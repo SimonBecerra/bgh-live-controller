@@ -621,7 +621,7 @@ body.compact .ot-done{min-height:44px}
 @keyframes ltCount{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media (prefers-reduced-motion:reduce){.lt-chip.counting::before{animation-timing-function:steps(8,end)}}
 .lt-chip[aria-pressed="true"] svg{color:#fff}
-.lt-chip:disabled{opacity:.45}
+.lt-chip:disabled,.lt-chip.lt-missing{opacity:.45}
 body.compact .ot-btn{min-height:46px;font-size:16px}
 body.compact .ot-ctrl .btn{min-height:46px}
 body.compact .lt-chip{min-height:42px}
@@ -3388,7 +3388,8 @@ function renderOt(){
       b.querySelector(".lt-txt span").textContent = ltShort(name, names);
       b.setAttribute("aria-label", b.title = (on ? `Hide ${name}'s lower third` : `Show ${name}'s lower third`));
       b.title = on ? `Hide ${name}'s lower third` : `Show ${name}'s lower third`;
-      b.disabled = ui.lt.found === false;
+      // Never disabled: a tap always asks OBS, so if the source really is missing it says so instead of doing nothing
+      b.classList.toggle("lt-missing", ui.lt.found === false);
       b.addEventListener("click", () => ltToggle(i));
       row.appendChild(b);
     });
@@ -3397,11 +3398,12 @@ function renderOt(){
 }
 // Lower thirds are on or off per scene collection (Settings → Scene collections)
 function ltOn(coll = ui.collection){ const c = ui.collCfg[coll]; return c && c.ltOn !== undefined ? !!c.ltOn : (!!c && !!ui.ot.ltOn); }
-/* Whose names the buttons show: the speakers text source when this collection has one (it follows Go Live,
-   Change Speakers and edits in OBS); otherwise the speakers last chosen in Go Live or Change Speakers. */
+/* Whose names the buttons show: the speakers last chosen in Go Live or Change Speakers. */
 ui.ltPicked = (() => { try{ const l = JSON.parse(localStorage.getItem("ltPicked")); return Array.isArray(l) ? l : []; }catch(e){ return []; } })();
 function setLtPicked(names){ ui.ltPicked = names; try{ localStorage.setItem("ltPicked", JSON.stringify(names)); }catch(e){} renderOt(); renderQcBtn(); }
-const ltNames = () => ui.spkMode === "on" && ui.lt.names.length ? ui.lt.names : ui.ltPicked;
+// Always the speakers picked from the controller's stored speakers (Go Live or Change Speakers), never what
+// OBS's text source happens to say, so the names and subtitles are exactly as saved in Settings → Speakers
+const ltNames = () => ui.ltPicked;
 /* The button shows just the last name, to save space (the stream still shows the full name).
    "Jr.", "Sr.", "II" and so on stay with it; two speakers with the same last name get a first initial too. */
 function ltLast(name){
@@ -3431,6 +3433,7 @@ async function ltSetTheme(){
 const ltThemeOff = d => (d.theme && d.theme !== ltTheme()) || (ltTheme() === "conference" && d.color && hexColor(d.color) !== ltColor());
 async function ltToggle(i){
   if(ot.item) return;   // a hymn or passage is in use
+  if(ui.lt.found === false) await otSync();   // added in OBS since the last check?
   try{
     const name = ltNames()[i];
     const r = await vcall("ShowLowerThird", {name, toggle:true, subtitle:ltShowSub() ? ltSubtitle(name) : ""});
@@ -3484,6 +3487,13 @@ obs.on("VendorEvent", ev => {
   }
 });
 obs.on("ConnectionClosed", () => { ot.showing = false; renderOt(); });
+// A Lower Third or Scripture & Hymns source added, removed or renamed in OBS: check again straight away,
+// so the buttons work without restarting the controller
+const OT_KINDS = ["church_lower_third", "church_text_display"];
+let otRecheckT;
+function otRecheck(){ clearTimeout(otRecheckT); otRecheckT = setTimeout(() => { if(ui.connected !== false) otSync(); }, 300); }
+obs.on("InputCreated", d => { if(OT_KINDS.includes(d.unversionedInputKind || d.inputKind)) otRecheck(); });
+obs.on("InputRemoved", d => { if(ui.lt.found || ot.tdFound) otRecheck(); });
 $("otPrev").addEventListener("click", () => otStep(-1));
 $("otNext").addEventListener("click", () => otStep(1));
 $("otShow").addEventListener("click", () => ot.showing ? otHide() : otSend());
