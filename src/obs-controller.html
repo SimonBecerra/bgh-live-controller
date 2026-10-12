@@ -1104,6 +1104,19 @@ body.compact .lt-chip{min-height:42px}
             <label class="check" for="setLtSubB" id="setLtSubBField"><input type="checkbox" id="setLtSubB" data-cfg>
               <span>Show visiting speakers' subtitles<small>Under the name in the Barrington lower third, for example the assembly they're from. Home speakers never show a subtitle.</small></span>
             </label>
+            <label class="check" for="setLtHostOn" id="setLtHostField"><input type="checkbox" id="setLtHostOn" data-cfg>
+              <span>Host<small>An extra lower third button for the host or emcee, before the speakers. It's there for every service in this collection, whoever is speaking.</small></span>
+            </label>
+            <div class="sub-check" id="setLtHostBox" hidden>
+              <div class="field"><label class="label" for="setLtHost">Host</label>
+                <select id="setLtHost" data-cfg></select>
+                <span class="path">From your home and visiting speakers in Settings → Speakers.</span></div>
+              <label class="check" for="setLtHostSubOn"><input type="checkbox" id="setLtHostSubOn" data-cfg>
+                <span>Show a subtitle under the host's name<small>In both themes. Starts as the speaker's subtitle from Settings → Speakers; you can type another, like HOST.</small></span>
+              </label>
+              <div class="field" id="setLtHostSubField" hidden><label class="label" for="setLtHostSub">Host subtitle</label>
+                <input id="setLtHostSub" data-cfg maxlength="60" placeholder="HOST" autocomplete="off" spellcheck="false"></div>
+            </div>
             <div class="field" id="setLtColorField" hidden><label class="label" for="setLtColor">Conference colour</label>
               <div class="clr-row">
                 <span class="clr-swatch" id="setLtSwatch" aria-hidden="true"></span>
@@ -1851,7 +1864,7 @@ class MockOBS {
         if(!this.lt.enabled) return {ok:false, code:"DISABLED", ...this._ltState()};
         const name = q.name || this._ltNames()[q.index];
         if(!name) return {ok:false, code:"NO_SUCH_NAME", ...this._ltState()};
-        if(q.toggle && this.lt.showing === name){ this._ltHide(); return {ok:true, code:"OK", ...this._ltState()}; }
+        if(q.toggle && this.lt.showing === name && (this.lt.subtitle || "") === String(q.subtitle || "").trim()){ this._ltHide(); return {ok:true, code:"OK", ...this._ltState()}; }
         clearTimeout(this.lt.timer); this.lt.showing = name; this.lt.subtitle = q.subtitle || ""; this._ltEmit();
         this.lt.timer = setTimeout(() => this._ltHide(), 8000);
         return {ok:true, code:"OK", ...this._ltState()};
@@ -3382,14 +3395,32 @@ function renderOt(){
   $("ltWrap").hidden = !ltOn() || !!it;
   const row = $("ltRow"); row.innerHTML = "";
   if(ltOn() && !it){
-    const names = ltNames();
+    const names = ltNames(), host = ltHost();
+    if(host){
+      const b = document.createElement("button");
+      b.className = "lt-chip lt-host"; b.type = "button";
+      const on = ltIsUp(host.name, host.subtitle);
+      b.setAttribute("aria-pressed", on);
+      if(on && ui.lt.duration > 0 && ui.lt.since){
+        b.classList.add("counting");
+        b.style.setProperty("--lt-dur", ui.lt.duration + "s");
+        b.style.setProperty("--lt-in", Math.max(0, (performance.now() - ui.lt.since) / 1000) + "s");
+      }
+      b.innerHTML = `<i data-lucide="${on ? "user-x" : "mic"}"></i><span class="lt-txt"><span></span><small>Host</small></span>`;
+      b.querySelector(".lt-txt span").textContent = ltShort(host.name, [host.name, ...names]);
+      b.title = on ? `Hide the host's lower third (${host.name})` : `Show the host's lower third (${host.name})`;
+      b.setAttribute("aria-label", b.title);
+      b.classList.toggle("lt-missing", ui.lt.found === false);
+      b.addEventListener("click", ltToggleHost);
+      row.appendChild(b);
+    }
     if(!names.length){
-      row.innerHTML = `<span class="path">${ui.lt.found === false || ot.plugin === false ? "Not available right now." : "No speakers chosen yet. Choose them in Go Live or with Change Speakers."}</span>`;
+      row.insertAdjacentHTML("beforeend", `<span class="path">${ui.lt.found === false || ot.plugin === false ? "Not available right now." : "No speakers chosen yet. Choose them in Go Live or with Change Speakers."}</span>`);
     }
     names.forEach((name, i) => {
       const b = document.createElement("button");
       b.className = "lt-chip"; b.type = "button";
-      const on = ui.lt.showing === name;
+      const on = ltIsUp(name, ltSpeakerSub(name));
       b.setAttribute("aria-pressed", on);
       // Countdown fill, picking up where it is if the buttons are redrawn part-way through
       if(on && ui.lt.duration > 0 && ui.lt.since){
@@ -3444,22 +3475,33 @@ async function ltSetTheme(){
   try{ await vcall("SetLowerThirdTheme", {theme:ltTheme(), color:ltColor()}); }catch(e){ if(e.code === "PLUGIN_MISSING") ot.plugin = false; }
 }
 const ltThemeOff = d => (d.theme && d.theme !== ltTheme()) || (ltTheme() === "conference" && d.color && hexColor(d.color) !== ltColor());
-async function ltToggle(i){
-  if(ot.item) return;   // a hymn or passage is in use
+// The host's button (Settings → Scene collections → Lower third → Host), or null when there isn't one
+function ltHost(){
+  const h = (cfg() || {}).ltHost;
+  const sp = h && h.on ? allSpeakers().find(x => x.id === h.id) : null;
+  return sp ? {name:sp.name, subtitle:h.sub ? String(h.subText || "").trim().toUpperCase() : ""} : null;
+}
+// What's on screen is this name with this subtitle (the host and a speaker can share a name)
+const ltIsUp = (name, sub) => ui.lt.showing === name && (ui.lt.subtitle || "") === (sub || "");
+const ltSpeakerSub = name => ltShowSub() ? ltSubtitle(name) : "";
+async function ltToggle(i){ return ltShow(ltNames()[i], ltSpeakerSub(ltNames()[i])); }
+async function ltToggleHost(){ const h = ltHost(); if(h) return ltShow(h.name, h.subtitle); }
+async function ltShow(name, subtitle){
+  if(ot.item || !name) return;   // a hymn or passage is in use
   closeOtMenus();
   if(ui.lt.found === false) await otSync();   // added in OBS since the last check?
   try{
-    const name = ltNames()[i];
-    const r = await vcall("ShowLowerThird", {name, toggle:true, subtitle:ltShowSub() ? ltSubtitle(name) : ""});
+    const r = await vcall("ShowLowerThird", {name, toggle:true, subtitle});
     if(r.ok === false) throw otErr(r.code);
     ltApply(r);
   }catch(e){ otFail(e); }
 }
 function ltApply(d){
   // When a name goes up (or a different name replaces it), the countdown starts again, as the plug-in's timer does
-  const prev = ui.lt || {}, showing = d.showing || "";
-  const since = showing ? (showing === prev.showing && prev.since ? prev.since : performance.now()) : 0;
-  ui.lt = {found:true, names:(d.names || []).map(x => x.name), showing, enabled:d.enabled,
+  const prev = ui.lt || {}, showing = d.showing || "", subtitle = showing ? (d.subtitle || "") : "";
+  const same = showing === prev.showing && subtitle === (prev.subtitle || "");
+  const since = showing ? (same && prev.since ? prev.since : performance.now()) : 0;
+  ui.lt = {found:true, names:(d.names || []).map(x => x.name), showing, subtitle, enabled:d.enabled,
     duration:typeof d.duration === "number" ? d.duration : (prev.duration ?? 8), since};
   renderOt();
 }
@@ -4759,6 +4801,7 @@ function syncCfgFields(){
     ltOn: $("setLtOnColl").checked,
     ltTheme: $("setLtTheme").value,
     ltSubB: $("setLtSubB").checked,
+    ltHost: {on:$("setLtHostOn").checked, id:$("setLtHost").value, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
     ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
     autoMic: {on: $("setAutoMic").checked,
       scenes: Object.fromEntries([...document.querySelectorAll("#setAutoMicList select")].map(el => [el.dataset.scene, el.value]))}};
@@ -4793,6 +4836,7 @@ async function fillCfgFields(coll){
   $("setLtOnColl").checked = c ? (c.ltOn !== undefined ? !!c.ltOn : !!ui.ot.ltOn) : false;
   $("setLtTheme").value = c && c.ltTheme === "conference" ? "conference" : "barrington";
   $("setLtSubB").checked = !!(c && c.ltSubB);
+  fillLtHost(c && c.ltHost);
   $("setLtColor").value = (c && c.ltColor) || LT_COLOR;
   renderLtColor();
   // Automatic mute: one row per scene
@@ -4853,6 +4897,9 @@ function renderLtColor(){
   $("setLtThemeField").hidden = !on;
   $("setLtColorField").hidden = !on || !conf;
   $("setLtSubBField").hidden = !on || conf;
+  $("setLtHostField").hidden = !on;
+  $("setLtHostBox").hidden = !on || !$("setLtHostOn").checked;
+  $("setLtHostSubField").hidden = !$("setLtHostSubOn").checked;
   const v = $("setLtColor").value, hex = hexColor(v);
   $("setLtSwatch").style.setProperty("--sw", rgba(hex || LT_COLOR));
   $("setLtColorMsg").classList.toggle("err", !hex && !!v.trim());
@@ -4880,6 +4927,36 @@ function rememberLtColor(hex){
 }
 $("setLtTheme").addEventListener("change", renderLtColor);
 $("setLtOnColl").addEventListener("change", renderLtColor);
+$("setLtHostOn").addEventListener("change", renderLtColor);
+$("setLtHostSubOn").addEventListener("change", () => { hostSubDefault(); renderLtColor(); });
+$("setLtHost").addEventListener("change", () => hostSubDefault(true));
+$("setLtHostSub").addEventListener("input", () => {
+  const el = $("setLtHostSub"), at = el.selectionStart; el.value = el.value.toUpperCase(); el.setSelectionRange(at, at);
+});
+/* Host: the speakers to choose from (home, then visiting), and the subtitle it starts with */
+function fillLtHost(h){
+  h = h || {};
+  const sel = $("setLtHost"); sel.innerHTML = "";
+  const group = (label, list) => {
+    if(!list.length) return;
+    const g = document.createElement("optgroup"); g.label = label;
+    byLastName(list).forEach(sp => { const o = document.createElement("option"); o.value = sp.id; o.textContent = sp.name; g.appendChild(o); });
+    sel.appendChild(g);
+  };
+  const none = document.createElement("option"); none.value = ""; none.textContent = "Choose the host"; sel.appendChild(none);
+  group(homeLabel(), ui.speakers.home); group("Visiting speakers", ui.speakers.visiting);
+  sel.value = allSpeakers().some(sp => sp.id === h.id) ? h.id : "";
+  $("setLtHostOn").checked = !!h.on;
+  $("setLtHostSubOn").checked = !!h.sub;
+  $("setLtHostSub").value = h.subText || "";
+}
+// A visiting host's own subtitle fills the box when it's empty (or when a different host is chosen)
+function hostSubDefault(changedHost){
+  const sp = ui.speakers.visiting.find(x => x.id === $("setLtHost").value);
+  const own = sp && sp.subtitle ? sp.subtitle.trim().toUpperCase() : "";
+  const box = $("setLtHostSub");
+  if(!box.value.trim() || (changedHost && own)) box.value = own;
+}
 $("setLtGo").addEventListener("click", () => { showSetPage("collections"); const el = $("setLtOnColl").closest(".set-section"); el.scrollIntoView?.({block:"center"}); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); });
 // Each valid colour counts the moment it's in the box, so a later mistype falls back to it on Apply
 $("setLtColor").addEventListener("input", () => {
