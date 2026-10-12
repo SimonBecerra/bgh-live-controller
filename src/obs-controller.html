@@ -168,6 +168,9 @@ body.portrait .set-nav .nav-proto{margin-top:0;border-top:none}
 @keyframes flash{0%,30%{box-shadow:0 0 0 3px var(--accent);border-radius:10px}100%{box-shadow:0 0 0 3px transparent}}
 .set-note{display:block;font-size:13px;line-height:1.4;color:var(--fg);border-left:3px solid var(--warn);padding:2px 0 2px 10px}
 .bk-auto{display:flex;flex-direction:column;gap:8px}
+.end-banner{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:26;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);padding:10px 12px 10px 16px;border-radius:12px;background:var(--panel);border:2px solid var(--pgm);box-shadow:0 10px 28px rgba(0,0,0,.45);font-size:16px;font-weight:600}
+.end-banner svg{width:22px;height:22px;color:var(--pgm);flex:none}
+.end-banner .btn{flex:none;min-height:48px;font-size:15px}
 .automic{display:flex;flex-direction:column;gap:10px;padding-left:16px;border-left:2px solid var(--line-2)}
 .automic-list{display:flex;flex-direction:column;gap:6px}
 .automic-row{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:10px;align-items:center}
@@ -781,6 +784,17 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
               <select id="setVis"><option>Public</option><option>Unlisted</option><option>Private</option></select>
               <span class="path">Chosen for you on the last step of Go Live. You can still change it there.</span></div>
           </div>
+          <div class="set-section">
+            <h4>Starting and ending</h4>
+            <label class="check" for="setStartTitle"><input type="checkbox" id="setStartTitle">
+              <span>Start the livestream on the title slide<small>When you go live, from the controller or from OBS, the title slide goes to Program: the one set as this scene collection's Waiting title slide.</small></span>
+            </label>
+            <label class="check" for="setAutoEnd"><input type="checkbox" id="setAutoEnd">
+              <span>End the livestream after Ending<small>While live, once Ending has been on Program for the time below, the stream stops by itself. A countdown shows first, with a Keep streaming button. Recording keeps going.</small></span>
+            </label>
+            <div class="field sub-check" id="setAutoEndBox"><label class="label" for="setAutoEndSec">End the stream after</label>
+              <select id="setAutoEndSec"><option value="15">15 seconds on Ending</option><option value="30">30 seconds on Ending</option><option value="60">1 minute on Ending</option><option value="120">2 minutes on Ending</option></select></div>
+          </div>
         </section>
 
         <section class="set-page" id="page-alerts" data-page="alerts" role="tabpanel" aria-labelledby="tab-alerts" tabindex="-1" hidden>
@@ -935,6 +949,8 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
               <option value="PLUGIN_MISSING">Companion plug-in not running</option>
               <option value="INCOMPLETE">OBS needs more information in its dialog</option>
               <option value="NO_ANSWER">Plug-in never reports back</option>
+              <option value="CANCELLED">OBS's YouTube window closed without starting</option>
+              <option value="BINDING">YouTube: broadcast can't be bound to the stream (403)</option>
               <option value="LOSE_CONNECTION">Connection drops just as OBS goes live</option>
             </select>
           </div>
@@ -1101,6 +1117,7 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
     <div class="apply-row"><button class="btn" id="pickClose" type="button" style="flex:1">Decide later</button></div>
   </div>
 </div>
+<div class="end-banner" id="endBanner" role="alert" hidden><i data-lucide="timer"></i><span id="endBannerTxt"></span><button type="button" class="btn" id="endKeep">Keep streaming</button></div>
 <div class="screen-banner" id="screenBanner" role="status" hidden><i data-lucide="monitor-off"></i><span id="screenBannerTxt"></span></div>
 <div class="touch-test" id="touchTest" hidden>
   <div class="tt-box">
@@ -1288,6 +1305,7 @@ class MockOBS {
           return this._job("BroadcastResult", async done => {
             await sleep(1500);   // OBS's dialog opens and the fields are filled in
             if(this.protoFail === "LOSE_CONNECTION"){ this._output("stream","StreamStateChanged",true); this.disconnect(6000); return done({ok:true, code:"OK"}); }
+            if(this.protoFail === "BINDING") return done({ok:false, code:"YOUTUBE_ERROR", message:"forbidden (403) liveBroadcastBindingNotAllowed The current status of the live broadcast does not allow it to be bound to a stream."});
             if(this.protoFail) return done({ok:false, code:this.protoFail, message:this.protoFail === "YOUTUBE_LIMIT" ? "quotaExceeded: too many broadcasts" : this.protoFail});
             await sleep(1500);   // YouTube creates the broadcast, OBS starts streaming
             this._output("stream","StreamStateChanged",true);
@@ -1599,7 +1617,15 @@ async function openObsStream(){
   }catch(e){ if(e.code === "NOT_SIGNED_IN") return showSignInAlert(); toast(e.code === "NOT_CONNECTED" ? "Not connected to OBS. Wait for it to reconnect, or start the stream from OBS." : "Couldn't open OBS's stream setup. Start the stream from OBS instead."); }
 }
 async function toggleStream(){
-  if(!ui.stream.active && ui.streamMsg){ toast(`Still working on it: ${ui.streamMsg.replace(/…$/, "")}. Watch OBS on your main monitor.`); return; }
+  if(!ui.stream.active && ui.streamPending){
+    // Waiting for OBS. If OBS showed an error or its window was closed, this is the way out.
+    const again = await confirmDlg(ui.streamMsg ? `Still ${ui.streamMsg.replace(/…$/, "").replace(/^\w/, c => c.toLowerCase())}` : "Waiting for OBS",
+      "OBS hasn't started the stream yet. If OBS showed an error, or you closed its YouTube window, start over. Nothing is live.",
+      "Start over", "primary", "Keep waiting");
+    if(!again) return;
+    if(ui.goLiveCancel) ui.goLiveCancel();
+    ui.streamPending = null; ui.streamMsg = null; renderOutputs();
+  }
   if(!ui.stream.active){ openGoLive(); return; }
   if(await confirmDlg("End the livestream?", `You have been live for ${fmt(Date.now()-ui.stream.t0)}. Viewers will see the stream end.`, "End stream"))
     obs.call("StopStream");
@@ -1643,6 +1669,8 @@ const FALLBACK = {
   TIMEOUT: {problem:"OBS didn't start streaming after the broadcast was set up.", fix:"Check OBS on your main monitor and go live from there."},
   NOT_CONNECTED: {problem:"The controller lost its connection to OBS, so nothing was started.", fix:"Wait for the controller to reconnect, then try again. Or go live from OBS on your main monitor."},
   PLUGIN_MISSING: {problem:"The companion plug-in isn't running in OBS.", fix:"Go live from OBS. Before the next service, check that the plug-in is installed (in OBS, Help → Log Files → View Current Log, and look for church-controller)."},
+  CANCELLED: {problem:"OBS's YouTube window was closed before the stream started.", fix:"Nothing is live. Tap Go Live to try again, or go live from OBS."},
+  BROADCAST_NOT_BINDABLE: {problem:"YouTube wouldn't connect the stream to that broadcast because of its current status. It may have already ended, or be live from somewhere else.", fix:"Nothing is live. Tap Go Live and create a new broadcast instead, or pick a different one."},
   NO_ANSWER: {problem:"OBS didn't say whether the broadcast started.", fix:"Look at OBS on your main monitor. If it isn't streaming, go live from there."},
   CONNECTION_LOST: {problem:"The controller lost its connection to OBS while setting up the broadcast, and OBS isn't streaming.", fix:"Look at OBS on your main monitor. Finish in its dialog if it's open, or go live from OBS."}
 };
@@ -1655,6 +1683,7 @@ function vendorJob(requestType, requestData, eventType, timeoutMs){
     let jobId = null, early = [], timer = null, finished = false;
     const finish = (err, data) => {
       if(finished) return; finished = true;
+      if(requestType === "StartYouTubeBroadcast") ui.goLiveCancel = null;
       clearTimeout(timer); obs.off("VendorEvent", onEvent); obs.off("ConnectionClosed", onClosed);
       err ? reject(err) : resolve(data);
     };
@@ -1665,6 +1694,8 @@ function vendorJob(requestType, requestData, eventType, timeoutMs){
       else if(ev.eventData.jobId === jobId) handle(ev.eventData);
     };
     const onClosed = () => finish(fail("CONNECTION_LOST"));
+    // "Start over" on the Go Live button stops waiting for this one
+    if(requestType === "StartYouTubeBroadcast") ui.goLiveCancel = () => finish(fail("STARTED_OVER"));
     obs.on("VendorEvent", onEvent); obs.on("ConnectionClosed", onClosed);
     try{
       const r = await obs.call("CallVendorRequest", {vendorName:"church-controller", requestType, requestData});
@@ -1678,6 +1709,7 @@ function vendorJob(requestType, requestData, eventType, timeoutMs){
 }
 // After a lost connection or no answer, OBS is the truth: wait to reconnect, then see whether it's streaming
 async function settleGoLive(e, details){
+  if(e.code === "STARTED_OVER") return;   // the operator chose to start over; already reset
   if(e.code === "CONNECTION_LOST" || e.code === "NO_ANSWER"){
     ui.streamMsg = "Checking OBS…"; renderOutputs();
     for(let i = 0; i < 40 && ui.connected === false; i++) await sleep(1500);
@@ -1691,7 +1723,9 @@ async function settleGoLive(e, details){
 }
 let fbData = {title:"", desc:""};
 // YouTube's usage limits come back as a general YouTube error; recognize them from the message
-const normCode = (code, msg) => code === "YOUTUBE_ERROR" && /quota|exceeded|limit|too many/i.test(msg || "") ? "YOUTUBE_LIMIT" : code;
+const normCode = (code, msg) =>
+  code === "YOUTUBE_ERROR" && /BindingNotAllowed|does not allow it to be bound/i.test(msg || "") ? "BROADCAST_NOT_BINDABLE"
+  : code === "YOUTUBE_ERROR" && /quota|exceeded|limit|too many/i.test(msg || "") ? "YOUTUBE_LIMIT" : code;
 function showObsFallback(code, msg, details){
   code = normCode(code, msg);
   const f = FALLBACK[code] || {problem:"The controller couldn't go live" + (msg ? ` (${msg})` : "") + ".", fix:"Go live from OBS on your main monitor."};
@@ -2036,7 +2070,7 @@ async function goExisting(){
   toast("Starting the selected broadcast in OBS…");
   try{
     // The plug-in finds the row by title; the index only breaks ties between identical titles
-    await vendorJob("StartYouTubeBroadcast", {mode:"existing", broadcastTitle:b.title, broadcastIndex:b.index}, "BroadcastResult", 90000);
+    await vendorJob("StartYouTubeBroadcast", {mode:"existing", broadcastTitle:b.title, broadcastIndex:b.index}, "BroadcastResult", 120000);
     ui.streamMsg = null; renderOutputs();
     toast(`Live on YouTube · ${b.title}`);
   }catch(e){ settleGoLive(e, {title:b.title, desc:""}); }
@@ -2085,7 +2119,7 @@ $("glGo").addEventListener("click", async () => {
   toast("Setting up the YouTube broadcast in OBS…");
   try{
     await vendorJob("StartYouTubeBroadcast",
-      {mode:"new", title:glTitle(), description:glDesc(), privacyStatus:gl.vis.toLowerCase(), rememberSettings:true}, "BroadcastResult", 90000);
+      {mode:"new", title:glTitle(), description:glDesc(), privacyStatus:gl.vis.toLowerCase(), rememberSettings:true}, "BroadcastResult", 120000);
     ui.streamMsg = null; renderOutputs();
     toast(`Live on YouTube · ${gl.vis}`);
     gl.sel = [];  // selection stays with this setup only until the stream starts
@@ -2224,6 +2258,9 @@ $("cpuChip").addEventListener("click", () => {
 /* Open with OBS / close with OBS (the desktop app and the companion plug-in do the actual launching and closing) */
 ui.openWithObs = (() => { try{ return localStorage.getItem("openWithObs") === "1"; }catch(e){ return false; } })();
 ui.openObs = (() => { try{ return localStorage.getItem("openObs") === "1"; }catch(e){ return false; } })();
+ui.startTitle = (() => { try{ return localStorage.getItem("startTitle") === "1"; }catch(e){ return false; } })();
+ui.autoEnd = (() => { try{ return localStorage.getItem("autoEnd") === "1"; }catch(e){ return false; } })();
+ui.autoEndSec = (() => { try{ const v = parseInt(localStorage.getItem("autoEndSec"), 10); return [15,30,60,120].includes(v) ? v : 30; }catch(e){ return 30; } })();
 ui.closeWithObs = (() => { try{ return localStorage.getItem("closeWithObs") === "1"; }catch(e){ return false; } })();
 
 /* Which monitor the controller opens on.
@@ -2565,6 +2602,7 @@ async function openSettingsPanel(page = ui.setPage){
   $("setMax").value = ui.speakers.max;
   $("setSilence").value = ui.silenceSec; $("setSilenceDb").value = ui.silenceDb; $("setMeasureMsg").textContent = ""; renderSilencePreview(); $("setAwake").checked = ui.keepAwake;
   $("setOpenWithObs").checked = ui.openWithObs; $("setCloseWithObs").checked = ui.closeWithObs; $("setOpenObs").checked = ui.openObs;
+  $("setStartTitle").checked = ui.startTitle; $("setAutoEnd").checked = ui.autoEnd; $("setAutoEndSec").value = String(ui.autoEndSec); $("setAutoEndBox").hidden = !ui.autoEnd;
   $("setScreen").innerHTML = ""; screenDraft = null; renderScreens(); $("setScreenFollow").checked = ui.screen.follow; $("setScreenWindowed").checked = ui.screen.windowed;
   $("setLayout").value = ui.layout; $("setTheme").value = ui.theme; $("setTextSize").value = String(ui.textSize); renderTextSizeNote(); renderAutoBackups();
   $("setHomeLbl").value = homeLabel(); $("setHomeHdr").textContent = homeLabel();
@@ -2732,6 +2770,7 @@ document.querySelectorAll("#page-collections [data-cfg]").forEach(el => {
 });
 $("setAutoMicList").addEventListener("change", touchCfg);   // the per-scene choices are made fresh for each collection
 $("setAutoMic").addEventListener("change", () => { $("setAutoMicBox").hidden = !$("setAutoMic").checked; });
+$("setAutoEnd").addEventListener("change", () => { $("setAutoEndBox").hidden = !$("setAutoEnd").checked; });
 $("setCfgUse").addEventListener("click", () => {
   cfgTouched.add(cfgColl); syncCfgFields(); renderCfgState(); updateSetDots();
   $("setCfgColl").focus();
@@ -2859,7 +2898,7 @@ function backupData(){
     settings:{
       obs:{host:ui.obsAddr.host, port:ui.obsAddr.port},   // the password is left out on purpose
       speakers:ui.speakers, collCfg:ui.collCfg, audio:ui.src.audio, defaultVis:ui.defaultVis,
-      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, openObs:ui.openObs,
+      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, openObs:ui.openObs, startTitle:ui.startTitle, autoEnd:ui.autoEnd, autoEndSec:ui.autoEndSec,
       screen:ui.screen, layout:ui.layout, theme:ui.theme, textSize:ui.textSize, useTable:ui.useTable
     }};
 }
@@ -2930,6 +2969,9 @@ function restoreBackup(st){
   if(typeof st.silenceDb === "number"){ ui.silenceDb = st.silenceDb; save("silenceDb", String(ui.silenceDb)); }
   if(typeof st.keepAwake === "boolean"){ ui.keepAwake = st.keepAwake; save("keepAwake", ui.keepAwake ? "1" : "0"); applyWakeLock(); }
   if(typeof st.openWithObs === "boolean"){ ui.openWithObs = st.openWithObs; save("openWithObs", ui.openWithObs ? "1" : "0"); if(window.bgh) window.bgh.setOpenWithObs(ui.openWithObs); }
+  if(typeof st.startTitle === "boolean"){ ui.startTitle = st.startTitle; save("startTitle", ui.startTitle ? "1" : "0"); }
+  if(typeof st.autoEnd === "boolean"){ ui.autoEnd = st.autoEnd; save("autoEnd", ui.autoEnd ? "1" : "0"); }
+  if([15,30,60,120].includes(st.autoEndSec)){ ui.autoEndSec = st.autoEndSec; save("autoEndSec", String(ui.autoEndSec)); }
   if(typeof st.openObs === "boolean"){ ui.openObs = st.openObs; save("openObs", ui.openObs ? "1" : "0"); if(window.bgh) window.bgh.setOpenObs(ui.openObs); }
   if(typeof st.closeWithObs === "boolean"){ ui.closeWithObs = st.closeWithObs; save("closeWithObs", ui.closeWithObs ? "1" : "0"); }
   if(st.screen){ ui.screen = st.screen; save("screen", ui.screen); }
@@ -3063,6 +3105,9 @@ $("setForm").addEventListener("submit", e => {
   if(window.bgh) window.bgh.setOpenWithObs(ui.openWithObs);
   ui.openObs = $("setOpenObs").checked; try{ localStorage.setItem("openObs", ui.openObs ? "1" : "0"); }catch(err){}
   if(window.bgh) window.bgh.setOpenObs(ui.openObs);
+  ui.startTitle = $("setStartTitle").checked; ui.autoEnd = $("setAutoEnd").checked; ui.autoEndSec = parseInt($("setAutoEndSec").value, 10) || 30;
+  try{ localStorage.setItem("startTitle", ui.startTitle ? "1" : "0"); localStorage.setItem("autoEnd", ui.autoEnd ? "1" : "0"); localStorage.setItem("autoEndSec", String(ui.autoEndSec)); }catch(err){}
+  if(!ui.autoEnd) cancelAutoEnd();
   // Desktop app: Electron's screen module places the window; "display-added" moves it when a monitor is plugged in
   const prevScreen = JSON.stringify(ui.screen);
   ui.screen = {target:selToTarget($("setScreen").value), follow:$("setScreenFollow").checked, windowed:$("setScreenWindowed").checked};
@@ -3284,6 +3329,8 @@ obs.on("CurrentProgramSceneChanged", d => {
   const prev = ui.program;
   ui.program = d.sceneName; renderScenes();
   autoMute(prev, d.sceneName);
+  if(ui.autoEndSkip && ui.autoEndSkip !== d.sceneName) ui.autoEndSkip = null;   // "Keep streaming" lasts until Ending is left
+  if(!ui.autoEndSkip) checkAutoEnd(d.sceneName);
 });
 /* Automatic mute (Settings → Scene collections → Audio). Works however Program changes: a scene button,
    CUT, OBS itself, or the Advanced Scene Switcher. Only changes the mic when it isn't already that way. */
@@ -3338,14 +3385,56 @@ obs.on("StreamStateChanged", d => {
   const startedHere = d.outputActive && !!ui.streamPending;   // Go Live from the controller (either way)
   ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive();
   if(startedHere) comeBackAfterGoingLive();
-  if(d.outputActive) autoMuteAtStart();
+  if(d.outputActive) startOnTitle().then(scene => autoMuteAtStart(scene));
+  else cancelAutoEnd();
 });
+/* "Start the livestream on the title slide": the collection's Waiting title slide (or a scene called
+   Title Slide) goes to Program as soon as the stream starts, however it was started. */
+function titleScene(){
+  const names = BUTTONS.flatMap(b => b.group);
+  const g = waitGroupFor(ui.collection, names);
+  return (g && g[0]) || names.find(n => /^title slide$/i.test(n.trim())) || null;
+}
+async function startOnTitle(){
+  if(!ui.startTitle) return ui.program;
+  const t = titleScene();
+  if(!t){ toast("Start on the title slide is on, but this scene collection has no title slide. Set one in Settings → Scene collections."); return ui.program; }
+  if(ui.program === t) return t;
+  try{ await obs.call("SetCurrentProgramScene", {sceneName:t}); toast(`Live: started on ${t}`); return t; }
+  catch(e){ toast(`Couldn't switch to ${t}`); return ui.program; }
+}
+/* "End the livestream after Ending": a countdown once Ending is on Program while live */
+const isEnding = n => /\bending\b/i.test(n || "");
+let autoEnd = null;
+function checkAutoEnd(scene){
+  if(!ui.autoEnd || !ui.stream.active || !isEnding(scene)){ cancelAutoEnd(); return; }
+  if(autoEnd) return;
+  autoEnd = {t0:Date.now(), timer:setInterval(tickAutoEnd, 250)};
+  tickAutoEnd();
+}
+function tickAutoEnd(){
+  if(!autoEnd) return;
+  const left = Math.ceil((autoEnd.t0 + ui.autoEndSec * 1000 - Date.now()) / 1000);
+  if(left <= 0){
+    cancelAutoEnd();
+    obs.call("StopStream").then(() => toast("The livestream ended automatically after Ending. Recording, if on, keeps going."))
+      .catch(() => toast("Couldn't end the stream automatically. Tap Stop Live."));
+    return;
+  }
+  $("endBannerTxt").textContent = `On Ending: the livestream ends in ${left} s`;
+  if($("endBanner").hidden){ $("endBanner").hidden = false; if(window.lucide) lucide.createIcons(); }
+}
+function cancelAutoEnd(){
+  if(autoEnd){ clearInterval(autoEnd.timer); autoEnd = null; }
+  $("endBanner").hidden = true;
+}
+$("endKeep").addEventListener("click", () => { cancelAutoEnd(); ui.autoEndSkip = ui.program; toast("Still live. It won't end by itself until you leave Ending and come back."); });
 /* Automatic mute while live: the stream starts muted (you normally start on Waiting or Live Soon).
    If you somehow start straight on a "Mic on" scene, like a camera, it's left on. */
-function autoMuteAtStart(){
+function autoMuteAtStart(scene = ui.program){
   const c = cfg();
   if(!c || !c.autoMic || !c.autoMic.on || !srcAudio() || ui.audioMissing || ui.muted) return;
-  const kind = (c.autoMic.scenes && c.autoMic.scenes[ui.program]) || autoMicDefault(ui.program || "");
+  const kind = (c.autoMic.scenes && c.autoMic.scenes[scene]) || autoMicDefault(scene || "");
   if(kind === "on") return;
   obs.call("SetInputMute", {inputName:srcAudio(), inputMuted:true})
     .then(() => toast("Live: mic muted until you switch to a camera or slideshow"))
