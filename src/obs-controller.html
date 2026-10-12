@@ -2491,12 +2491,14 @@ obs.on("ConnectionClosed", async () => {
   $("health").hidden = true; renderMeter([-90,-90]);
   for(let attempt = 1; ; attempt++){
     $("connBannerTxt").textContent = attempt === 1 ? "Reconnecting…" : `Reconnecting… (try ${attempt})`;
-    try{ await obs.connect(); break; }catch(e){
-      if(attempt >= 2 && window.bgh) $("connBannerTxt").textContent = `Trying ${ui.obsAddr.host}:${ui.obsAddr.port} (try ${attempt}). Is OBS open with its WebSocket server on, and the password right?`;
-      await sleep(3000);
+    // Connect, then read everything from OBS. While OBS is still starting, its WebSocket server is already up
+    // but answers "not ready", so a failed read is retried too (connected, just waiting for OBS to finish loading).
+    try{ if(!obs.connected) await obs.connect(); await syncAll(); break; }catch(e){
+      if(obs.connected){ $("connBannerTitle").textContent = "OBS is starting."; $("connBannerTxt").textContent = `Waiting for it to finish loading… (try ${attempt})`; }
+      else if(attempt >= 2 && window.bgh) $("connBannerTxt").textContent = `Trying ${ui.obsAddr.host}:${ui.obsAddr.port} (try ${attempt}). Is OBS open with its WebSocket server on, and the password right?`;
+      await sleep(attempt < 10 ? 1500 : 3000);
     }
   }
-  await syncAll();
   ui.connected = true; ui.everConnected = true; reconnecting = false; lastSoundAt = Date.now(); ui.obsExiting = false;
   $("connBanner").hidden = true; document.body.classList.remove("offline");
   document.querySelector(".conn .dot").classList.remove("off"); renderConnText();
