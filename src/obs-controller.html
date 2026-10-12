@@ -168,6 +168,19 @@ body.portrait .set-nav .nav-proto{margin-top:0;border-top:none}
 @keyframes flash{0%,30%{box-shadow:0 0 0 3px var(--accent);border-radius:10px}100%{box-shadow:0 0 0 3px transparent}}
 .set-note{display:block;font-size:13px;line-height:1.4;color:var(--fg);border-left:3px solid var(--warn);padding:2px 0 2px 10px}
 .bk-auto{display:flex;flex-direction:column;gap:8px}
+.safe-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--line-2);background:var(--panel);color:var(--muted);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;white-space:nowrap}
+.safe-btn svg{width:18px;height:18px}
+.safe-btn .safe-st{padding:2px 8px;border-radius:999px;background:var(--panel-2);color:var(--fg);font-size:12px}
+.safe-btn[aria-pressed=true]{border-color:var(--pvw);background:var(--pvw-soft);color:var(--fg)}
+.safe-btn[aria-pressed=true] svg{color:var(--pvw)}
+.safe-btn[aria-pressed=true] .safe-st{background:var(--pvw);color:#06130b}
+.safe-btn.nudge{animation:safeNudge .5s ease-in-out 3}
+@keyframes safeNudge{0%,100%{transform:scale(1)}50%{transform:scale(1.12);box-shadow:0 0 0 6px var(--pvw-soft)}}
+body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){cursor:not-allowed}
+body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opacity:.55}
+.safe-banner{position:fixed;left:50%;transform:translateX(-50%);top:calc(84px + env(safe-area-inset-top,0px));z-index:27;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);padding:10px 12px 10px 16px;border-radius:12px;background:var(--panel);border:2px solid var(--pvw);box-shadow:0 10px 28px rgba(0,0,0,.45);font-size:16px;line-height:1.35}
+.safe-banner svg{width:22px;height:22px;color:var(--pvw);flex:none}
+.safe-banner .btn{flex:none;min-height:48px;font-size:15px}
 .end-banner{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:26;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);padding:10px 12px 10px 16px;border-radius:12px;background:var(--panel);border:2px solid var(--pgm);box-shadow:0 10px 28px rgba(0,0,0,.45);font-size:16px;font-weight:600}
 .end-banner svg{width:22px;height:22px;color:var(--pgm);flex:none}
 .end-banner .btn{flex:none;min-height:48px;font-size:15px}
@@ -784,6 +797,7 @@ body.compact .lt-chip{min-height:42px}
     <span class="health" id="health" hidden role="status" aria-live="polite"><span class="hdot"></span><span class="mono" id="healthTxt"></span></span>
     <span class="disk-note" id="diskNote" role="status" hidden><i data-lucide="hard-drive"></i><span id="diskTxt"></span></span>
     <span class="stat" id="statRec" role="status"><span class="tally"></span><span class="lbl">NOT RECORDING</span><span class="tm mono" id="recTime"></span></span>
+    <button class="safe-btn" id="safeBtn" type="button" aria-pressed="false" title="Safe mode stops accidental changes to the livestream"><i data-lucide="lock-open" class="safe-ico"></i><span class="safe-lbl">SAFE MODE</span><b class="safe-st">OFF</b></button>
     <button class="icon-btn" id="fsBtn" aria-label="Enter fullscreen"><i data-lucide="maximize"></i></button>
     <button class="icon-btn" id="settingsBtn" aria-label="Settings">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
@@ -956,6 +970,7 @@ body.compact .lt-chip{min-height:42px}
     <p id="dlgBody"></p>
     <div class="apply-row">
       <button class="btn" id="dlgCancel">Keep going</button>
+      <button class="btn" id="dlgAlt" hidden></button>
       <button class="btn danger" id="dlgOk"></button>
     </div>
   </div>
@@ -1011,13 +1026,19 @@ body.compact .lt-chip{min-height:42px}
           </div>
           <div class="set-section">
             <h4>Starting and closing</h4>
+            <label class="check" for="setStartAtLogin"><input type="checkbox" id="setStartAtLogin">
+              <span>Open the BGH LIVE Controller when Windows starts<small>The controller opens by itself after you sign in to Windows, maximized. Turn on "Open OBS when the controller starts" too, and OBS opens behind it.</small></span>
+            </label>
             <label class="check" for="setOpenObs"><input type="checkbox" id="setOpenObs">
               <span>Open OBS when the controller starts<small>OBS opens behind the controller, which stays in front. Nothing happens if OBS is already open.</small></span>
             </label>
             <label class="check" for="setOpenWithObs"><input type="checkbox" id="setOpenWithObs">
               <span>Open the controller when OBS starts<small>The companion plug-in opens the controller on the touchscreen whenever OBS opens.</small></span>
             </label>
-            <label class="check sub-check" for="setCloseWithObs"><input type="checkbox" id="setCloseWithObs">
+            <label class="check" for="setCloseObs"><input type="checkbox" id="setCloseObs">
+              <span>Close OBS when the controller closes<small>Closing the controller closes OBS too, the normal way, so OBS saves everything. If you're live or recording, the controller asks first.</small></span>
+            </label>
+            <label class="check" for="setCloseWithObs"><input type="checkbox" id="setCloseWithObs">
               <span>Close the controller when OBS closes<small>Only when OBS is closed normally. If OBS crashes, the controller stays open and reconnects.</small></span>
             </label>
           </div>
@@ -1320,6 +1341,7 @@ body.compact .lt-chip{min-height:42px}
               <button type="button" class="btn" data-sim="deleteImage">Delete the current schedule image file</button>
               <button type="button" class="btn" data-sim="disconnect">Crash OBS / lose connection (back in 10 s)</button>
               <button type="button" class="btn" data-sim="closeObs">Close OBS normally (reopens in 10 s)</button>
+              <button type="button" class="btn" data-sim="closeApp">Close the controller window (×)</button>
               <button type="button" class="btn" data-sim="lowDisk">Disk space: plenty → 1.2 GB → 0.2 GB</button>
               <button type="button" class="btn" data-sim="silent">Toggle a silent mixer</button>
               <button type="button" class="btn" data-sim="badNet">Toggle a struggling internet connection</button>
@@ -1517,6 +1539,7 @@ body.compact .lt-chip{min-height:42px}
     <div class="apply-row"><button class="btn" id="pickClose" type="button" style="flex:1">Decide later</button></div>
   </div>
 </div>
+<div class="safe-banner" id="safeBanner" role="alert" hidden><i data-lucide="lock"></i><span><b>Safe mode is on.</b> To make changes, turn it off with the Safe mode button at the top.</span><button type="button" class="btn" id="safeOff">Turn off safe mode</button></div>
 <div class="end-banner" id="endBanner" role="alert" hidden><i data-lucide="timer"></i><span id="endBannerTxt"></span><button type="button" class="btn" id="endKeep">Keep streaming</button></div>
 <div class="screen-banner" id="screenBanner" role="status" hidden><i data-lucide="monitor-off"></i><span id="screenBannerTxt"></span></div>
 <div class="touch-test" id="touchTest" hidden>
@@ -4082,10 +4105,14 @@ $("cpuChip").addEventListener("click", () => {
 /* Open with OBS / close with OBS (the desktop app and the companion plug-in do the actual launching and closing) */
 ui.openWithObs = (() => { try{ return localStorage.getItem("openWithObs") === "1"; }catch(e){ return false; } })();
 ui.openObs = (() => { try{ return localStorage.getItem("openObs") === "1"; }catch(e){ return false; } })();
+// Desktop app: Windows' own startup list is the record; the prototype keeps it here
+ui.startAtLogin = (() => { try{ return localStorage.getItem("startAtLogin") === "1"; }catch(e){ return false; } })();
+if(window.bgh) window.bgh.getStartAtLogin().then(on => { ui.startAtLogin = !!on; if(!$("setOverlay").hidden) $("setStartAtLogin").checked = ui.startAtLogin; });
 ui.startTitle = (() => { try{ return localStorage.getItem("startTitle") === "1"; }catch(e){ return false; } })();
 ui.autoEnd = (() => { try{ return localStorage.getItem("autoEnd") === "1"; }catch(e){ return false; } })();
 ui.autoEndSec = (() => { try{ const v = parseInt(localStorage.getItem("autoEndSec"), 10); return [15,30,60,120].includes(v) ? v : 30; }catch(e){ return 30; } })();
 ui.closeWithObs = (() => { try{ return localStorage.getItem("closeWithObs") === "1"; }catch(e){ return false; } })();
+ui.closeObs = (() => { try{ return localStorage.getItem("closeObs") === "1"; }catch(e){ return false; } })();
 
 /* Which monitor the controller opens on.
    The chosen monitor is remembered by Windows' ID, its name and size, and its position next to the main screen,
@@ -4295,6 +4322,30 @@ async function applyWakeLock(){
 document.addEventListener("visibilitychange", applyWakeLock);
 applyWakeLock();
 
+/* Closing the controller window (Settings → Connection → "Close OBS when the controller closes").
+   The desktop app asks the page first; the answer is "both" (close OBS too), "controller" (only this window)
+   or "cancel" (stay open). While live or recording, closing OBS would end it, so the page asks. */
+async function askClose(answer){
+  if(!ui.closeObs){ answer("controller"); return; }
+  if(!ui.connected || !isLiveOrRec()){ answer("both"); return; }
+  answer("wait");   // a question is on screen: the app waits for the real answer
+  const what = ui.stream.active && ui.rec.active ? "livestream and the recording" : ui.stream.active ? "livestream" : "recording";
+  const v = await confirmDlg(`Still ${ui.stream.active ? "live" : "recording"}`,
+    `Closing OBS now ends the ${what}. "Close both" ends ${ui.stream.active && ui.rec.active ? "them" : "it"} and closes OBS. "Controller only" leaves OBS running.`,
+    "Close both", "danger", "Cancel", "Controller only");
+  if(v === false){ answer("cancel"); return; }
+  if(v === "alt"){ answer("controller"); return; }
+  // End it first, so OBS closes without its own "still streaming" question
+  try{
+    if(ui.stream.active) await obs.call("StopStream");
+    if(ui.rec.active) await obs.call("StopRecord");
+  }catch(e){}
+  for(let i = 0; i < 20 && isLiveOrRec(); i++) await sleep(250);
+  answer("both");
+}
+if(window.bgh && window.bgh.onClosing) window.bgh.onClosing(() => askClose(v => window.bgh.closeAnswer(v)));
+if(window.bgh && window.bgh.setCloseObs) window.bgh.setCloseObs(ui.closeObs);
+
 /* Connection to OBS: banner, greyed-out controls, automatic reconnect, then a full re-sync */
 ui.connected = true;
 let reconnecting = false;
@@ -4439,7 +4490,7 @@ async function openSettingsPanel(page = ui.setPage){
   try{ await renderCfgFields(); }catch(e){ $("setCfgState").textContent = "Connect to OBS to see this collection's sources and scenes."; }
   $("setMax").value = ui.speakers.max;
   $("setSilence").value = ui.silenceSec; $("setSilenceDb").value = ui.silenceDb; $("setMeasureMsg").textContent = ""; renderSilencePreview(); $("setAwake").checked = ui.keepAwake;
-  $("setOpenWithObs").checked = ui.openWithObs; $("setCloseWithObs").checked = ui.closeWithObs; $("setOpenObs").checked = ui.openObs;
+  $("setOpenWithObs").checked = ui.openWithObs; $("setCloseWithObs").checked = ui.closeWithObs; $("setCloseObs").checked = ui.closeObs; $("setOpenObs").checked = ui.openObs; $("setStartAtLogin").checked = ui.startAtLogin;
   $("setStartTitle").checked = ui.startTitle; $("setAutoEnd").checked = ui.autoEnd; $("setAutoEndSec").value = String(ui.autoEndSec); $("setAutoEndBox").hidden = !ui.autoEnd;
   $("setScreen").innerHTML = ""; screenDraft = null; renderScreens(); $("setScreenFollow").checked = ui.screen.follow; $("setScreenWindowed").checked = ui.screen.windowed;
   $("setLayout").value = ui.layout; $("setTheme").value = ui.theme; $("setTextSize").value = String(ui.textSize); renderTextSizeNote(); renderAutoBackups();
@@ -4502,6 +4553,55 @@ function renderTextSizeNote(){
 }
 $("setTextSize").addEventListener("change", renderTextSizeNote);
 window.addEventListener("resize", () => { if(!$("setOverlay").hidden) renderTextSizeNote(); });
+/* Safe mode: while it's on, nothing on the main screen can change the livestream (scenes, CUT, Studio Mode,
+   Mute, Go Live and Record, scene collections, speakers and schedule, hymns, verses and lower thirds).
+   A tap on any of them shows a notice instead. Settings, fullscreen and the safe mode button still work.
+   Automatic things you've turned on in Settings (automatic mute, ending after Ending) keep working. */
+ui.safe = (() => { try{ return localStorage.getItem("safeMode") === "1"; }catch(e){ return false; } })();
+function renderSafe(){
+  document.body.classList.toggle("safe", ui.safe);
+  const b = $("safeBtn");
+  b.setAttribute("aria-pressed", ui.safe);
+  b.querySelector(".safe-st").textContent = ui.safe ? "ON" : "OFF";
+  b.setAttribute("aria-label", ui.safe ? "Safe mode is on. Tap to turn it off" : "Safe mode is off. Tap to turn it on");
+  b.querySelector(".safe-ico").outerHTML = `<i data-lucide="${ui.safe ? "lock" : "lock-open"}" class="safe-ico"></i>`;
+  if(window.lucide) lucide.createIcons();
+  if(!ui.safe) $("safeBanner").hidden = true;
+}
+function setSafe(on){
+  ui.safe = !!on; try{ localStorage.setItem("safeMode", ui.safe ? "1" : "0"); }catch(e){}
+  renderSafe();
+  toast(ui.safe ? "Safe mode on: the livestream can't be changed until you turn it off" : "Safe mode off: you can make changes");
+}
+let safeBannerT;
+function safeNotice(){
+  $("safeBanner").hidden = false; if(window.lucide) lucide.createIcons();
+  clearTimeout(safeBannerT); safeBannerT = setTimeout(() => { $("safeBanner").hidden = true; }, 5000);
+  const b = $("safeBtn"); b.classList.remove("nudge"); void b.offsetWidth; b.classList.add("nudge");
+}
+$("safeBtn").addEventListener("click", () => setSafe(!ui.safe));
+$("safeOff").addEventListener("click", () => setSafe(false));
+// Every tap on the main screen's controls goes through here first
+const SAFE_GUARD = ".main button, .main [role=button], .main input, .main select, .rail button, .rail [role=button], .rail input, .rail select";
+const SAFE_ALLOW = "#audNote, #otNote, .safe-ok";   // these only open Settings
+function safeBlock(e){
+  if(!ui.safe) return;
+  const el = e.target.closest && e.target.closest(SAFE_GUARD);
+  if(!el || el.closest(SAFE_ALLOW)) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if(e.type === "click") safeNotice();
+}
+["click", "pointerdown", "keydown"].forEach(t => document.addEventListener(t, e => {
+  if(t === "keydown"){
+    // A presentation clicker or the arrow keys step hymns and verses: blocked too
+    if(!ui.safe || e.target.closest("input,textarea,select") || !/^(ArrowRight|ArrowLeft|PageDown|PageUp)$/.test(e.key)) return;
+    if(document.querySelector(".overlay:not([hidden])")) return;
+    e.preventDefault(); e.stopImmediatePropagation(); safeNotice(); return;
+  }
+  if(t === "pointerdown"){ if(ui.safe && e.target.closest && e.target.closest(SAFE_GUARD) && !e.target.closest(SAFE_ALLOW)) e.stopImmediatePropagation(); return; }
+  safeBlock(e);
+}, true));
+renderSafe();
 // Deep links: open Settings on the right page and point at the field
 async function settingsGoTo(page, focusId){
   await openSettingsPanel(page);
@@ -4711,6 +4811,9 @@ document.querySelectorAll("[data-sim]").forEach(b => b.addEventListener("click",
   if(k === "moveFolder"){ obs.folderMoved = true; loadDefaultSources(); toast("Simulated in OBS"); }
   if(k === "disconnect"){ closeSettings(); obs.disconnect(10000); return; }
   if(k === "closeObs"){ closeSettings(); obs.emit("ExitStarted",{}); obs.disconnect(10000); return; }
+  if(k === "closeApp"){ closeSettings(); askClose(v => v !== "cancel" && infoDlg("The controller would close now",
+    v === "both" ? "OBS would be closed too, the normal way (as if you'd closed its window), and then the controller closes." :
+    "OBS stays open; only the controller closes.")); return; }
   if(k === "lowDisk"){
     obs.diskMB = obs.diskMB > 10000 ? 1200 : obs.diskMB > 500 ? 200 : 182000;
     checkDiskWhileRec();
@@ -4797,7 +4900,7 @@ function backupData(){
     settings:{
       obs:{host:ui.obsAddr.host, port:ui.obsAddr.port},   // the password is left out on purpose
       speakers:ui.speakers, collCfg:ui.collCfg, audio:ui.src.audio, defaultVis:ui.defaultVis,
-      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, openObs:ui.openObs, startTitle:ui.startTitle, autoEnd:ui.autoEnd, autoEndSec:ui.autoEndSec,
+      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, closeObs:ui.closeObs, openObs:ui.openObs, startAtLogin:ui.startAtLogin, startTitle:ui.startTitle, autoEnd:ui.autoEnd, autoEndSec:ui.autoEndSec,
       screen:ui.screen, layout:ui.layout, theme:ui.theme, textSize:ui.textSize, useTable:ui.useTable,
       onscreen:ui.ot   // hymn books are exported on their own (Export text); API keys are never included
     }};
@@ -4872,8 +4975,10 @@ function restoreBackup(st){
   if(typeof st.startTitle === "boolean"){ ui.startTitle = st.startTitle; save("startTitle", ui.startTitle ? "1" : "0"); }
   if(typeof st.autoEnd === "boolean"){ ui.autoEnd = st.autoEnd; save("autoEnd", ui.autoEnd ? "1" : "0"); }
   if([15,30,60,120].includes(st.autoEndSec)){ ui.autoEndSec = st.autoEndSec; save("autoEndSec", String(ui.autoEndSec)); }
+  if(typeof st.startAtLogin === "boolean"){ ui.startAtLogin = st.startAtLogin; save("startAtLogin", ui.startAtLogin ? "1" : "0"); if(window.bgh) window.bgh.setStartAtLogin(ui.startAtLogin); }
   if(typeof st.openObs === "boolean"){ ui.openObs = st.openObs; save("openObs", ui.openObs ? "1" : "0"); if(window.bgh) window.bgh.setOpenObs(ui.openObs); }
   if(typeof st.closeWithObs === "boolean"){ ui.closeWithObs = st.closeWithObs; save("closeWithObs", ui.closeWithObs ? "1" : "0"); }
+  if(typeof st.closeObs === "boolean"){ ui.closeObs = st.closeObs; save("closeObs", ui.closeObs ? "1" : "0"); if(window.bgh && window.bgh.setCloseObs) window.bgh.setCloseObs(ui.closeObs); }
   if(st.screen){ ui.screen = st.screen; save("screen", ui.screen); }
   if(st.layout){ ui.layout = st.layout; save("layout", ui.layout); applyLayout(); }
   if(st.theme){ ui.theme = st.theme; save("appTheme", ui.theme); applyTheme(); }
@@ -5022,6 +5127,13 @@ $("setForm").addEventListener("submit", e => {
   if(window.bgh) window.bgh.setOpenWithObs(ui.openWithObs);
   ui.openObs = $("setOpenObs").checked; try{ localStorage.setItem("openObs", ui.openObs ? "1" : "0"); }catch(err){}
   if(window.bgh) window.bgh.setOpenObs(ui.openObs);
+  // Desktop app: kept in launch.json too, so the app knows it when its window is closed
+  ui.closeObs = $("setCloseObs").checked; try{ localStorage.setItem("closeObs", ui.closeObs ? "1" : "0"); }catch(err){}
+  if(window.bgh && window.bgh.setCloseObs) window.bgh.setCloseObs(ui.closeObs);
+  if(ui.startAtLogin !== $("setStartAtLogin").checked){
+    ui.startAtLogin = $("setStartAtLogin").checked; try{ localStorage.setItem("startAtLogin", ui.startAtLogin ? "1" : "0"); }catch(err){}
+    if(window.bgh) window.bgh.setStartAtLogin(ui.startAtLogin);
+  }
   ui.startTitle = $("setStartTitle").checked; ui.autoEnd = $("setAutoEnd").checked; ui.autoEndSec = parseInt($("setAutoEndSec").value, 10) || 30;
   try{ localStorage.setItem("startTitle", ui.startTitle ? "1" : "0"); localStorage.setItem("autoEnd", ui.autoEnd ? "1" : "0"); localStorage.setItem("autoEndSec", String(ui.autoEndSec)); }catch(err){}
   if(!ui.autoEnd) cancelAutoEnd();
@@ -5223,17 +5335,20 @@ async function setDefaultSources({text, file}){
 // Dialog + toast
 function infoDlg(title, body){
   $("dlgTitle").textContent = title; $("dlgBody").textContent = body;
-  $("dlgOk").textContent = "OK"; $("dlgOk").className = "btn primary"; $("dlgCancel").hidden = true;
+  $("dlgOk").textContent = "OK"; $("dlgOk").className = "btn primary"; $("dlgCancel").hidden = true; $("dlgAlt").hidden = true;
   $("overlay").hidden = false; $("dlgOk").focus();
   $("dlgOk").onclick = () => { $("overlay").hidden = true; $("dlgCancel").hidden = false; $("dlgOk").onclick = null; };
 }
-function confirmDlg(title, body, ok, style = "danger", cancel = "Keep going"){
+// alt: an optional middle choice; picking it answers "alt"
+function confirmDlg(title, body, ok, style = "danger", cancel = "Keep going", alt = ""){
   $("dlgOk").className = "btn " + style; $("dlgCancel").hidden = false; $("dlgCancel").textContent = cancel;
+  $("dlgAlt").hidden = !alt; $("dlgAlt").textContent = alt;
   $("dlgTitle").textContent = title; $("dlgBody").textContent = body; $("dlgOk").textContent = ok;
   $("overlay").hidden = false; $("dlgCancel").focus();
   return new Promise(res => {
-    const close = v => { $("overlay").hidden = true; $("dlgOk").onclick = $("dlgCancel").onclick = null; res(v); };
+    const close = v => { $("overlay").hidden = true; $("dlgAlt").hidden = true; $("dlgOk").onclick = $("dlgCancel").onclick = $("dlgAlt").onclick = null; res(v); };
     $("dlgOk").onclick = () => close(true);
+    $("dlgAlt").onclick = () => close("alt");
     $("dlgCancel").onclick = () => close(false);
   });
 }
@@ -5268,7 +5383,17 @@ function autoMute(prev, next){
     .catch(() => toast(`Couldn't ${mute ? "mute" : "unmute"} the mic automatically. Use the Mute button.`));
 }
 obs.on("CurrentPreviewSceneChanged", d => { ui.preview = d.sceneName; renderScenes(); });
-obs.on("StudioModeStateChanged", d => { ui.studio = d.studioModeEnabled; if(!ui.studio) ui.preview = null; renderStudio(); });
+obs.on("StudioModeStateChanged", d => { ui.studio = d.studioModeEnabled; if(!ui.studio) ui.preview = null; renderStudio(); if(ui.studio) previewOtherCamera(); });
+/* Studio Mode turned on (here or in OBS) while Camera 1 is in Program: Camera 2 goes to Preview, and the
+   other way round, so CUT switches cameras straight away. Any other Program scene leaves Preview as OBS sets it. */
+const camScene = n => BUTTONS.flatMap(b => b.group).find(x => new RegExp(`^cam(era)?\\s*${n}$`, "i").test(x.trim()));
+function previewOtherCamera(){
+  const c1 = camScene(1), c2 = camScene(2);
+  const other = ui.program && ui.program === c1 ? c2 : ui.program && ui.program === c2 ? c1 : null;
+  if(!other) return;
+  // OBS first sets Preview to the Program scene; this follows right after
+  setTimeout(() => { if(ui.studio && ui.preview !== other) obs.call("SetCurrentPreviewScene", {sceneName:other}).catch(() => {}); }, 150);
+}
 obs.on("CurrentSceneTransitionChanged", d => { ui.transition = d.transitionName; renderScenes(); });
 // #proto-start  stands in for the user acting on OBS's dialog on the other monitor
 obs.on("_ProtoShowOBS", () => toast("OBS brought to the front on your main monitor"));
