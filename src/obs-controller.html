@@ -3264,7 +3264,21 @@ obs.on("InputVolumeMeters", d => {
   if(!$("setOverlay").hidden) renderSilencePreview();
 });
 obs.on("RecordStateChanged", d => { ui.rec = {active:d.outputActive,t0:d.t0}; renderOutputs(); lockIfWentLive(); diskSamples = []; if(d.outputActive) setTimeout(checkDiskWhileRec, 5000); else $("diskNote").hidden = true; });
-obs.on("StreamStateChanged", d => { ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive(); });
+obs.on("StreamStateChanged", d => {
+  const startedHere = d.outputActive && !!ui.streamPending;   // Go Live from the controller (either way)
+  ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive();
+  if(startedHere) comeBackAfterGoingLive();
+});
+/* Going live brings OBS to the front for its YouTube dialog. With one monitor that covers the controller,
+   so once the stream has started, the controller comes back in front. With the controller on its own
+   monitor, nothing is covered and nothing moves. */
+function comeBackAfterGoingLive(){
+  if(!window.bgh) return;
+  const p = screenPlacement();
+  const sharesScreenWithObs = protoDisplays.length < 2 || !p.display || p.display.primary;
+  if(!sharesScreenWithObs) return;
+  setTimeout(() => { window.bgh.bringToFront(); toast("You're live. Back to the controller."); }, 1500);   // after OBS closes its dialog
+}
 // Fix 1: scenes added, removed, renamed or reordered in OBS update the buttons straight away
 async function refreshScenes(){
   try{
