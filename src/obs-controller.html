@@ -68,7 +68,7 @@ body{font-feature-settings:"cv11" 1}
   .monitors.studio{--mw:min(calc((100cqw - 14px) / 2), calc((100cqh - 114px) * 16 / 9))}
   .monitors.studio .mon{width:var(--mw)}
   .monitors.studio .cut-wrap{width:calc(var(--mw) * 2 + 14px);justify-self:center}
-  .rail{min-height:0;overflow-y:auto}
+  .rail{min-height:0;overflow-y:auto;scrollbar-gutter:stable}
   .rail .panel{padding:14px;gap:12px}
   .sc,.sq{min-height:84px}
   textarea{min-height:64px}
@@ -447,7 +447,21 @@ textarea:disabled,select:disabled{opacity:.5}
 .spk-foot svg{width:20px;height:20px}
 .spk-list{display:flex;flex-direction:column;gap:8px}
 .spk-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
-.spk-row .btn{min-height:46px;font-size:14px;flex:none}
+.spk-row .btn{min-height:46px;font-size:14px;flex:none;align-self:stretch;height:auto}
+.clr-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.clr-row input{flex:1 1 140px;max-width:200px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.04em}
+.clr-row .btn{flex:none;min-height:46px;font-size:14px}
+.clr-swatch{width:48px;height:48px;border-radius:8px;flex:none;border:1px solid var(--line-2);background-image:linear-gradient(45deg,#9aa7b4 25%,transparent 25%,transparent 75%,#9aa7b4 75%),linear-gradient(45deg,#9aa7b4 25%,#c8d0d8 25%,#c8d0d8 75%,#9aa7b4 75%);background-size:12px 12px;background-position:0 0,6px 6px;position:relative;overflow:hidden}
+.clr-swatch::after{content:"";position:absolute;inset:0;background:var(--sw,rgba(19,41,50,.76))}
+.clr-recent{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.clr-recent .btn{min-height:40px;font-size:13px;padding:0 10px;display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono)}
+.clr-recent .btn i{width:18px;height:18px;border-radius:4px;border:1px solid var(--line-2);flex:none}
+#setLtColorMsg.err{color:var(--warn);font-weight:600}
+.spk-names{display:flex;flex-direction:column;gap:6px;min-width:0}
+.spk-row input.spk-sub,.set-body .spk-row input.spk-sub{min-height:32px;height:34px;padding:5px 12px;font-size:13px;color:var(--muted)}
+.spk-names:has(.spk-sub){gap:4px}
+.lt-chip .lt-txt{display:flex;flex-direction:column;min-width:0}
+.lt-chip small{font-size:12px;font-weight:500;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spk-rm.arm{background:var(--pgm);border-color:var(--pgm);color:#fff}
 .health{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--muted)}
 .hdot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
@@ -523,6 +537,238 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
 .sil-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--warn)}
 .inline-row{display:flex;align-items:center;gap:10px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:600;max-width:calc(100% - 32px);z-index:11}
+
+/* On screen: hymns, Bible verses and lower thirds */
+.ot-panel .panel-head .chip{max-width:62%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.live{background:var(--pgm);border-color:var(--pgm);color:#fff}
+.ot-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ot-btn{min-height:58px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--panel-2);display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--f-display);font-weight:600;font-size:18px}
+.ot-btn:active{background:var(--line)}
+.ot-now.verse .ot-ctrl,.ot-now.verse .ot-up{display:none}
+.ot-now.verse .ot-now-txt{cursor:pointer}
+.ot-bbopen{min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:16px}
+.ot-bbopen svg{width:20px;height:20px}
+.rail.ot-busy .aud-panel,.rail.ot-busy .qc-btn{display:none}
+.ot-btn:disabled{opacity:.35;cursor:not-allowed;background:var(--panel-2)}
+.ot-btn svg{width:24px;height:24px;stroke-width:1.75}
+.ot-now{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line-2);border-radius:var(--r);background:var(--bg);padding:10px 12px}
+.ot-now.on{border-color:var(--pgm);box-shadow:inset 0 0 0 1px var(--pgm)}
+.ot-now-top{display:flex;align-items:flex-start;gap:10px}
+.ot-tag{flex:none;font-family:var(--f-display);font-weight:700;font-size:10px;letter-spacing:.06em;padding:3px 6px;border-radius:4px;background:var(--panel-2);color:var(--muted);margin-top:2px}
+.ot-now.on .ot-tag{background:var(--pgm);color:#fff}
+.ot-now-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;background:none;border:none;padding:0;text-align:left}
+.ot-now-t{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-now-s{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-ctrl{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:8px}
+.ot-ctrl .btn{min-height:56px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 10px;flex:none}
+.ot-ctrl .btn svg{width:24px;height:24px}
+.ot-verses{display:grid;gap:6px}
+.ot-verses:empty{display:none}
+.ot-vchip{min-height:44px;min-width:56px;padding:0 12px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2);font-size:14px;font-weight:600;min-width:0;padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ot-vchip.wide{grid-column:span 2}
+.ot-vchip[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.ot-lyrics{max-height:230px;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:6px;padding:4px;border-radius:8px;border:1px solid var(--line);background:var(--panel);scroll-behavior:smooth}
+.ot-lyr-v{display:flex;flex-direction:column;gap:1px;padding:6px 8px;border-radius:6px;border:none;background:none;text-align:left;width:100%;box-sizing:border-box}
+.ot-lyr-p{display:flex;flex-direction:column;gap:1px;padding:3px 0;border:none;background:none;text-align:left;width:100%;border-radius:6px;cursor:pointer}
+.ot-lyr-p:active{background:var(--panel-2)}
+.ot-lyr-p.on:active{background:none}
+.ot-lyr-v b{font-family:var(--f-display);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.ot-lyr-v.cur b{color:var(--accent)}
+.ot-lyr-l{font-size:13px;line-height:1.4;color:var(--muted);padding:1px 6px;border-radius:4px}
+.ot-lyr-l.on{background:var(--accent-soft);color:var(--fg);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}
+body.compact .ot-lyrics{max-height:150px}
+.ot-now.hymn #otShow{display:none}
+.ot-now.hymn .ot-ctrl{grid-template-columns:1fr 2fr}
+.ot-next-lbl{font-size:16px;font-weight:600}
+.ot-up{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;border:1px dashed var(--line-2);background:var(--panel);text-align:left;min-width:0;width:100%;box-sizing:border-box}
+.ot-up:disabled{cursor:default}
+.ot-up-h{display:flex;align-items:baseline;gap:8px;min-width:0}
+.ot-up-h .label{color:var(--accent);flex:none}
+.ot-up-h span:last-child{font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-up-t{font-size:14px;line-height:1.35;color:var(--fg);white-space:pre-line;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.ot-up.last .ot-up-t{color:var(--muted)}
+body.compact .ot-up-t{-webkit-line-clamp:2;font-size:13px}
+.ot-done{min-height:52px;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.ot-done svg{width:22px;height:22px;color:var(--pvw)}
+body.compact .ot-vchip{min-height:38px}
+body.compact .ot-done{min-height:44px}
+.btn.live{background:var(--panel-2);border-color:var(--pgm);color:var(--fg);box-shadow:inset 0 0 0 1px var(--pgm)}
+.lt-wrap{display:flex;flex-direction:column;gap:8px}
+.lt-row{display:flex;flex-wrap:wrap;gap:8px}
+.lt-chip{flex:1 1 140px;min-height:50px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-size:15px;font-weight:600;text-align:left;min-width:0}
+.lt-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lt-chip svg{width:20px;height:20px;flex:none;color:var(--muted)}
+/* While a speaker's lower third is up, the red fill is a countdown: it starts full and shrinks from the right
+   to the left until the lower third hides itself. --lt-dur is how long it stays up; --lt-in how far along it is. */
+.lt-chip{position:relative;isolation:isolate;overflow:hidden}
+.lt-chip::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--pgm);transform-origin:left center;transform:scaleX(0)}
+.lt-chip[aria-pressed="true"]{border-color:var(--pgm);color:#fff}
+.lt-chip[aria-pressed="true"]::before{transform:scaleX(1)}
+.lt-chip.counting::before{animation:ltCount var(--lt-dur,8s) linear forwards;animation-delay:calc(-1 * var(--lt-in,0s))}
+@keyframes ltCount{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.lt-chip.counting::before{animation-timing-function:steps(8,end)}}
+.lt-chip[aria-pressed="true"] svg{color:#fff}
+.lt-chip:disabled{opacity:.45}
+body.compact .ot-btn{min-height:46px;font-size:16px}
+body.compact .ot-ctrl .btn{min-height:46px}
+body.compact .lt-chip{min-height:42px}
+/* Hymn and Bible screens */
+.sheet.ot{width:min(1040px,100%)}
+.book-chips{display:flex;flex-wrap:wrap;gap:8px}
+.book-chip{min-height:56px;display:inline-flex;align-items:center;gap:10px;padding:0 16px 0 8px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-size:16px;font-weight:600}
+.book-chip img,.book-chip .no-logo{width:40px;height:40px;object-fit:contain;border-radius:6px;flex:none}
+.no-logo{display:grid;place-items:center;background:var(--line);color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.book-chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.hy-grid{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.hy-grid{grid-template-columns:minmax(0,1fr)}}
+.hy-pad{display:flex;flex-direction:column;gap:10px}
+.hy-num{min-height:76px;border:1px solid var(--line-2);border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:700;font-size:46px;letter-spacing:.05em}
+.hy-num.empty{font-size:17px;font-weight:500;letter-spacing:0;color:var(--dim)}
+.keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.keypad button{min-height:66px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-size:26px;font-weight:600;display:grid;place-items:center}
+.keypad button:active{background:var(--line)}
+.keypad button svg{width:26px;height:26px}
+.keypad button.kp-sm{font-size:15px;color:var(--muted)}
+.hy-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.hy-res{display:flex;flex-direction:column;gap:10px;min-width:0}
+.hy-title{display:flex;align-items:baseline;gap:12px;min-width:0}
+.hy-title-n{font-family:var(--f-display);font-weight:700;font-size:30px;color:var(--accent)}
+.hy-title-t{font-size:24px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.verse-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:330px;overflow-y:auto;overscroll-behavior:contain}
+.verse-btn{min-height:64px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:8px 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left;min-width:0}
+.verse-btn b{font-size:16px}
+.verse-btn small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.verse-btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.hy-hit{min-height:54px;display:flex;align-items:center;gap:14px;padding:0 14px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left;font-size:16px}
+.hy-hit-n{font-weight:700;color:var(--accent);min-width:40px}
+.hy-hit-t{font-weight:600}
+.tr-chips{display:flex;flex-wrap:wrap;gap:8px}
+.tr-chip{min-height:50px;min-width:76px;padding:0 16px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:700;font-size:16px;letter-spacing:.02em}
+.tr-chip.off{color:var(--dim);border-style:dashed}
+.tr-chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent);color:var(--fg)}
+.bb-chosen{min-height:34px;display:flex;align-items:center;font-size:24px;font-weight:700;color:var(--fg)}
+.bb-chosen.empty{color:var(--dim);font-size:16px;font-weight:500}
+.bb-crumbs{display:flex;align-items:center;flex-wrap:wrap;gap:2px;color:var(--dim);min-height:32px}
+.bb-step{display:flex;flex-direction:column;gap:8px}
+.bk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:6px}
+.bk-grid button,.num-grid button{min-height:48px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2);font-size:14px;font-weight:600;padding:0 6px}
+.num-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;max-height:300px;overflow-y:auto;overscroll-behavior:contain}
+.num-grid button{min-height:52px;font-size:17px}
+.num-grid button.in-range{background:var(--accent-soft);border-color:var(--accent)}
+.num-grid button.edge{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.bb-scroll{max-height:42vh;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+/* Hymn and Bible screens: laid out sideways over the scene buttons, which keep their size, so nothing else moves */
+.scene-slot{position:relative;display:flex;flex-direction:column;min-width:0}
+.scene-slot:has(.overlay.dock:not([hidden])) #scenesPanel{visibility:hidden}
+.overlay.dock{position:absolute;inset:0;background:none;padding:0;display:block;z-index:5}
+.overlay.dock .sheet.ot{width:100%;height:100%;max-height:none;overflow:hidden;padding:10px 12px;border-radius:14px;border-color:var(--accent);box-sizing:border-box}
+.dk{height:100%;display:grid;grid-template-columns:auto minmax(0,1fr) 168px;gap:12px;min-height:0}
+.dk-col{display:flex;flex-direction:column;gap:6px;min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain}
+.dk-head{display:flex;align-items:center;gap:10px;min-width:0}
+.dk-head h2{margin:0;font-size:18px;flex:none}
+.dock-note{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dk-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13px;font-weight:600;color:var(--muted)}
+.dk-act{display:flex;flex-direction:column;gap:6px;min-height:0}
+.dk-act .hy-enter{flex:2 1 0;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-size:20px}
+.dk-act .hy-enter svg{width:26px;height:26px}
+.dk-act .btn{flex:1 1 0;min-height:36px;max-height:64px;min-width:0;padding:0 10px;font-size:15px}
+.dk .hy-num{flex:1;min-height:38px;min-width:0;font-size:26px;padding:0 10px;border-radius:8px}
+.dk .hy-num.empty{font-size:14px}
+.dk .keypad{grid-template-columns:repeat(6,56px);gap:6px}
+.dk .keypad button{min-height:40px;font-size:19px;border-radius:8px}
+/* Hymn keypad: the keys grow to fill the screen's height, no empty space under them */
+.dk-pad{overflow:hidden}
+/* Hymn Enter and Cancel fill the height too; Enter gets about two thirds of it */
+#hyOverlay .dk-act .btn{max-height:none}
+#hyOverlay .dk-act .hy-enter{flex:2 1 0;font-size:24px}
+#hyOverlay .dk-act .hy-enter svg{width:30px;height:30px}
+#hyOverlay .dk-act #hyCancel{flex:1 1 0;font-size:17px}
+.dk-pad .keypad{flex:1 1 auto;grid-template-rows:repeat(2,minmax(40px,1fr));min-height:0}
+.dk-pad .keypad button{min-height:0;font-size:24px}
+.dk-pad .keypad button svg{width:24px;height:24px}
+.dk .keypad button svg{width:20px;height:20px}
+.dk .keypad button.kp-sm{font-size:13px}
+.dk .hy-res{gap:6px}
+.dk .hy-title-n{font-size:22px}
+.dk .hy-title-t{font-size:18px}
+.dk .verse-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;max-height:none;overflow:visible}
+.dk .verse-btn{min-height:40px;padding:4px 10px}
+.dk .verse-btn b{font-size:14px}
+.dk .verse-btn small{font-size:11px}
+.dk .bc-msg{padding:4px 0;font-size:14px}
+.dk .book-chip{min-height:38px;font-size:14px;padding:0 12px 0 6px}
+.dk .book-chip img,.dk .book-chip .no-logo{width:28px;height:28px}
+.dk .hy-hit{min-height:40px}
+.dk-left{width:250px}
+.dk .tr-chips{gap:5px}
+.dk .tr-chip{min-height:36px;min-width:0;padding:0 10px;font-size:13px}
+.dk .bb-chosen{min-height:24px;font-size:18px}
+.dk .bb-scroll{max-height:none}
+.dk .bb-crumbs{min-height:26px}
+/* Bible reading: verse numbers fill the middle; the one on the stream is solid, ones already read are ticked */
+.vn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px;align-content:start}
+.vn-grid button{min-height:46px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2);font-size:17px;font-weight:600;position:relative}
+.vn-grid button:active{background:var(--line)}
+.vn-grid button.seen{color:var(--muted);background:var(--bg)}
+.vn-grid button.seen::after{content:"";position:absolute;top:5px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--muted)}
+.vn-grid button.cur{background:var(--accent-soft);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--fg)}
+.vn-grid button.cur.live{background:var(--live,#e5484d);border-color:var(--live,#e5484d);box-shadow:none;color:#fff}
+.vn-grid button.cur::after{display:none}
+.bb-dk{grid-template-columns:96px minmax(0,1fr) 190px}
+/* The books, chapters and verse numbers stretch to fill the height (scrolling only when there are too many) */
+#bbMid > .bb-step:not([hidden]){flex:1 0 auto;display:flex;flex-direction:column;gap:6px}
+#bbMid .bb-step > .tm-grid,#bbMid .bb-step > .bk-grid,#bbMid .bb-step > .num-grid{flex:1 0 auto;height:auto;max-height:none;overflow:visible;grid-auto-rows:minmax(38px,1fr);align-content:stretch}
+#bbMid .bb-step > .tm-grid button,#bbMid .bb-step > .bk-grid button,#bbMid .bb-step > .num-grid button{min-height:0;height:100%}
+#bbMid .bb-step > .num-grid button{font-size:18px}
+#bbMid > .vn-grid:not([hidden]){flex:1 0 auto;grid-auto-rows:minmax(44px,1fr);align-content:stretch}
+#bbMid > .vn-grid button{min-height:0;height:100%;font-size:19px}
+.bb-trs{display:flex;flex-direction:column;gap:5px;min-height:0}
+.bb-trs .tr-chip{flex:1 1 0;min-height:24px;max-height:46px;min-width:0;padding:0 6px;font-size:13px;border-radius:8px}
+.bb-top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:26px;position:sticky;top:0;background:var(--panel);z-index:1}
+.bb-top .bb-crumbs b{font-size:18px;color:var(--fg)}
+.bb-now{display:flex;gap:8px;align-items:baseline;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:6px 10px;font-size:14px;line-height:1.35;flex:none}
+.bb-now b{flex:none;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.bb-now.live b{color:var(--live,#e5484d)}
+.bb-now span{min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--fg)}
+.bb-ract .bb-pn{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:6px;flex:1.3 1 0;min-height:0}
+.bb-ract .btn{flex:1 1 0;max-height:none}
+.bb-ract .bb-pn .btn{max-height:none;height:100%;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:17px}
+.bb-ract .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.bb-ract .btn svg{width:20px;height:20px}
+@media (max-width:760px){.bb-dk{grid-template-columns:minmax(0,1fr)}.bb-trs{flex-direction:row;flex-wrap:wrap}}
+.bb-ract .ot-done svg{color:var(--ok,#3fb950)}
+.tm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;height:100%}
+.tm-grid button{min-height:72px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px}
+.tm-grid button:active{background:var(--line)}
+.tm-grid b{font-family:var(--f-display);font-size:22px;font-weight:700}
+.tm-grid small{font-size:13px;color:var(--muted)}
+.dk .bk-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:5px}
+.dk .bk-grid button,.dk .num-grid button{min-height:38px;font-size:13px}
+.dk .num-grid{grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px;max-height:none;overflow:visible}
+.dk .num-grid button{font-size:15px}
+/* Narrow screens: the scene area is short, so the screens stack and scroll inside it */
+@media (max-width:760px){.dk{grid-template-columns:minmax(0,1fr)}.dk-left{width:auto}.overlay.dock .sheet.ot{overflow-y:auto}.dk-act{flex-direction:row}}
+/* Settings → On-screen text */
+.hb-list{display:flex;flex-direction:column;gap:8px}
+.hb-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.hb-row > div{flex:1;min-width:160px;display:flex;flex-direction:column;gap:2px;font-size:15px}
+.hb-row small{color:var(--muted);font-size:13px}
+.hb-row .btn{flex:none;min-height:46px;font-size:14px}
+.hb-logo{width:48px;height:48px;border-radius:8px;object-fit:contain;flex:none;background:var(--panel-2)}
+.hb-overlay{z-index:36}
+.hb-dialog{max-width:620px;max-height:calc(100% - 32px);overflow-y:auto;box-sizing:border-box}
+.hb-dialog input{background:var(--bg);border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;font-size:16px;width:100%;box-sizing:border-box;color:var(--fg);min-height:48px}
+.hb-sum{margin:0;font-size:15px;color:var(--fg)}
+.hb-logo-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hb-logo-row .btn{min-height:46px;font-size:14px;flex:none}
+.hb-logo-row .hb-logo{width:64px;height:64px}
+.hb-warns{border-left:3px solid var(--warn);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:6px}
+.hb-warns ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.4;color:var(--fg);max-height:180px;overflow-y:auto}
+.tr-list{display:flex;flex-direction:column;gap:6px}
+.tr-st{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+.tr-st b{color:var(--fg);min-width:84px}
+.tr-st svg{width:18px;height:18px;flex:none;color:var(--dim)}
+.tr-st.ok svg{color:var(--pvw)}
 </style>
 
 <div class="app">
@@ -562,6 +808,7 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
       </div>
     </section>
 
+    <div class="scene-slot">
     <section class="panel" id="scenesPanel">
       <div class="panel-head">
         <span class="label">Scenes</span>
@@ -569,6 +816,60 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
       </div>
       <div class="scenes" id="scenes"></div>
     </section>
+    <!-- Hymn and Bible screens open here, in place of the scene buttons, so Program stays in view -->
+<div class="overlay dock" id="hyOverlay" hidden>
+  <div class="sheet ot" role="region" aria-labelledby="hyH">
+    <div class="dk">
+      <div class="dk-col dk-pad">
+        <div class="dk-head"><h2 id="hyH">Hymn</h2><div class="hy-num empty" id="hyNum" aria-live="polite">Number</div></div>
+        <div class="keypad" id="hyPad">
+          <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+          <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+          <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+          <button type="button" data-k="0">0</button>
+          <button type="button" data-k="back" aria-label="Delete"><i data-lucide="delete"></i></button>
+          <button type="button" data-k="clear" class="kp-sm">Clear</button>
+        </div>
+      </div>
+      <div class="dk-col dk-mid">
+        <div class="dk-top"><span id="hyBookTag"></span><span class="dock-note">Shows on the camera scenes</span></div>
+        <p class="sp-note link-note" id="hyNote" hidden></p>
+        <div id="hyBooksField"><div class="book-chips" id="hyBooks"></div></div>
+        <div class="hy-res" id="hyRes" aria-live="polite"></div>
+      </div>
+      <div class="dk-act"><button class="btn danger hy-enter" id="hyEnter" aria-label="Enter: put the hymn number on the stream"><i data-lucide="corner-down-left"></i><span>Enter</span></button><button class="btn" id="hyCancel">Cancel</button></div>
+    </div>
+  </div>
+</div>
+<div class="overlay dock" id="bbOverlay" hidden>
+  <div class="sheet ot" role="region" aria-label="Bible">
+    <!-- Translations down the left, the books / chapters / verse numbers in the wide middle, buttons on the right -->
+    <div class="dk bb-dk">
+      <div class="bb-trs" id="bbTr" role="group" aria-label="Translation"></div>
+      <div class="dk-col dk-mid bb-scroll" id="bbMid">
+        <div class="bb-top">
+          <div class="bb-crumbs" id="bbCrumbs"></div>
+          <button type="button" class="link-btn" id="bbChange" hidden>Change passage</button>
+        </div>
+        <span class="path" id="bbTrNote"></span>
+        <div class="bb-now" id="bbNow" aria-live="polite" hidden><b id="bbNowH"></b><span id="bbNowT"></span></div>
+        <div class="bb-step" id="bbStep"></div>
+        <div class="vn-grid" id="bbVerses" role="group" aria-label="Verses" hidden></div>
+        <p class="bc-msg err" id="bbErr" hidden></p>
+      </div>
+      <div class="dk-act bb-ract">
+        <div class="bb-pn">
+          <button class="btn" id="bbPrev" aria-label="Previous verse"><i data-lucide="chevron-left"></i></button>
+          <button class="btn" id="bbNext" aria-label="Next verse"><span>Next</span><i data-lucide="chevron-right"></i></button>
+        </div>
+        <button class="btn" id="bbHide"></button>
+        <button class="btn ot-done" id="bbDone"><i data-lucide="check"></i><span>Done</span></button>
+        <button class="btn" id="bbCancel"></button>
+      </div>
+    </div>
+  </div>
+</div>
+    </div>
   </main>
 
   <aside class="rail">
@@ -595,6 +896,34 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
           <span class="nm">Scene Collection</span><span class="st" id="sqCollSt">—</span>
         </button>
       </div></div>
+    </section>
+    <section class="panel ot-panel" id="otPanel">
+      <div class="panel-head"><span class="label">On screen</span><span class="chip" id="otChip">Nothing showing</span></div>
+      <p class="sp-note link-note" id="otNote" role="button" tabindex="0" hidden></p>
+      <div class="ot-row" id="otRow">
+        <button class="ot-btn" id="otHymnBtn"><i data-lucide="music"></i>Hymn</button>
+        <button class="ot-btn" id="otBibleBtn"><i data-lucide="book-open"></i>Bible</button>
+      </div>
+      <div class="ot-now" id="otNow" hidden>
+        <div class="ot-now-top">
+          <span class="ot-tag" id="otTag">READY</span>
+          <button type="button" class="ot-now-txt" id="otNowT" aria-label="Change"><span class="ot-now-t" id="otNowTitle"></span><span class="ot-now-s" id="otNowS"></span></button>
+        </div>
+        <div class="ot-verses" id="otVerses" role="group" aria-label="Go to a verse"></div>
+        <div class="ot-lyrics" id="otLyrics" hidden></div>
+        <button type="button" class="ot-up" id="otUp" aria-live="polite"><span class="ot-up-h"><span class="label">Next</span><span id="otUpH"></span></span><span class="ot-up-t" id="otUpT"></span></button>
+        <div class="ot-ctrl">
+          <button class="btn" id="otPrev" aria-label="Back"><i data-lucide="chevron-left"></i></button>
+          <button class="btn danger" id="otShow"></button>
+          <button class="btn" id="otNext" aria-label="Next"><i data-lucide="chevron-right"></i></button>
+        </div>
+        <button class="btn ot-bbopen" id="otBbOpen" hidden><i data-lucide="layout-grid"></i><span>Verse buttons</span></button>
+        <button class="btn ot-done" id="otDone"><i data-lucide="check"></i><span>Done</span></button>
+      </div>
+      <div class="lt-wrap" id="ltWrap" hidden>
+        <span class="label">Lower thirds</span>
+        <div class="lt-row" id="ltRow"></div>
+      </div>
     </section>
     <section class="panel aud-panel">
       <div class="panel-head"><span class="label">Audio</span><span class="chip" id="audChip">PYLE USB Mixer</span></div>
@@ -656,6 +985,7 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
         <button type="button" role="tab" id="tab-connection" data-page="connection" aria-controls="page-connection"><i data-lucide="plug"></i><span>Connection</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-collections" data-page="collections" aria-controls="page-collections"><i data-lucide="layers"></i><span>Scene collections</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-speakers" data-page="speakers" aria-controls="page-speakers"><i data-lucide="users"></i><span>Speakers</span><b class="tdot" aria-hidden="true"></b></button>
+        <button type="button" role="tab" id="tab-ontext" data-page="ontext" aria-controls="page-ontext"><i data-lucide="captions"></i><span>On-screen text</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-golive" data-page="golive" aria-controls="page-golive"><i data-lucide="radio"></i><span>Going live</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-alerts" data-page="alerts" aria-controls="page-alerts"><i data-lucide="bell"></i><span>Alerts</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-screen" data-page="screen" aria-controls="page-screen"><i data-lucide="monitor"></i><span>Screen</span><b class="tdot" aria-hidden="true"></b></button>
@@ -727,6 +1057,29 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
               <span class="path" id="setFolderHint">Each image in the folder becomes a choice in Go Live and on the change button.</span></div>
           </div>
           <div class="set-section">
+            <h4>Lower third</h4>
+            <label class="check" for="setLtOnColl"><input type="checkbox" id="setLtOnColl" data-cfg>
+              <span>Lower thirds for this collection<small>The On screen section appears, with Hymn, Bible and a button for each speaker, and Go Live asks for the speakers. When this is off, the whole On screen section is hidden and no lower third can appear in the livestream or a recording, even from OBS.</small></span>
+            </label>
+            <div class="field" id="setLtThemeField"><label class="label" for="setLtTheme">Theme</label>
+              <select id="setLtTheme" data-cfg>
+                <option value="barrington">Barrington: the name over a large B</option>
+                <option value="conference">Conference: the name with a subtitle under it</option>
+              </select>
+              <span class="path">Conference shows a visiting speaker's subtitle, such as where they're from. Set subtitles for visiting speakers in Settings → Speakers.</span></div>
+            <label class="check" for="setLtSubB" id="setLtSubBField"><input type="checkbox" id="setLtSubB" data-cfg>
+              <span>Show visiting speakers' subtitles<small>Under the name in the Barrington lower third, for example the assembly they're from. Home speakers never show a subtitle.</small></span>
+            </label>
+            <div class="field" id="setLtColorField" hidden><label class="label" for="setLtColor">Conference colour</label>
+              <div class="clr-row">
+                <span class="clr-swatch" id="setLtSwatch" aria-hidden="true"></span>
+                <input id="setLtColor" data-cfg maxlength="7" placeholder="#132932" autocomplete="off" spellcheck="false" aria-describedby="setLtColorMsg">
+                <button type="button" class="btn" id="setLtColorReset">Reset colour</button>
+              </div>
+              <div class="clr-recent" id="setLtRecent"></div>
+              <span class="path" id="setLtColorMsg">A hex code, like #132932. It's shown at the same see-through level as the Barrington lower third.</span></div>
+          </div>
+          <div class="set-section">
             <h4>Audio</h4>
             <div class="field"><label class="label" for="setAudio">Audio input</label>
               <select id="setAudio" data-cfg></select>
@@ -772,7 +1125,50 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
             <div class="spk-list" id="setVisit"></div>
             <div class="spk-row"><input id="setVisitNew" data-spk placeholder="Add a visiting speaker" aria-labelledby="setVisitHdr" autocomplete="off" enterkeyhint="done"><button type="button" class="btn" id="setVisitAdd">Add</button></div>
             <span class="spk-err" id="setVisitErr" hidden></span>
-            <span class="path">Visiting speakers can also be added during Go Live with the + button.</span>
+            <span class="path">Visiting speakers can also be added during Go Live with the + button. A visiting speaker's subtitle shows under their name in the Conference lower third, and in the Barrington one when that's switched on (Settings → Scene collections). Home speakers don't have subtitles.</span>
+          </div>
+        </section>
+
+        <section class="set-page" id="page-ontext" data-page="ontext" role="tabpanel" aria-labelledby="tab-ontext" tabindex="-1" hidden>
+          <h3 class="page-h">On-screen text</h3>
+          <div class="set-status" id="setOtTdStatus"></div>
+          <div class="set-status" id="setOtLtStatus"></div>
+          <div class="set-section">
+            <h4>Lower thirds</h4>
+            <p class="path">Lower thirds are turned on or off for each scene collection, with its theme and colour, in <b>Scene collections</b>. Each one hides itself after the time set in the Lower Third source in OBS (8 seconds to start with).</p>
+            <div class="btn-row"><button type="button" class="btn" id="setLtGo" data-keep>Open Scene collections</button></div>
+          </div>
+          <div class="set-section">
+            <h4>Hymn books</h4>
+            <div class="hb-list" id="hbList"></div>
+            <div class="btn-row">
+              <button type="button" class="btn" id="hbAdd"><i data-lucide="plus"></i>Add hymn book</button>
+              <button type="button" class="btn" id="hbTemplate" data-keep><i data-lucide="file-text"></i>Get the template</button>
+            </div>
+            <span class="path">Type a hymn book into the template in Notepad, then add it here and choose its logo. To change it later, edit the text file and use Update from file. Hymn books are saved straight away; they don't need Apply.</span>
+          </div>
+          <div class="set-section">
+            <h4>Hymns on screen</h4>
+            <div class="field"><label class="label" for="setHyLines">Lines at a time</label>
+              <select id="setHyLines"><option value="2">2 lines (recommended)</option><option value="4">4 lines</option><option value="0">The whole verse</option></select>
+              <span class="path">Next moves through the hymn this many lines at a time.</span></div>
+            <label class="check" for="setHyChorus"><input type="checkbox" id="setHyChorus">
+              <span>Repeat the chorus after every verse<small>Type the chorus once in the hymn book. Next goes verse, chorus, verse, chorus.</small></span>
+            </label>
+          </div>
+          <div class="set-section">
+            <h4>Bible</h4>
+            <div class="two">
+              <div class="field"><label class="label" for="setBbTr">Translation to start with</label><select id="setBbTr"></select></div>
+              <div class="field" hidden><label class="label" for="setBbPer">Verses at a time</label>
+                <select id="setBbPer"><option value="260">As many as fit comfortably</option><option value="0">One verse at a time</option></select></div>
+            </div>
+            <div class="tr-list" id="setTrList"></div>
+            <div class="field"><label class="label" for="setEsvKey">ESV API key</label><input id="setEsvKey" type="password" autocomplete="off" spellcheck="false">
+              <span class="path">Free for churches: create an account at api.esv.org, then create an application to get a key. Crossway allows up to 500 verses at a time.</span></div>
+            <div class="field"><label class="label" for="setAbKey">API.Bible key</label><input id="setAbKey" type="password" autocomplete="off" spellcheck="false">
+              <span class="path">For the NKJV, NIV, CSB and NASB 1995: sign up at api.bible. Each publisher decides whether its translation is offered on your plan; the list above shows which ones work with your key.</span></div>
+            <span class="path">Keys are saved encrypted by Windows, like the OBS password, and never put in a backup. The KJV is built in and works without internet.</span>
           </div>
         </section>
 
@@ -1001,6 +1397,10 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
             <button class="spk-trigger" id="glSpkBtn" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="glSpkLbl glSpkVal"><span id="glSpkVal"></span><i data-lucide="chevron-down"></i></button>
             <span class="path" id="glSpkHint">Names appear in the order you pick them. To remove a visiting speaker, select them first.</span>
           </div>
+          <div class="field" id="glHbField" hidden><span class="label">Hymn book</span>
+            <div class="book-chips" id="glHb"></div>
+            <span class="path">Used for hymns during this service. You can also switch on the Hymn screen.</span>
+          </div>
         </div>
         <div class="d-preview" id="glExisting" hidden>
           <div class="pv-row"><span class="label">Upcoming broadcasts</span><button class="link-btn" id="glBcRefresh">Refresh</button></div>
@@ -1134,6 +1534,21 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
     <div class="apply-row"><button class="btn" id="bkClose" type="button">Close</button><button class="btn primary" id="bkCopy" type="button">Copy</button></div>
   </div>
 </div>
+<div class="overlay hb-overlay" id="hbOverlay" hidden>
+  <div class="dialog hb-dialog" role="dialog" aria-modal="true" aria-labelledby="hbTitle">
+    <h2 id="hbTitle">Add hymn book</h2>
+    <p class="hb-sum" id="hbSum"></p>
+    <div class="field"><label class="label" for="hbName">Name</label><input id="hbName" autocomplete="off"></div>
+    <div class="field"><label class="label" for="hbShort">Short name (optional)</label><input id="hbShort" autocomplete="off" maxlength="12" placeholder="For example HOW"></div>
+    <div class="field"><span class="label">Logo</span>
+      <div class="hb-logo-row"><span id="hbLogo"></span><button type="button" class="btn" id="hbLogoBtn"><i data-lucide="image"></i> Choose image…</button><button type="button" class="btn" id="hbLogoClear">Remove logo</button></div>
+      <span class="path">Shown with the hymn number on the stream. A square PNG with a transparent or plain background looks best.</span></div>
+    <div class="hb-warns" id="hbWarns" hidden></div>
+    <div class="apply-row"><button type="button" class="btn" id="hbCancel">Cancel</button><button type="button" class="btn primary" id="hbSave">Save hymn book</button></div>
+  </div>
+</div>
+<input type="file" id="hbFile" accept=".txt,text/plain" hidden>
+<input type="file" id="hbImg" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
@@ -1184,12 +1599,16 @@ class MockOBS {
         "Church Logo":{kind:"image_source", file:"C:\\Users\\Media\\Livestream\\Logos\\Hall Logo.png"},
         "PYLE USB Mixer":{kind:"wasapi_input_capture", muted:false},
         "Pulpit Mic":{kind:"wasapi_input_capture", muted:false},
-        "Desktop Audio":{kind:"wasapi_output_capture", muted:false}
+        "Desktop Audio":{kind:"wasapi_output_capture", muted:false},
+        "Lower Third":{kind:"church_lower_third"},
+        "Scripture & Hymns":{kind:"church_text_display"}
       },
       "Special Events": {
         "Speaker Names":{kind:"text_gdiplus_v3", text:"Guest Speaker", font:{face:"Montserrat",size:64}},
         "Schedule":{kind:"image_source", file:FOLDER+"Special Meeting.png"},
-        "PYLE USB Mixer":{kind:"wasapi_input_capture", muted:false}
+        "PYLE USB Mixer":{kind:"wasapi_input_capture", muted:false},
+        "Lower Third":{kind:"church_lower_third"},
+        "Scripture & Hymns":{kind:"church_text_display"}
       },
       "Wednesday Bible Study": {
         "Lower Third":{kind:"text_gdiplus_v3", text:"Bible Study"},
@@ -1211,6 +1630,8 @@ class MockOBS {
     this.connected = true; this.downUntil = 0; this.ytSignedIn = true; this.diskMB = 182000; this.silent = false; this.badNet = false;
     this.net = {bytes:0, frames:0, skipped:0, last:0};
     this.overload = false; this.perf = {total:0, rtotal:0, encSkip:0, renSkip:0, last:0};
+    // The plug-in's Lower Third and Scripture & Hymns sources
+    this.lt = {enabled:true, showing:"", subtitle:"", theme:"barrington", color:"#132932", timer:null}; this.td = {showing:false, key:""};
     this._waitCheck(this.s.program);
     this._meter();
   }
@@ -1261,7 +1682,9 @@ class MockOBS {
         this._input(d.inputName);
         // overlay:true (the obs-websocket default) merges, so font, size, crop etc. stay untouched
         Object.assign(this._input(d.inputName), d.inputSettings);
-        this.emit("InputSettingsChanged",{inputName:d.inputName,inputSettings:structuredClone(this._input(d.inputName))}); return {};
+        this.emit("InputSettingsChanged",{inputName:d.inputName,inputSettings:structuredClone(this._input(d.inputName))});
+        if(d.inputName === "Speaker Names") this._ltEmit();   // the Lower Third follows the speakers text
+        return {};
       // Provided by a small companion OBS plug-in (obs_websocket_register_vendor_request). It raises the OBS
       // window and runs OBS's own Start Streaming action, so OBS shows its normal setup/confirmation dialog.
       case "CallVendorRequest":
@@ -1312,6 +1735,7 @@ class MockOBS {
             done({ok:true, code:"OK", message:"Streaming started."});
           });
         }
+        if(d.vendorName === "church-controller" && /LowerThird|Text$|TextStatus$/.test(d.requestType)) return {responseData:this._onScreen(d.requestType, d.requestData || {})};
         throw new Error("Unknown vendor request");
       // Free space on the recording drive (MB), as obs-websocket's GetStats reports it
       case "GetVideoSettings": return {fpsNumerator:30, fpsDenominator:1, baseWidth:1920, baseHeight:1080, outputWidth:1920, outputHeight:1080};
@@ -1360,6 +1784,56 @@ class MockOBS {
         { const f = /[\\/]$/.test(d.folder) ? d.folder : d.folder + "\\"; return {files:SCHEDULE_FILES.map(x => f + x)}; }
     }
     throw new Error("Unknown request "+type);
+  }
+  // Stand-in for the plug-in's Lower Third and Scripture & Hymns sources (lower-third.cpp, text-display.cpp)
+  _src(kind){ return Object.values(this.inputsByColl[this.s.collection] || {}).find(i => i.kind === kind); }
+  _ltNames(){
+    const t = (this.inputsByColl[this.s.collection] || {})["Speaker Names"];
+    const out = [];
+    String(t && t.text || "").split(/\s*(?:,|;|&|\n|\band\b)\s*/i).map(x => x.trim()).filter(Boolean).forEach(n => { if(!out.includes(n)) out.push(n); });
+    return out;
+  }
+  _ltState(){ return {sourceName:"Lower Third", enabled:this.lt.enabled, theme:this.lt.theme, color:this.lt.color, names:this._ltNames().map(name => ({name})), showing:this.lt.showing, subtitle:this.lt.subtitle, duration:8}; }
+  _ltEmit(){ if(this._src("church_lower_third") && this.connected) this.emit("VendorEvent",{vendorName:"church-controller", eventType:"LowerThirdChanged", eventData:this._ltState()}); }
+  _ltHide(){ clearTimeout(this.lt.timer); if(this.lt.showing){ this.lt.showing = ""; this._ltEmit(); } }
+  _onScreen(type, q){
+    const lt = this._src("church_lower_third"), td = this._src("church_text_display");
+    const tdState = () => ({sourceName:"Scripture & Hymns", showing:this.td.showing, key:this.td.key});
+    switch(type){
+      case "GetLowerThirdStatus": return lt ? {found:true, ...this._ltState()} : {found:false};
+      case "SetLowerThirdEnabled":
+        if(!lt) return {ok:false, code:"NO_LOWER_THIRD", updated:0};
+        if(this.lt.enabled !== !!q.enabled){ this.lt.enabled = !!q.enabled; if(!this.lt.enabled) this._ltHide(); setTimeout(() => this._ltEmit(), 40); }
+        return {ok:true, code:"OK", updated:1};
+      case "SetLowerThirdTheme":
+        if(!lt) return {ok:false, code:"NO_LOWER_THIRD", updated:0};
+        { const t = q.theme === "conference" ? "conference" : "barrington", c = q.color || this.lt.color;
+          if(this.lt.theme !== t || this.lt.color !== c){ this.lt.theme = t; this.lt.color = c; this._ltHide(); setTimeout(() => this._ltEmit(), 40); } }
+        return {ok:true, code:"OK", updated:1};
+      case "ShowLowerThird": {
+        if(!lt) return {ok:false, code:"NO_LOWER_THIRD"};
+        if(!this.lt.enabled) return {ok:false, code:"DISABLED", ...this._ltState()};
+        const name = q.name || this._ltNames()[q.index];
+        if(!name) return {ok:false, code:"NO_SUCH_NAME", ...this._ltState()};
+        if(q.toggle && this.lt.showing === name){ this._ltHide(); return {ok:true, code:"OK", ...this._ltState()}; }
+        clearTimeout(this.lt.timer); this.lt.showing = name; this.lt.subtitle = q.subtitle || ""; this._ltEmit();
+        this.lt.timer = setTimeout(() => this._ltHide(), 8000);
+        return {ok:true, code:"OK", ...this._ltState()};
+      }
+      case "HideLowerThird": if(!lt) return {ok:false, code:"NO_LOWER_THIRD"}; this._ltHide(); return {ok:true, code:"OK", ...this._ltState()};
+      case "GetTextStatus": return td ? {found:true, ...tdState()} : {found:false, ok:false, code:"NO_TEXT_SOURCE"};
+      case "ShowText":
+        if(!td) return {ok:false, found:false, code:"NO_TEXT_SOURCE"};
+        this.td = {showing:true, key:q.slide && q.slide.key || "", slide:q.slide};
+        this.emit("VendorEvent",{vendorName:"church-controller", eventType:"TextChanged", eventData:tdState()});
+        return {ok:true, found:true, code:"OK", ...tdState()};
+      case "ClearText":
+        if(!td) return {ok:false, found:false, code:"NO_TEXT_SOURCE"};
+        this.td = {showing:false, key:""};
+        this.emit("VendorEvent",{vendorName:"church-controller", eventType:"TextChanged", eventData:tdState()});
+        return {ok:true, found:true, code:"OK", ...tdState()};
+    }
+    throw new Error("Unknown vendor request");
   }
   // Sources only exist in the loaded collection; obs-websocket answers code 600 (not found) otherwise
   _input(name){
@@ -1880,6 +2354,7 @@ $("spkCancel").addEventListener("click", closeSpk);
 $("spkApply").addEventListener("click", () => { const sel = [...spkDraft]; closeSpk(); if(spkOnApply) spkOnApply(sel); });
 async function glApplySpeakers(sel){
   gl.sel = sel;
+  if(ltOn()) setLtPicked(selNames(sel));
   renderSpkTrigger(); glRender();
   // Confirmed: update the speakers text source in OBS for this scene collection
   const names = formatNames(selNames(gl.sel));
@@ -1953,14 +2428,19 @@ $("glHere").addEventListener("click", async () => {
   $("glDate").value = gl.date; renderSpkTrigger(); closeSpk();
   // Only show what this scene collection has (None in Settings hides it)
   $("glSvcField").hidden = ui.schMode === "off";
-  $("glSpkField").hidden = ui.spkMode === "off";
+  $("glSpkField").hidden = ui.spkMode === "off" && !ltOn();
   $("glSvcPath").textContent = serviceStatus();
   $("glSvcPath").classList.toggle("warn-txt", ui.schMode === "error" || !scheduleInFolder());
   $("glSvcHint").hidden = !canWriteSch();
   $("glSvcLbl").textContent = svcLabel();
   $("glSvcHint").textContent = `The ${svcLabel()} image in OBS switches to this when you go live.`;
-  $("glSpkHint").textContent = speakerHint();
+  $("glSpkHint").textContent = ui.spkMode === "off" && ltOn() ? "For the lower thirds. Names appear in the order you pick them." : speakerHint();
   if(!svcChoosable()) $("glTitleIn").value = gl.customTitle;
+  // Hymn book for this service (only asked when there's more than one)
+  gl.hymnBook = ui.ot.book;
+  $("glHbField").hidden = ui.hymnBooks.length < 2 || !ltOn();   // no on-screen text for this collection: no hymn book to ask about
+  const pickHb = id => { gl.hymnBook = id; bookChips($("glHb"), gl.hymnBook, pickHb); };
+  pickHb(gl.hymnBook);
   $("glSvc").innerHTML = "";
   names.forEach(n => {
     const b = document.createElement("button");
@@ -1992,17 +2472,24 @@ function glRender(){
   $("glDescHelp").classList.toggle("err", !!(dErr || adErr));
   const titleOk = ct ? !tErr : (svcChoosable() && gl.svc && gl.date && !atErr);
   const descOk = cd ? !dErr : ((ui.spkMode === "off" || gl.sel.length) && !adErr);
+  // Lower thirds on for this collection: the speakers are needed, whichever kind of broadcast
+  const spkOk = !ltOn() || gl.sel.length > 0;
   $("glCustTitle").hidden = !svcChoosable();
   if(!svcChoosable() && !tErr) $("glTitleHelp").textContent = `${(gl.customTitle || "").length} / 100 · This scene collection has no schedule set up, so write the title here.`;
   const ex = gl.mode === "existing";
   $("glModeNew").setAttribute("aria-selected", !ex); $("glModeEx").setAttribute("aria-selected", ex);
   // Existing broadcast: only the broadcast list; speakers, service type and date are hidden
-  $("glPreview").hidden = ex; $("glExisting").hidden = !ex; $("glForm").hidden = ex;
-  $("glGrid").classList.toggle("single", ex);
+  $("glPreview").hidden = ex; $("glExisting").hidden = !ex;
+  // Existing broadcast: only the speakers stay (when lower thirds are on); schedule and date come from YouTube
+  $("glForm").hidden = ex && !ltOn();
+  $("glSvcField").hidden = ex || ui.schMode === "off"; $("glDateField").hidden = ex;
+  $("glGrid").classList.toggle("single", ex && !ltOn());
   $("glStepTag").hidden = ex;
   $("glNext").textContent = ex ? "Go Live" : "Next: Visibility";
   $("glNext").classList.toggle("primary", !ex); $("glNext").classList.toggle("danger", ex);
-  $("glNext").disabled = ex ? !(gl.bc != null && gl.bcList) : !(titleOk && descOk);
+  $("glNext").disabled = ex ? !(gl.bc != null && gl.bcList && spkOk) : !(titleOk && descOk && spkOk);
+  $("glSpkHint").classList.toggle("warn-txt", ltOn() && !gl.sel.length);
+  if(ltOn() && !gl.sel.length) $("glSpkHint").textContent = "Choose the speakers: lower thirds are on for this scene collection.";
   renderBc();
 }
 $("glDate").addEventListener("input", e => { gl.date = e.target.value; glRender(); });
@@ -2051,6 +2538,11 @@ function renderBc(){
 $("glModeNew").addEventListener("click", () => setMode("new"));
 $("glModeEx").addEventListener("click", () => setMode("existing"));
 $("glBcRefresh").addEventListener("click", loadBroadcasts);
+function useGlHymnBook(){ if(gl.hymnBook && gl.hymnBook !== ui.ot.book && bookById(gl.hymnBook)){ ui.ot.book = gl.hymnBook; saveOt(); } }
+async function applySpeakersOnly(){
+  const names = formatNames(selNames(gl.sel));
+  if(names && names !== ui.speaker && canWriteSpk()){ try{ await setDefaultSources({text:names}); }catch(e){} }
+}
 // Speakers text and schedule image: same for new or existing broadcasts
 async function applyOnScreen(){
   const names = formatNames(selNames(gl.sel));
@@ -2066,6 +2558,9 @@ async function applyOnScreen(){
 async function goExisting(){
   const b = gl.bcList.find(x => x.index === gl.bc);
   closeGoLive();
+  useGlHymnBook();
+  // Speakers chosen for the lower thirds: on screen now, even though they don't change the broadcast
+  if(gl.sel.length){ setLtPicked(selNames(gl.sel)); await applySpeakersOnly(); }
   ui.streamPending = Date.now(); ui.streamMsg = "Starting in OBS…"; renderOutputs();
   toast("Starting the selected broadcast in OBS…");
   try{
@@ -2109,6 +2604,7 @@ function glVisRender(){
 $("glBack").addEventListener("click", () => glShow("glDetails"));
 $("glGo").addEventListener("click", async () => {
   closeGoLive();
+  useGlHymnBook();
   const details = {title:glTitle(), desc:glDesc()};
   ui.streamPending = Date.now(); ui.streamMsg = "Setting up in OBS…"; renderOutputs();
   // Update the on-screen Speaker Names text first, so it's right even if the controller has to hand off to OBS.
@@ -2116,6 +2612,7 @@ $("glGo").addEventListener("click", async () => {
   // Goes to the default collection: right away if it's loaded, otherwise when it's next loaded.
   // Each part only applies when the default collection actually has that source.
   await applyOnScreen();
+  if(gl.sel.length) setLtPicked(selNames(gl.sel));
   toast("Setting up the YouTube broadcast in OBS…");
   try{
     await vendorJob("StartYouTubeBroadcast",
@@ -2140,13 +2637,14 @@ async function openQc(){
 }
 function qcChange(){
   const change = {}, names = formatNames(selNames(qc.sel));
+  if(ltOn() && qc.sel.length && JSON.stringify(selNames(qc.sel)) !== JSON.stringify(ui.ltPicked)) change.lt = selNames(qc.sel);
   const file = ui.files.find(p => noExt(base(p)) === qc.svc);
   if(names && names !== ui.speaker && canWriteSpk()) change.text = names;
   if(file && file !== ui.schedule && canWriteSch()) change.file = file;
   return change;
 }
 function renderQc(){
-  const so = ui.spkMode !== "off", vo = ui.schMode !== "off";
+  const so = ui.spkMode !== "off" || ltOn(), vo = ui.schMode !== "off";
   $("qcSpkField").hidden = !so;
   $("qcSvcField").hidden = !vo;
   $("qcH").textContent = !so ? `Change ${svcLabel()}` : !vo ? "Change Speakers" : `Change Speaker and ${svcLabel()}`;
@@ -2154,8 +2652,8 @@ function renderQc(){
   const names = selNames(qc.sel);
   $("qcSpkVal").textContent = names.length ? formatNames(names) : "Select speakers";
   $("qcSpkBtn").classList.toggle("empty", !names.length);
-  $("qcSpkBtn").disabled = !canWriteSpk();
-  $("qcSpkNow").textContent = ui.spkMode === "error" ? ui.spkMsg : `Showing now: ${ui.speaker || "nothing"}`;
+  $("qcSpkBtn").disabled = !canWriteSpk() && !ltOn();
+  $("qcSpkNow").textContent = ui.spkMode === "error" ? ui.spkMsg : ui.spkMode === "off" ? `Lower thirds now: ${formatNames(ui.ltPicked) || "nobody yet"}` : `Showing now: ${ui.speaker || "nothing"}`;
   $("qcSpkNow").classList.toggle("warn-txt", ui.spkMode === "error");
   $("qcSvc").innerHTML = "";
   ui.files.forEach(p => {
@@ -2179,17 +2677,1343 @@ $("qcApply").addEventListener("click", async () => {
   const change = qcChange();
   $("qcOverlay").hidden = true;
   // Reminder: this only changes what's shown in the video, not the YouTube title or description
-  const what = [change.text != null && "speakers", change.file != null && svcLabel()].filter(Boolean).join(" and ");
+  const what = [(change.text != null || change.lt) && "speakers", change.file != null && svcLabel()].filter(Boolean).join(" and ");
   const ok = await confirmDlg("Only the on-screen display changes",
     `The ${what} shown in the livestream video will change. The YouTube title and description stay the same.` +
       (ui.stream.active ? " You're live, so viewers will see the change right away. The YouTube title and description can't be changed from the controller while live. To update them, edit the broadcast in YouTube Studio." : ""),
     "OK", "primary", "Cancel");
   if(!ok){ $("qcOverlay").hidden = false; return; }
+  if(change.lt) setLtPicked(change.lt);
   try{
     const r = await setDefaultSources(change);
-    toast(`Updated ${r.done.join(" and ")} in OBS`);
+    toast(r.done.length ? `Updated ${r.done.join(" and ")} in OBS` : "Lower third names updated");
   }catch(e){ toast(`Couldn't update OBS: ${e.message}`); }
 });
+
+/* ------------------------------------------------------------------
+   On-screen text: hymns from the church's hymn books, Bible verses, and lower thirds,
+   shown in OBS by the companion plug-in's "Scripture & Hymns" and "Lower Third" sources.
+------------------------------------------------------------------- */
+/* ---------------- Hymn books: the plain-text format, read and written ----------------
+   A hymn book is a .txt file typed in Notepad (see "Hymn book template.txt"):
+     Hymn book: Hymns of Worship          the book's name (required, near the top)
+     Short name: HOW                      optional, shown where space is tight
+     Hymn 124: Amazing Grace              starts a hymn: number, then title
+     Words: John Newton                   optional lines right after it (Words, Music, Tune, Meter, Author)
+     (blank line)
+     Amazing grace! how sweet the sound   a verse: lines until the next blank line
+     Chorus                               a verse whose first line is "Chorus" or "Refrain" is the chorus
+     # a note                             lines starting with # are notes and are skipped
+   A verse may start with its number on a line of its own ("2" or "2."); otherwise verses are numbered in order. */
+const HYMN_CREDIT = /^(words|music|tune|meter|metre|author|composer|arranger|arr\.?|copyright)\s*:\s*(.*)$/i;
+const HYMN_HEAD = /^hymn\s+(\d+[a-z]?)\s*(?:[:.\-–—]\s*(.*))?$/i;
+const HYMN_LABEL = /^(chorus|refrain|verse\s*\d+|\d+)\s*[:.]?$/i;
+
+function parseHymnBook(text){
+  const lines = String(text || "").replace(/^﻿/, "").split(/\r\n|\r|\n/);
+  const book = {name:"", short:"", hymns:[]}, warnings = [];
+  let hymn = null, block = null, blockLine = 0, inCredits = false;
+  const warn = (line, msg) => warnings.push({line, msg});
+  const endBlock = () => {
+    if(!block || !hymn) { block = null; return; }
+    let label = "", kind = "verse", body = block;
+    const m = body.length && body[0].match(HYMN_LABEL);
+    if(m){
+      body = body.slice(1);
+      const w = m[1].toLowerCase();
+      if(w === "chorus" || w === "refrain"){ kind = "chorus"; label = w === "chorus" ? "Chorus" : "Refrain"; }
+      else label = "Verse " + w.replace(/\D/g, "");
+    }
+    if(!body.length){ warn(blockLine, `"${label}" has no words under it.`); block = null; return; }
+    if(kind === "verse" && !label) label = "Verse " + (hymn.verses.filter(v => v.kind === "verse").length + 1);
+    hymn.verses.push({label, kind, lines:body});
+    block = null;
+  };
+  const endHymn = () => {
+    endBlock();
+    if(hymn && !hymn.verses.length) warn(hymn.line, `Hymn ${hymn.number} has no verses.`);
+  };
+  lines.forEach((raw, i) => {
+    const n = i + 1, line = raw.replace(/\s+/g, " ").trim();
+    if(line.startsWith("#")) return;
+    const head = line.match(HYMN_HEAD);
+    if(head){
+      endHymn();
+      const number = head[1].toUpperCase().replace(/^0+(?=\d)/, "");
+      if(book.hymns.some(h => h.number === number)) warn(n, `Hymn ${number} appears more than once. The first one is used.`);
+      hymn = {number, title:(head[2] || "").trim(), credits:[], verses:[], line:n};
+      if(!hymn.title) warn(n, `Hymn ${number} has no title. Write it after the number, like "Hymn ${number}: Title".`);
+      book.hymns.push(hymn);
+      inCredits = true;
+      return;
+    }
+    if(!hymn){
+      // The top of the file: the book's name and short name
+      if(!line) return;
+      const f = line.match(/^(hymn ?book|book|name|short name|abbreviation)\s*:\s*(.*)$/i);
+      if(f){ if(/short|abbr/i.test(f[1])) book.short = f[2].trim(); else book.name = f[2].trim(); return; }
+      warn(n, `"${line.slice(0, 40)}" is before the first hymn, so it's skipped. Each hymn starts with a line like "Hymn 1: Title".`);
+      return;
+    }
+    if(inCredits){
+      const c = line.match(HYMN_CREDIT);
+      if(c){ hymn.credits.push(line); return; }
+      if(!line) return;
+      inCredits = false;
+    }
+    if(!line){ endBlock(); return; }
+    if(!block){ block = []; blockLine = n; }
+    // A label line inside a verse means a new verse started without a blank line
+    if(block.length && HYMN_LABEL.test(line)){ endBlock(); block = []; blockLine = n; }
+    block.push(line);
+    if(line.length > 70) warn(n, `This line is long (${line.length} letters), so it will be shown smaller. Splitting it into two lines reads better.`);
+  });
+  endHymn();
+  if(!book.name) warn(1, `The file doesn't say the hymn book's name. Add a line like "Hymn book: Hymns of Worship" at the top.`);
+  if(!book.hymns.length) warn(1, `No hymns were found. Each hymn starts with a line like "Hymn 1: Title".`);
+  // Duplicates: keep the first
+  const seen = new Set();
+  book.hymns = book.hymns.filter(h => !seen.has(h.number) && seen.add(h.number)).map(({line, ...h}) => h);
+  return {book, warnings};
+}
+
+// The book back as text, in the same format (for "Export as text", to edit and import again)
+function hymnBookText(book){
+  const out = [`Hymn book: ${book.name}`];
+  if(book.short) out.push(`Short name: ${book.short}`);
+  book.hymns.forEach(h => {
+    out.push("", "", `Hymn ${h.number}: ${h.title}`);
+    (h.credits || []).forEach(c => out.push(c));
+    h.verses.forEach(v => { out.push("", v.kind === "chorus" ? v.label : v.label.replace(/^Verse /, "")); v.lines.forEach(l => out.push(l)); });
+  });
+  return out.join("\r\n") + "\r\n";
+}
+
+// Sort hymn numbers the way a hymnal does: 2, 10, 10a, 11
+const hymnNumKey = n => { const m = String(n).match(/^(\d+)(.*)$/); return m ? [parseInt(m[1], 10), m[2]] : [Infinity, String(n)]; };
+const byHymnNumber = (a, b) => { const x = hymnNumKey(a.number), y = hymnNumKey(b.number); return x[0] - y[0] || x[1].localeCompare(y[1]); };
+
+/* What goes on screen, in order. Each verse is split into pages of up to `perPage` lines (0 = the whole verse),
+   as evenly as possible (6 lines at 4 per page show as 3 and 3, not 4 and 2).
+   With `repeatChorus`, the chorus follows every verse (as it's sung) instead of appearing once where it's written. */
+function hymnSlides(hymn, {perPage = 2, repeatChorus = true} = {}){
+  const chorus = hymn.verses.find(v => v.kind === "chorus");
+  const verses = hymn.verses.filter(v => v.kind === "verse");
+  const order = repeatChorus && chorus && verses.length
+    ? verses.flatMap(v => [v, chorus])
+    : hymn.verses;
+  const slides = [];
+  order.forEach((v, vi) => {
+    const L = v.lines.length, pages = perPage > 0 ? Math.ceil(L / perPage) : 1;
+    const size = Math.ceil(L / pages);
+    for(let p = 0; p < pages; p++){
+      slides.push({verseIndex:vi, label:v.label, kind:v.kind, lines:v.lines.slice(p * size, (p + 1) * size), from:p * size, page:p + 1, pages});
+    }
+  });
+  return slides.filter(s => s.lines.length);
+}
+
+// The file offered by Settings → On-screen text → Get the template (also the prototype's sample book)
+const HYMN_TEMPLATE = `# HYMN BOOK TEMPLATE for the BGH LIVE Controller
+#
+# Type your hymn book into this file in Notepad, save it, then in the controller open
+# Settings > On-screen text > Add hymn book and choose the file. You'll choose the book's logo there too.
+#
+# The rules (lines that start with # like these are notes and are skipped):
+#   1. The first line names the book:            Hymn book: Hymns of Worship
+#      A short name is optional:                 Short name: HOW
+#   2. Each hymn starts with its number and title:   Hymn 124: Amazing Grace
+#   3. Optional credit lines can follow right under it (not shown on screen):
+#        Words: ...   Music: ...   Tune: ...   Meter: ...
+#   4. Then the verses. Leave ONE BLANK LINE between verses.
+#      Type each line as it's printed in the hymn book.
+#   5. You can put the verse number on its own line above a verse (like "2"), or leave it out
+#      and the verses are numbered in order.
+#   6. Write "Chorus" (or "Refrain") on its own line above the chorus. Type the chorus once;
+#      the controller repeats it after every verse.
+#
+# Tip: do a few hymns, import the file to check it, then keep going. Importing the file again
+# replaces the book and keeps its logo.
+#
+# Delete the three examples below and everything above this line when you start your own book.
+
+Hymn book: Sample Hymns
+Short name: SH
+
+Hymn 1: Amazing Grace
+Words: John Newton
+
+1
+Amazing grace! how sweet the sound
+That saved a wretch like me!
+I once was lost, but now am found;
+Was blind, but now I see.
+
+2
+'Twas grace that taught my heart to fear,
+And grace my fears relieved;
+How precious did that grace appear
+The hour I first believed!
+
+3
+Through many dangers, toils, and snares,
+I have already come;
+'Tis grace hath brought me safe thus far,
+And grace will lead me home.
+
+4
+The Lord has promised good to me,
+His word my hope secures;
+He will my shield and portion be
+As long as life endures.
+
+5
+When we've been there ten thousand years,
+Bright shining as the sun,
+We've no less days to sing God's praise
+Than when we'd first begun.
+
+
+Hymn 2: Holy, Holy, Holy
+Words: Reginald Heber
+
+Holy, holy, holy! Lord God Almighty!
+Early in the morning our song shall rise to Thee;
+Holy, holy, holy! merciful and mighty!
+God in three Persons, blessed Trinity!
+
+Holy, holy, holy! all the saints adore Thee,
+Casting down their golden crowns around the glassy sea;
+Cherubim and seraphim falling down before Thee,
+Who wert, and art, and evermore shalt be.
+
+Holy, holy, holy! though the darkness hide Thee,
+Though the eye of sinful man Thy glory may not see;
+Only Thou art holy; there is none beside Thee,
+Perfect in power, in love, and purity.
+
+Holy, holy, holy! Lord God Almighty!
+All Thy works shall praise Thy name, in earth, and sky, and sea;
+Holy, holy, holy! merciful and mighty!
+God in three Persons, blessed Trinity!
+
+
+Hymn 3: It Is Well with My Soul
+Words: Horatio G. Spafford
+
+1
+When peace, like a river, attendeth my way,
+When sorrows like sea billows roll;
+Whatever my lot, Thou hast taught me to say,
+It is well, it is well with my soul.
+
+Chorus
+It is well with my soul,
+It is well, it is well with my soul.
+
+2
+Though Satan should buffet, though trials should come,
+Let this blest assurance control,
+That Christ hath regarded my helpless estate,
+And hath shed His own blood for my soul.
+
+3
+My sin, oh, the bliss of this glorious thought!
+My sin, not in part but the whole,
+Is nailed to the cross, and I bear it no more,
+Praise the Lord, praise the Lord, O my soul!
+
+4
+And Lord, haste the day when my faith shall be sight,
+The clouds be rolled back as a scroll;
+The trump shall resound, and the Lord shall descend,
+Even so, it is well with my soul.
+`;
+
+const BIBLE_BOOKS_RAW = [
+  ["Genesis","GEN","gen|ge|gn"],
+  ["Exodus","EXO","exo|ex|exod"],
+  ["Leviticus","LEV","lev|le|lv"],
+  ["Numbers","NUM","num|nu|nm|nb"],
+  ["Deuteronomy","DEU","deut|deu|de|dt"],
+  ["Joshua","JOS","josh|jos|jsh"],
+  ["Judges","JDG","judg|jdg|jg|jdgs"],
+  ["Ruth","RUT","ruth|rth|ru"],
+  ["1 Samuel","1SA","1 sam|1 sa|1 sm"],
+  ["2 Samuel","2SA","2 sam|2 sa|2 sm"],
+  ["1 Kings","1KI","1 kgs|1 ki|1 kin"],
+  ["2 Kings","2KI","2 kgs|2 ki|2 kin"],
+  ["1 Chronicles","1CH","1 chron|1 chr|1 ch"],
+  ["2 Chronicles","2CH","2 chron|2 chr|2 ch"],
+  ["Ezra","EZR","ezr"],
+  ["Nehemiah","NEH","neh|ne"],
+  ["Esther","EST","esth|est|es"],
+  ["Job","JOB","jb"],
+  ["Psalms","PSA","psalm|ps|psa|pss|psm"],
+  ["Proverbs","PRO","prov|pro|prv|pr"],
+  ["Ecclesiastes","ECC","eccl|ecc|eccles|qoh"],
+  ["Song of Solomon","SNG","song of songs|song|sos|canticles"],
+  ["Isaiah","ISA","isa|is"],
+  ["Jeremiah","JER","jer|je|jr"],
+  ["Lamentations","LAM","lam|la"],
+  ["Ezekiel","EZK","ezek|eze|ezk"],
+  ["Daniel","DAN","dan|da|dn"],
+  ["Hosea","HOS","hos|ho"],
+  ["Joel","JOL","joel|jl"],
+  ["Amos","AMO","amos|am"],
+  ["Obadiah","OBA","obad|oba|ob"],
+  ["Jonah","JON","jonah|jnh|jon"],
+  ["Micah","MIC","mic|mc"],
+  ["Nahum","NAM","nah|na"],
+  ["Habakkuk","HAB","hab|hb"],
+  ["Zephaniah","ZEP","zeph|zep|zp"],
+  ["Haggai","HAG","hag|hg"],
+  ["Zechariah","ZEC","zech|zec|zc"],
+  ["Malachi","MAL","mal|ml"],
+  ["Matthew","MAT","matt|mat|mt"],
+  ["Mark","MRK","mark|mrk|mk|mr"],
+  ["Luke","LUK","luke|luk|lk"],
+  ["John","JHN","john|jhn|jn|joh"],
+  ["Acts","ACT","acts|act|ac"],
+  ["Romans","ROM","rom|ro|rm"],
+  ["1 Corinthians","1CO","1 cor|1 co"],
+  ["2 Corinthians","2CO","2 cor|2 co"],
+  ["Galatians","GAL","gal|ga"],
+  ["Ephesians","EPH","eph|ephes"],
+  ["Philippians","PHP","phil|php|pp"],
+  ["Colossians","COL","col"],
+  ["1 Thessalonians","1TH","1 thess|1 thes|1 th"],
+  ["2 Thessalonians","2TH","2 thess|2 thes|2 th"],
+  ["1 Timothy","1TI","1 tim|1 ti"],
+  ["2 Timothy","2TI","2 tim|2 ti"],
+  ["Titus","TIT","tit"],
+  ["Philemon","PHM","philem|phm|phlm"],
+  ["Hebrews","HEB","heb"],
+  ["James","JAS","jas|jm|jms"],
+  ["1 Peter","1PE","1 pet|1 pe|1 pt"],
+  ["2 Peter","2PE","2 pet|2 pe|2 pt"],
+  ["1 John","1JN","1 jn|1 jhn|1 jo"],
+  ["2 John","2JN","2 jn|2 jhn|2 jo"],
+  ["3 John","3JN","3 jn|3 jhn|3 jo"],
+  ["Jude","JUD","jude|jud|jd"],
+  ["Revelation","REV","rev|re|revelations"]
+];
+// Verses in each chapter (King James versification), books separated by ";"
+const BIBLE_VERSE_COUNTS = "31,25,24,26,32,22,24,22,29,32,32,20,18,24,21,16,27,33,38,18,34,24,20,67,34,35,46,22,35,43,55,32,20,31,29,43,36,30,23,23,57,38,34,34,28,34,31,22,33,26;22,25,22,31,23,30,25,32,35,29,10,51,22,31,27,36,16,27,25,26,36,31,33,18,40,37,21,43,46,38,18,35,23,35,35,38,29,31,43,38;17,16,17,35,19,30,38,36,24,20,47,8,59,57,33,34,16,30,37,27,24,33,44,23,55,46,34;54,34,51,49,31,27,89,26,23,36,35,16,33,45,41,50,13,32,22,29,35,41,30,25,18,65,23,31,40,16,54,42,56,29,34,13;46,37,29,49,33,25,26,20,29,22,32,32,18,29,23,22,20,22,21,20,23,30,25,22,19,19,26,68,29,20,30,52,29,12;18,24,17,24,15,27,26,35,27,43,23,24,33,15,63,10,18,28,51,9,45,34,16,33;36,23,31,24,31,40,25,35,57,18,40,15,25,20,20,31,13,31,30,48,25;22,23,18,22;28,36,21,22,12,21,17,22,27,27,15,25,23,52,35,23,58,30,24,42,15,23,29,22,44,25,12,25,11,31,13;27,32,39,12,25,23,29,18,13,19,27,31,39,33,37,23,29,33,43,26,22,51,39,25;53,46,28,34,18,38,51,66,28,29,43,33,34,31,34,34,24,46,21,43,29,53;18,25,27,44,27,33,20,29,37,36,21,21,25,29,38,20,41,37,37,21,26,20,37,20,30;54,55,24,43,26,81,40,40,44,14,47,40,14,17,29,43,27,17,19,8,30,19,32,31,31,32,34,21,30;17,18,17,22,14,42,22,18,31,19,23,16,22,15,19,14,19,34,11,37,20,12,21,27,28,23,9,27,36,27,21,33,25,33,27,23;11,70,13,24,17,22,28,36,15,44;11,20,32,23,19,19,73,18,38,39,36,47,31;22,23,15,17,14,14,10,17,32,3;22,13,26,21,27,30,21,22,35,22,20,25,28,22,35,22,16,21,29,29,34,30,17,25,6,14,23,28,25,31,40,22,33,37,16,33,24,41,30,24,34,17;6,12,8,8,12,10,17,9,20,18,7,8,6,7,5,11,15,50,14,9,13,31,6,10,22,12,14,9,11,12,24,11,22,22,28,12,40,22,13,17,13,11,5,26,17,11,9,14,20,23,19,9,6,7,23,13,11,11,17,12,8,12,11,10,13,20,7,35,36,5,24,20,28,23,10,12,20,72,13,19,16,8,18,12,13,17,7,18,52,17,16,15,5,23,11,13,12,9,9,5,8,28,22,35,45,48,43,13,31,7,10,10,9,8,18,19,2,29,176,7,8,9,4,8,5,6,5,6,8,8,3,18,3,3,21,26,9,8,24,13,10,7,12,15,21,10,20,14,9,6;33,22,35,27,23,35,27,36,18,32,31,28,25,35,33,33,28,24,29,30,31,29,35,34,28,28,27,28,27,33,31;18,26,22,16,20,12,29,17,18,20,10,14;17,17,11,16,16,13,13,14;31,22,26,6,30,13,25,22,21,34,16,6,22,32,9,14,14,7,25,6,17,25,18,23,12,21,13,29,24,33,9,20,24,17,10,22,38,22,8,31,29,25,28,28,25,13,15,22,26,11,23,15,12,17,13,12,21,14,21,22,11,12,19,12,25,24;19,37,25,31,31,30,34,22,26,25,23,17,27,22,21,21,27,23,15,18,14,30,40,10,38,24,22,17,32,24,40,44,26,22,19,32,21,28,18,16,18,22,13,30,5,28,7,47,39,46,64,34;22,22,66,22,22;28,10,27,17,17,14,27,18,11,22,25,28,23,23,8,63,24,32,14,49,32,31,49,27,17,21,36,26,21,26,18,32,33,31,15,38,28,23,29,49,26,20,27,31,25,24,23,35;21,49,30,37,31,28,28,27,27,21,45,13;11,23,5,19,15,11,16,14,17,15,12,14,16,9;20,32,21;15,16,15,13,27,14,17,14,15;21;17,10,10,11;16,13,12,13,15,16,20;15,13,19;17,20,19;18,15,20;15,23;21,13,10,14,11,15,14,23,17,12,17,14,9,21;14,17,18,6;25,23,17,25,48,34,29,34,38,42,30,50,58,36,39,28,27,35,30,34,46,46,39,51,46,75,66,20;45,28,35,41,43,56,37,38,50,52,33,44,37,72,47,20;80,52,38,44,39,49,50,56,62,42,54,59,35,35,32,31,37,43,48,47,38,71,56,53;51,25,36,54,47,71,53,59,41,42,57,50,38,31,27,33,26,40,42,31,25;26,47,26,37,42,15,60,40,43,48,30,25,52,28,41,40,34,28,41,38,40,30,35,27,27,32,44,31;32,29,31,25,21,23,25,39,33,21,36,21,14,23,33,27;31,16,23,21,13,20,40,13,27,33,34,31,13,40,58,24;24,17,18,18,21,18,16,24,15,18,33,21,14;24,21,29,31,26,18;23,22,21,32,33,24;30,30,21,23;29,23,25,18;10,20,13,18,28;12,17,18;20,15,16,16,25,21;18,26,17,22;16,15,15;25;14,18,19,16,14,20,28,13,28,39,40,29,25;27,26,18,17,20;25,25,22,19,14;21,22,18;10,29,24,21,21;13;14;25;20,29,22,11,14,17,17,13,21,11,19,17,18,20,8,21,18,24,21,15,27,21";
+/* Bible references: "John 3:16", "1 Cor 13:4-7", "Ps 23", "Romans 8:28, 31-39", "Jude 3", "Gen 1:1-2:3" */
+const BIBLE_BOOKS = BIBLE_BOOKS_RAW.map(([name, usfm, aliases], i) => ({
+  i, name, usfm, aliases: aliases.split("|"),
+  chapters: BIBLE_VERSE_COUNTS.split(";")[i].split(",").map(Number)
+}));
+const bibleNorm = s => String(s).toLowerCase().replace(/([a-z])\./g, "$1 ")
+  .replace(/^\s*(first|1st|i)\s+/, "1 ").replace(/^\s*(second|2nd|ii)\s+/, "2 ").replace(/^\s*(third|3rd|iii)\s+/, "3 ")
+  .replace(/^\s*([123])\s*(?=[a-z])/, "$1 ").replace(/\s+/g, " ").trim();
+// Every way of writing each book, longest first, so "song of songs" wins over "song" and "john" over "jo"
+const BIBLE_KEYS = BIBLE_BOOKS.flatMap(b => [b.name.toLowerCase(), ...b.aliases].map(k => ({k, b})))
+  .sort((a, b) => b.k.length - a.k.length);
+function findBibleBook(text){
+  const t = bibleNorm(text);
+  for(const {k, b} of BIBLE_KEYS) if(t.startsWith(k) && (t.length === k.length || /[\s\d:]/.test(t[k.length]))) return {book:b, rest:t.slice(k.length).trim()};
+  // Not an exact abbreviation: the start of exactly one book's name ("phili" → Philippians)
+  const word = (t.match(/^([123] )?[a-z][a-z ]*?(?=\s*\d|$)/) || [""])[0].trim();
+  if(word.replace(/^[123] /, "").length >= 2){
+    const hits = BIBLE_BOOKS.filter(b => b.name.toLowerCase().startsWith(word));
+    if(hits.length === 1) return {book:hits[0], rest:t.slice(word.length).trim()};
+  }
+  return null;
+}
+const oneChapter = b => b.chapters.length === 1;
+// Returns {ok:true, book, segments:[{c1,v1,c2,v2}], reference, verses} or {ok:false, error}
+function parseBibleRef(text){
+  const found = findBibleBook(text);
+  if(!found) return {ok:false, error:"Type a book of the Bible, like John 3:16 or Psalm 23."};
+  const {book, rest} = found, max = c => book.chapters[c - 1];
+  const segments = [];
+  let lastC = null;   // chapter context for bare verse numbers after "3:16, 18"
+  const parts = rest ? rest.replace(/\s/g, "").replace(/[–—]/g, "-").replace(/\./g, ":").split(/[,;]/).filter(Boolean) : [];
+  if(!parts.length){
+    if(oneChapter(book)) segments.push({c1:1, v1:1, c2:1, v2:max(1)});
+    else return {ok:false, error:`Which chapter of ${book.name}? ${book.name} has ${book.chapters.length} chapters.`, book};
+  }
+  for(const p of parts){
+    let m;
+    const bad = () => ({ok:false, error:`"${p}" isn't a chapter and verse. Try something like ${book.name} ${oneChapter(book) ? "3" : "3:16"}.`, book});
+    if((m = p.match(/^(\d+):(\d+)-(\d+):(\d+)$/))) segments.push({c1:+m[1], v1:+m[2], c2:+m[3], v2:+m[4]});
+    else if((m = p.match(/^(\d+):(\d+)(?:-(\d+))?$/))) segments.push({c1:+m[1], v1:+m[2], c2:+m[1], v2:+(m[3] || m[2])});
+    else if((m = p.match(/^(\d+)(?:-(\d+))?$/))){
+      // Bare numbers are verses in a one-chapter book or after "3:16,"; otherwise chapters
+      if(oneChapter(book)) segments.push({c1:1, v1:+m[1], c2:1, v2:+(m[2] || m[1])});
+      else if(lastC != null) segments.push({c1:lastC, v1:+m[1], c2:lastC, v2:+(m[2] || m[1])});
+      else { const c2 = +(m[2] || m[1]); segments.push({c1:+m[1], v1:1, c2, v2:max(c2) || 0}); }
+    }
+    else return bad();
+    const s = segments[segments.length - 1];
+    lastC = /:/.test(p) || oneChapter(book) ? s.c2 : null;
+    for(const c of [s.c1, s.c2]) if(!max(c)) return {ok:false, error:`${book.name} has ${book.chapters.length} chapter${book.chapters.length > 1 ? "s" : ""}.`, book};
+    if(s.v1 < 1 || s.v1 > max(s.c1)) return {ok:false, error:`${book.name} ${s.c1} has ${max(s.c1)} verses.`, book};
+    if(s.v2 < 1 || s.v2 > max(s.c2)) return {ok:false, error:`${book.name} ${s.c2} has ${max(s.c2)} verses.`, book};
+    if(s.c2 < s.c1 || (s.c2 === s.c1 && s.v2 < s.v1)) return {ok:false, error:`"${p}" goes backwards.`, book};
+  }
+  const verses = segments.reduce((n, s) => {
+    let count = 0;
+    for(let c = s.c1; c <= s.c2; c++) count += (c === s.c2 ? s.v2 : max(c)) - (c === s.c1 ? s.v1 : 1) + 1;
+    return n + count;
+  }, 0);
+  if(verses > 200) return {ok:false, error:`That's ${verses} verses. Choose 200 or fewer at a time.`, book};
+  return {ok:true, book, segments, reference:formatBibleRef(book, segments), verses};
+}
+// "John 3:16–18", "Psalm 23", "Psalms 23–24", "Romans 8:28, 31–39", "Jude 3"
+function formatBibleRef(book, segments){
+  const max = c => book.chapters[c - 1];
+  const whole = s => s.v1 === 1 && s.v2 === max(s.c2);
+  const name = book.name === "Psalms" && segments.every(s => s.c1 === segments[0].c1 && s.c2 === segments[0].c1) ? "Psalm" : book.name;
+  let prevC = null;
+  const out = segments.map(s => {
+    let t;
+    if(oneChapter(book)) t = s.v1 === s.v2 ? `${s.v1}` : `${s.v1}–${s.v2}`;
+    else if(whole(s)) t = s.c1 === s.c2 ? `${s.c1}` : `${s.c1}–${s.c2}`;
+    else if(s.c1 === s.c2) t = (prevC === s.c1 ? "" : `${s.c1}:`) + (s.v1 === s.v2 ? `${s.v1}` : `${s.v1}–${s.v2}`);
+    else t = `${s.c1}:${s.v1}–${s.c2}:${s.v2}`;
+    prevC = s.c2;
+    return t;
+  });
+  return `${name} ${out.join(", ")}`;
+}
+/* Pages of verses for the screen: verses are grouped until about `chars` characters (one verse per page with
+   chars = 0). A verse longer than that is split at a pause (; : , .) near the middle and shown in parts. */
+function versePages(verses, chars = 260){
+  const pieces = [];
+  verses.forEach(v => {
+    const limit = chars || Infinity;
+    if(v.text.length <= limit * 1.25) { pieces.push({c:v.c, v:v.v, n:v.v, text:v.text}); return; }
+    const parts = Math.ceil(v.text.length / limit), out = [];
+    let rest = v.text;
+    for(let i = parts; i > 1; i--){
+      const target = rest.length / i;
+      // the pause nearest the target length
+      let best = -1;
+      for(const m of rest.matchAll(/[;:,.!?]\s/g)) if(best < 0 || Math.abs(m.index - target) < Math.abs(best - target)) best = m.index;
+      if(best < target * 0.5) best = rest.lastIndexOf(" ", Math.round(target));
+      if(best <= 0) break;
+      out.push(rest.slice(0, best + 1).trim()); rest = rest.slice(best + 1).trim();
+    }
+    out.push(rest);
+    out.forEach((t, k) => pieces.push({c:v.c, v:v.v, n:k ? null : v.v, text:t}));
+  });
+  const pages = [];
+  let cur = [], len = 0;
+  pieces.forEach(p => {
+    if(cur.length && (!chars || len + p.text.length > chars)){ pages.push(cur); cur = []; len = 0; }
+    cur.push(p); len += p.text.length + 1;
+  });
+  if(cur.length) pages.push(cur);
+  return pages;
+}
+// The reference for just the verses on one page: "John 3:16–17", or "Romans 8:28, 31" across a gap
+function pageRef(book, page){
+  const segs = [];
+  page.forEach(p => {
+    const s = segs[segs.length - 1];
+    const next = s && ((p.c === s.c2 && (p.v === s.v2 || p.v === s.v2 + 1)) || (p.c === s.c2 + 1 && p.v === 1 && s.v2 === book.chapters[s.c2 - 1]));
+    if(next){ s.c2 = p.c; s.v2 = p.v; } else segs.push({c1:p.c, v1:p.v, c2:p.c, v2:p.v});
+  });
+  return formatBibleRef(book, segs);
+}
+
+// #proto-start  a few KJV passages, so the Bible screen works in the prototype
+const PROTO_KJV = {"JHN 3:16": "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.","JHN 3:17": "For God sent not his Son into the world to condemn the world; but that the world through him might be saved.","JHN 3:18": "He that believeth on him is not condemned: but he that believeth not is condemned already, because he hath not believed in the name of the only begotten Son of God.","JHN 3:19": "And this is the condemnation, that light is come into the world, and men loved darkness rather than light, because their deeds were evil.","JHN 3:20": "For every one that doeth evil hateth the light, neither cometh to the light, lest his deeds should be reproved.","JHN 3:21": "But he that doeth truth cometh to the light, that his deeds may be made manifest, that they are wrought in God.","PSA 23:1": "The LORD is my shepherd; I shall not want.","PSA 23:2": "He maketh me to lie down in green pastures: he leadeth me beside the still waters.","PSA 23:3": "He restoreth my soul: he leadeth me in the paths of righteousness for his name’s sake.","PSA 23:4": "Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me.","PSA 23:5": "Thou preparest a table before me in the presence of mine enemies: thou anointest my head with oil; my cup runneth over.","PSA 23:6": "Surely goodness and mercy shall follow me all the days of my life: and I will dwell in the house of the LORD for ever.","PSA 46:1": "God is our refuge and strength, a very present help in trouble.","PSA 46:2": "Therefore will not we fear, though the earth be removed, and though the mountains be carried into the midst of the sea;","PSA 46:3": "Though the waters thereof roar and be troubled, though the mountains shake with the swelling thereof. Selah."};
+// #proto-end
+
+/* ---------------- On-screen text: state, OBS, and the panel on the main screen ----------------
+   Hymns and verses go to the plug-in's "Scripture & Hymns" source (ShowText / ClearText); lower thirds to its
+   "Lower Third" source (ShowLowerThird / SetLowerThirdEnabled). The controller decides what's on screen;
+   the plug-in reports changes back as vendor events (TextChanged, LowerThirdChanged). */
+ui.ot = (() => { const d = {ltOn:false, hyLines:2, hyChorus:true, bbTr:"KJV", bbPer:260, book:""};
+  try{ return {...d, ...JSON.parse(localStorage.getItem("onscreen") || "{}")}; }catch(e){ return d; } })();
+const saveOt = () => { try{ localStorage.setItem("onscreen", JSON.stringify(ui.ot)); }catch(e){} };
+const TRANSLATIONS = [["KJV","King James Version"],["NKJV","New King James Version"],["ESV","English Standard Version"],["NIV","New International Version"],["CSB","Christian Standard Bible"],["NASB 1995","New American Standard Bible 1995"]];
+// What's loaded in the On screen panel: slides to step through, which one, and whether it's on the stream
+const ot = {item:null, i:0, showing:false, tdFound:null, plugin:null, trSession:null};
+ui.lt = {found:null, names:[], showing:"", enabled:null};
+const otErr = (code, message) => { const e = new Error(message || code); e.code = code; return e; };
+async function vcall(requestType, requestData = {}){
+  const r = await obs.call("CallVendorRequest", {vendorName:"church-controller", requestType, requestData});
+  ot.plugin = true;
+  return (r && r.responseData) || {};
+}
+function otFail(e){
+  if(e.code === "PLUGIN_MISSING"){ ot.plugin = false; toast("The companion plug-in in OBS needs updating to show hymns, verses and lower thirds."); }
+  else if(e.code === "NO_TEXT_SOURCE"){ ot.tdFound = false; toast("OBS has no Scripture & Hymns source in this scene collection. In OBS: Sources → + → Scripture & Hymns."); }
+  else if(e.code === "NO_LOWER_THIRD"){ ui.lt.found = false; toast("OBS has no Lower Third source in this scene collection. In OBS: Sources → + → Lower Third."); }
+  else if(e.code === "DISABLED") toast("Lower thirds are switched off. Turn them on in Settings → On-screen text.");
+  else if(e.code === "NOT_CONNECTED") toast("Not connected to OBS.");
+  else toast(`OBS couldn't show that: ${e.message}`);
+  renderOt();
+}
+/* OBS may handle two requests at once, so quick taps could arrive out of order. Changes go one at a time,
+   and a change that's been overtaken by a newer tap is skipped: what's on screen always ends on the last tap. */
+let otChain = Promise.resolve(), otSeq = 0;
+function otQueue(fn){ const run = otChain.then(fn, fn); otChain = run.catch(() => {}); return run; }
+async function otSend(){
+  const my = ++otSeq;
+  await otQueue(async () => {
+    if(my !== otSeq) return;            // a newer tap is queued; it sends the latest slide
+    const s = ot.item && ot.item.slides[ot.i]; if(!s) return;
+    try{ const r = await vcall("ShowText", {slide:s}); if(r.ok === false) throw otErr(r.code); ot.tdFound = true; ot.showing = true; }
+    catch(e){ ot.showing = false; otFail(e); }
+  });
+  renderOt();
+}
+async function otHide(){
+  const was = ot.showing; ot.showing = false; renderOt();
+  ++otSeq;                              // anything still waiting to show is cancelled
+  await otQueue(async () => { try{ await vcall("ClearText"); }catch(e){ if(was) otFail(e); } });
+}
+function otStep(d){
+  if(!ot.item) return;
+  if(ot.item.kind === "verse") return bbStep(d);
+  const sl = ot.item.slides;
+  let n = ot.i + d;
+  if(n < 0 || n >= sl.length) return;
+  // Hymns: going back into another verse starts at its first part
+  if(d < 0 && ot.item.kind === "hymn" && !sl[n].intro && sl[n].label !== sl[ot.i].label)
+    while(n > 0 && !sl[n - 1].intro && sl[n - 1].label === sl[n].label) n--;
+  ot.i = n;
+  if(ot.showing || ot.item.kind === "hymn") otSend(); else renderOt();
+}
+// The whole hymn in the panel, with the lines on the stream highlighted; tap a verse to go to its start
+function renderLyrics(it, s){
+  const el = $("otLyrics"); el.innerHTML = "";
+  let cur = null;
+  // Just the verse being sung (before the words start: the first verse, ready to go)
+  const verse = s.intro ? it.hymn.verses[0] : (it.hymn.verses.find(v => v.label === s.label) || it.hymn.verses[0]);
+  [verse].filter(Boolean).forEach(v => {
+    const b = document.createElement("div"); b.className = "ot-lyr-v";
+    const here = !s.intro && v.label === s.label;
+    b.classList.toggle("cur", here);
+    const h = document.createElement("b"); h.textContent = v.label; b.appendChild(h);
+    // Each part (the two lines shown together) is its own button: tap it to put that part on the stream
+    const parts = otParts(v.label);
+    parts.forEach(n => {
+      const p = it.slides[n];
+      const pb = document.createElement("button"); pb.type = "button"; pb.className = "ot-lyr-p";
+      pb.setAttribute("aria-label", `Show ${v.label}, part ${p.page} of ${p.pages}`);
+      const on = n === ot.i && !s.intro;
+      pb.classList.toggle("on", on);
+      p.lines.forEach(line => { const l = document.createElement("span"); l.className = "ot-lyr-l" + (on ? " on" : ""); l.textContent = line; pb.appendChild(l); });
+      if(on) cur = pb;
+      pb.addEventListener("click", () => otGoTo(n));
+      b.appendChild(pb);
+    });
+    if(!parts.length) v.lines.forEach(line => { const l = document.createElement("span"); l.className = "ot-lyr-l"; l.textContent = line; b.appendChild(l); });
+    el.appendChild(b);
+  });
+  // Keep the highlighted lines in view
+  if(cur) requestAnimationFrame(() => { el.scrollTop = Math.max(0, cur.offsetTop - el.offsetTop - 28); });
+  else el.scrollTop = 0;
+}
+/* The parts (slide numbers) of a verse or chorus as it comes up here: the one being sung, otherwise the next
+   time it comes up, otherwise the first */
+function otParts(label){
+  const sl = ot.item.slides, starts = [];
+  sl.forEach((x, i) => { if(x.label === label && !x.intro && (i === 0 || sl[i - 1].label !== label || sl[i - 1].intro)) starts.push(i); });
+  if(!starts.length) return [];
+  const start = [...starts].reverse().find(i => i <= ot.i && sl[ot.i].label === label && !sl.slice(i, ot.i + 1).some(y => y.label !== label))
+             ?? starts.find(i => i > ot.i) ?? starts[0];
+  const out = [];
+  for(let i = start; i < sl.length && sl[i].label === label && !sl[i].intro; i++) out.push(i);
+  return out;
+}
+// Put one part on the stream (tapped in the hymn text)
+function otGoTo(n){
+  if(!ot.item || !ot.item.slides[n] || n === ot.i) return;
+  ot.i = n;
+  if(ot.showing || ot.item.kind === "hymn") otSend(); else renderOt();
+}
+// Go straight to a verse or the chorus. The chorus goes to the one after the verse being sung.
+function otJump(label){
+  if(!ot.item) return;
+  const sl = ot.item.slides, cur = sl[ot.i];
+  let n = -1;
+  if(cur && cur.label === label) n = sl.findIndex((x, i) => i <= ot.i && x.label === label && (i === 0 || sl[i - 1].label !== label) && !sl.slice(i, ot.i + 1).some(y => y.label !== label));
+  if(n < 0) n = sl.findIndex((x, i) => i > ot.i && x.label === label && (i === 0 || sl[i - 1].label !== label));
+  if(n < 0) n = sl.findIndex(x => x.label === label);
+  if(n < 0) return;
+  ot.i = n;
+  if(ot.showing || ot.item.kind === "hymn") otSend(); else renderOt();
+}
+// Done: the singing (or reading) is over. Take it off the stream and clear the panel.
+async function otDone(){
+  if(!ot.item) return;
+  const title = ot.item.title;
+  if(ot.showing) await otHide();
+  ot.item = null; renderOt();
+  toast(`Done: ${title}`);
+}
+// Puts a new hymn or passage in the panel; whatever was on screen comes down first
+async function otLoad(item, start, show){
+  if(ot.showing && !show) await otHide();
+  ot.item = item; ot.i = Math.max(0, Math.min(start || 0, item.slides.length - 1));
+  if(show) await otSend(); else { renderOt(); toast(`Ready: ${item.title}. Tap Show when it's time.`); }
+}
+function otNotes(){
+  const n = [];
+  if(ui.connected === false) return n;
+  if(ot.plugin === false) n.push("Update the companion plug-in in OBS to show hymns, verses and lower thirds.");
+  else {
+    if(ot.tdFound === false) n.push(`${ui.collection || "This scene collection"} has no Scripture & Hymns source. Add it in OBS: Sources → + → Scripture & Hymns.`);
+    if(ltOn() && ui.lt.found === false) n.push(`${ui.collection || "This scene collection"} has no Lower Third source. Add it in OBS: Sources → + → Lower Third.`);
+  }
+  return n;
+}
+function renderOt(){
+  const it = ot.item, s = it && it.slides[ot.i];
+  if(it && it.kind === "verse") renderBbRead();
+  else if(bb.mode === "read"){ bb.mode = "pick"; $("bbOverlay").hidden = true; }
+  // One thing at a time: a hymn or a passage takes over the whole On screen panel, and while a speaker's
+  // lower third is up, Hymn and Bible wait until it's gone
+  const ltUp = !it && ltOn() && !!ui.lt.showing;
+  $("otChip").textContent = ot.showing && s ? `Showing · ${it.short}` : it ? "Ready, not showing" : ltUp ? `Showing · ${ui.lt.showing}` : "Nothing showing";
+  $("otChip").classList.toggle("live", ot.showing || ltUp);
+  $("otRow").hidden = !!it;
+  // The whole On screen panel (Hymn, Bible and the speaker buttons) is only for collections with lower thirds on.
+  // Something already up stays until Done, so it can be taken down.
+  $("otPanel").hidden = !ltOn() && !it;
+  // While a hymn or passage is in use, Audio and Change Speaker step aside so the column doesn't need to scroll
+  document.querySelector(".rail").classList.toggle("ot-busy", !!it && it.kind === "hymn");
+  $("otNow").classList.toggle("verse", !!it && it.kind === "verse");
+  $("otBbOpen").hidden = !(it && it.kind === "verse" && $("bbOverlay").hidden);
+  ["otHymnBtn", "otBibleBtn"].forEach(id => {
+    $(id).disabled = ltUp;
+    $(id).title = ltUp ? "Available when the speaker's lower third has gone" : "";
+  });
+  const notes = otNotes();
+  $("otNote").hidden = !notes.length; $("otNote").textContent = notes.join(" ");
+  $("otNow").hidden = !it;
+  if(it){
+    $("otNow").classList.toggle("on", ot.showing);
+    $("otTag").textContent = ot.showing ? "ON SCREEN" : "READY";
+    $("otNowTitle").textContent = it.title;
+    $("otNowS").textContent = it.sub(ot.i);
+    $("otPrev").disabled = ot.i === 0;
+    $("otNext").disabled = ot.i >= it.slides.length - 1;
+    // Hymns: no Show/Hide (Enter put it up, Done takes it down); a wide Next instead
+    const isHymn = it.kind === "hymn";
+    $("otNow").classList.toggle("hymn", isHymn);
+    // Hymns: "Start" until the first words have gone up, then "Next" from then on
+    if(s && !s.intro) it.started = true;
+    const nextLbl = isHymn && !it.started ? "Start" : "Next";
+    $("otNext").innerHTML = isHymn ? `<span class="ot-next-lbl">${nextLbl}</span><i data-lucide="${nextLbl === "Start" ? "play" : "chevron-right"}"></i>` : `<i data-lucide="chevron-right"></i>`;
+    $("otNext").setAttribute("aria-label", nextLbl);
+    $("otLyrics").hidden = !isHymn; $("otUp").hidden = isHymn;
+    if(isHymn) renderLyrics(it, s);
+    $("otShow").innerHTML = ot.showing ? `<i data-lucide="eye-off"></i><span>Hide</span>` : `<i data-lucide="eye"></i><span>Show</span>`;
+    $("otShow").className = "btn " + (ot.showing ? "live" : "danger");
+    $("otShow").setAttribute("aria-label", ot.showing ? "Hide from the stream" : "Show on the stream");
+    // What comes next, so the operator can see it before it goes up. Tapping it goes there.
+    const nx = it.slides[ot.i + 1];
+    $("otUp").disabled = !nx; $("otUp").classList.toggle("last", !nx);
+    if(nx){
+      $("otUpH").textContent = nx.kind === "hymn" ? `${nx.label}${nx.pages > 1 ? ` (part ${nx.page} of ${nx.pages})` : ""}` : nx.reference;
+      $("otUpT").textContent = nx.kind === "hymn" ? nx.lines.join("\n") : nx.verses.map(v => (v.n != null ? v.n + " " : "") + v.text).join(" ");
+      $("otUp").setAttribute("aria-label", `Next: ${$("otUpH").textContent}. Tap to go to it.`);
+    } else {
+      $("otUpH").textContent = "";
+      $("otUpT").textContent = it.kind === "hymn" ? "This is the last part of the hymn. Tap Done when the singing ends." : "This is the last of the passage. Tap Done when the reading ends.";
+      $("otUp").removeAttribute("aria-label");
+    }
+    // Jump to any verse or the chorus (hymns): short labels so they fit as one row of buttons
+    const vb = $("otVerses"); vb.innerHTML = "";
+    if(it.kind === "hymn"){
+      const curLabel = s.label;
+      const labels = [...new Set(it.slides.map(x => x.label))];
+      const vs = labels.filter(l => /^verse /i.test(l)), others = labels.filter(l => l && !/^verse /i.test(l));
+      /* A fixed layout set by the hymn, not by what's selected: verse numbers one column each and the
+         chorus two, all on one row when they fit (up to 8 columns), otherwise rows of 6 */
+      const cols = vs.length + 2 * others.length;
+      vb.style.gridTemplateColumns = `repeat(${cols <= 8 ? cols : 6},minmax(0,1fr))`;
+      [...vs, ...others].forEach(label => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "ot-vchip" + (/^verse /i.test(label) ? "" : " wide");
+        b.textContent = /^verse /i.test(label) ? label.replace(/^verse /i, "") : label;
+        b.title = `Go to ${label}`; b.setAttribute("aria-label", `Go to ${label}`);
+        b.setAttribute("aria-current", label === curLabel);
+        b.addEventListener("click", () => otJump(label));
+        vb.appendChild(b);
+      });
+    }
+  }
+  // Lower thirds: one button per speaker, only when switched on in Settings
+  $("ltWrap").hidden = !ltOn() || !!it;
+  const row = $("ltRow"); row.innerHTML = "";
+  if(ltOn() && !it){
+    const names = ltNames();
+    if(!names.length){
+      row.innerHTML = `<span class="path">${ui.lt.found === false || ot.plugin === false ? "Not available right now." : "No speakers chosen yet. Choose them in Go Live or with Change Speakers."}</span>`;
+    }
+    names.forEach((name, i) => {
+      const b = document.createElement("button");
+      b.className = "lt-chip"; b.type = "button";
+      const on = ui.lt.showing === name;
+      b.setAttribute("aria-pressed", on);
+      // Countdown fill, picking up where it is if the buttons are redrawn part-way through
+      if(on && ui.lt.duration > 0 && ui.lt.since){
+        b.classList.add("counting");
+        b.style.setProperty("--lt-dur", ui.lt.duration + "s");
+        b.style.setProperty("--lt-in", Math.max(0, (performance.now() - ui.lt.since) / 1000) + "s");
+      }
+      b.innerHTML = `<i data-lucide="${on ? "user-x" : "user"}"></i><span class="lt-txt"><span></span></span>`;
+      b.querySelector(".lt-txt span").textContent = ltShort(name, names);
+      b.setAttribute("aria-label", b.title = (on ? `Hide ${name}'s lower third` : `Show ${name}'s lower third`));
+      b.title = on ? `Hide ${name}'s lower third` : `Show ${name}'s lower third`;
+      b.disabled = ui.lt.found === false;
+      b.addEventListener("click", () => ltToggle(i));
+      row.appendChild(b);
+    });
+  }
+  if(window.lucide) lucide.createIcons();
+}
+// Lower thirds are on or off per scene collection (Settings → Scene collections)
+function ltOn(coll = ui.collection){ const c = ui.collCfg[coll]; return c && c.ltOn !== undefined ? !!c.ltOn : (!!c && !!ui.ot.ltOn); }
+/* Whose names the buttons show: the speakers text source when this collection has one (it follows Go Live,
+   Change Speakers and edits in OBS); otherwise the speakers last chosen in Go Live or Change Speakers. */
+ui.ltPicked = (() => { try{ const l = JSON.parse(localStorage.getItem("ltPicked")); return Array.isArray(l) ? l : []; }catch(e){ return []; } })();
+function setLtPicked(names){ ui.ltPicked = names; try{ localStorage.setItem("ltPicked", JSON.stringify(names)); }catch(e){} renderOt(); renderQcBtn(); }
+const ltNames = () => ui.spkMode === "on" && ui.lt.names.length ? ui.lt.names : ui.ltPicked;
+/* The button shows just the last name, to save space (the stream still shows the full name).
+   "Jr.", "Sr.", "II" and so on stay with it; two speakers with the same last name get a first initial too. */
+function ltLast(name){
+  const w = String(name).trim().split(/\s+/);
+  let n = w.length - 1;
+  while(n > 0 && /^(jr|sr|ii|iii|iv)\.?,?$/i.test(w[n])) n--;
+  if(n > 0 && /,$/.test(w[n])) w[n] = w[n].slice(0, -1);
+  const key = w[n].toLowerCase();
+  while(n > 1 && /^(de|del|della|la|le|van|von|der|den|da|di|du|dos|das|st\.?|mc|bin|ibn)$/i.test(w[n - 1])) n--;   // "de la Cruz", "van der Berg"
+  return {first:w[0], last:w.slice(n).join(" "), key, single:n === 0};
+}
+function ltShort(name, all){
+  const me = ltLast(name);
+  if(me.single) return name.trim();
+  const twin = all.some(o => o !== name && ltLast(o).key === me.key);
+  return twin ? `${me.first[0]}. ${me.last}` : me.last;
+}
+// A speaker's subtitle (Settings → Speakers), matched by name to what the speakers text says
+const ltSubtitle = name => ((ui.speakers.visiting.find(sp => nameKey(sp.name) === nameKey(name)) || {}).subtitle || "").trim().toUpperCase();
+// Whether this collection's lower third shows subtitles: always for Conference, and for Barrington when switched on
+const ltShowSub = () => ltTheme() === "conference" || !!(cfg() || {}).ltSubB;
+const ltTheme = () => ((cfg() || {}).ltTheme === "conference" ? "conference" : "barrington");
+const ltColor = () => hexColor((cfg() || {}).ltColor) || LT_COLOR;
+async function ltSetTheme(){
+  try{ await vcall("SetLowerThirdTheme", {theme:ltTheme(), color:ltColor()}); }catch(e){ if(e.code === "PLUGIN_MISSING") ot.plugin = false; }
+}
+const ltThemeOff = d => (d.theme && d.theme !== ltTheme()) || (ltTheme() === "conference" && d.color && hexColor(d.color) !== ltColor());
+async function ltToggle(i){
+  if(ot.item) return;   // a hymn or passage is in use
+  try{
+    const name = ltNames()[i];
+    const r = await vcall("ShowLowerThird", {name, toggle:true, subtitle:ltShowSub() ? ltSubtitle(name) : ""});
+    if(r.ok === false) throw otErr(r.code);
+    ltApply(r);
+  }catch(e){ otFail(e); }
+}
+function ltApply(d){
+  // When a name goes up (or a different name replaces it), the countdown starts again, as the plug-in's timer does
+  const prev = ui.lt || {}, showing = d.showing || "";
+  const since = showing ? (showing === prev.showing && prev.since ? prev.since : performance.now()) : 0;
+  ui.lt = {found:true, names:(d.names || []).map(x => x.name), showing, enabled:d.enabled,
+    duration:typeof d.duration === "number" ? d.duration : (prev.duration ?? 8), since};
+  renderOt();
+}
+// The controller's Settings decide whether lower thirds can appear at all; OBS is kept in step
+async function ltSetEnabled(){
+  try{ const r = await vcall("SetLowerThirdEnabled", {enabled:ltOn()}); if(r.ok === false && r.code === "NO_LOWER_THIRD") ui.lt.found = false; }
+  catch(e){ if(e.code === "PLUGIN_MISSING") ot.plugin = false; }
+  renderOt();
+}
+async function otSync(){
+  try{
+    const t = await vcall("GetTextStatus");
+    ot.tdFound = !!t.found;
+    if(!t.showing) ot.showing = false;
+  }catch(e){ if(e.code === "PLUGIN_MISSING") ot.plugin = false; }
+  try{
+    const l = await vcall("GetLowerThirdStatus");
+    if(l.found){ ltApply(l); if(l.enabled !== ltOn()) await ltSetEnabled(); if(ltThemeOff(l)) await ltSetTheme(); }
+    else ui.lt = {found:false, names:[], showing:"", enabled:null};
+  }catch(e){ if(e.code === "PLUGIN_MISSING") ot.plugin = false; }
+  renderOt();
+}
+obs.on("VendorEvent", ev => {
+  if(!ev || ev.vendorName !== "church-controller" || !ev.eventData) return;
+  const d = ev.eventData;
+  if(ev.eventType === "LowerThirdChanged"){
+    ltApply(d);
+    if(typeof d.enabled === "boolean" && d.enabled !== ltOn()){
+      toast(ltOn() ? `Lower thirds were switched off in OBS. They're on for ${ui.collection} in the controller's Settings, so they were switched back on.`
+                   : `Lower thirds are off for ${ui.collection} in the controller's Settings → Scene collections, so they were switched off again in OBS.`);
+      ltSetEnabled();
+    }
+    // The theme follows Settings → Scene collections
+    if(ltThemeOff(d)) ltSetTheme();
+  }
+  if(ev.eventType === "TextChanged"){
+    ot.tdFound = true;
+    if(!d.showing && ot.showing){ ot.showing = false; renderOt(); }
+  }
+});
+obs.on("ConnectionClosed", () => { ot.showing = false; renderOt(); });
+$("otPrev").addEventListener("click", () => otStep(-1));
+$("otNext").addEventListener("click", () => otStep(1));
+$("otShow").addEventListener("click", () => ot.showing ? otHide() : otSend());
+$("otDone").addEventListener("click", otDone);
+$("otUp").addEventListener("click", () => otStep(1));
+$("otNowT").addEventListener("click", () => { if(!ot.item) return; ot.item.kind === "hymn" ? openHymn(ot.item.reopen) : bbShowRead(); });
+const otBusy = kind => (ot.item && ot.item.kind !== kind) || (!ot.item && ltOn() && !!ui.lt.showing);
+$("otHymnBtn").addEventListener("click", () => { if(!otBusy("hymn")) openHymn(); });
+$("otBibleBtn").addEventListener("click", () => { if(!otBusy("bible")) openBible(); });
+$("otNote").addEventListener("click", () => settingsGoTo("ontext"));
+$("otNote").addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); settingsGoTo("ontext"); } });
+// A presentation clicker or the keyboard: → / Page Down = next, ← / Page Up = back (when nothing else is open)
+document.addEventListener("keydown", e => {
+  if(!ot.item || e.target.closest("input,textarea,select") || document.querySelector(".overlay:not([hidden]):not(#bbOverlay), .spk-pop:not([hidden])")) return;
+  if(e.key === "ArrowRight" || e.key === "PageDown"){ e.preventDefault(); otStep(1); }
+  if(e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); otStep(-1); }
+});
+
+/* ---------------- Hymn books: stored by the desktop app, one file each ---------------- */
+const hymnStore = {
+  async list(){
+    if(window.bgh) return await window.bgh.hymns.list();
+    try{ const l = JSON.parse(localStorage.getItem("hymnBooks") || "null"); return Array.isArray(l) ? l : null; }catch(e){ return null; }
+  },
+  async save(book){
+    if(window.bgh) return window.bgh.hymns.save(book);
+    const l = ui.hymnBooks.filter(b => b.id !== book.id).concat(book);
+    localStorage.setItem("hymnBooks", JSON.stringify(l));
+  },
+  async remove(id){
+    if(window.bgh) return window.bgh.hymns.remove(id);
+    localStorage.setItem("hymnBooks", JSON.stringify(ui.hymnBooks.filter(b => b.id !== id)));
+  }
+};
+ui.hymnBooks = [];
+const bookById = id => ui.hymnBooks.find(b => b.id === id);
+async function loadHymnBooks(){
+  let list = null;
+  try{ list = await hymnStore.list(); }catch(e){}
+  // #proto-start  the prototype starts with the sample book from the template
+  // and a second sample book, so switching hymn books can be tried
+  if(!list){ const s = parseHymnBook(HYMN_TEMPLATE).book; list = [{id:"sample", ...s, logo:sampleLogo()}]; }
+  if(!list.some(b => b.id === "sample2")) list = list.concat({id:"sample2", ...parseHymnBook(SAMPLE_BOOK_2).book, logo:sampleLogo("GS", "#1f3a5f", "#ffffff")});
+  // #proto-end
+  ui.hymnBooks = (list || []).sort((a, b) => a.name.localeCompare(b.name));
+  if(!bookById(ui.ot.book)){ ui.ot.book = ui.hymnBooks[0] ? ui.hymnBooks[0].id : ""; saveOt(); }
+  if(!$("setOverlay").hidden) renderHbList();
+}
+// #proto-start
+function sampleLogo(t = "SH", bg = "#c9a45c", fg = "#12213d"){ return "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="16" fill="${bg}"/><text x="60" y="80" font-family="Georgia" font-size="56" font-weight="700" text-anchor="middle" fill="${fg}">${t}</text></svg>`); }
+// A second sample book (public-domain hymns)
+const SAMPLE_BOOK_2 = `Hymn book: Gospel Songs
+Short name: GS
+
+Hymn 7: Rock of Ages
+Words: Augustus M. Toplady
+
+1
+Rock of Ages, cleft for me,
+Let me hide myself in Thee;
+Let the water and the blood,
+From Thy wounded side which flowed,
+Be of sin the double cure;
+Save from wrath and make me pure.
+
+2
+Not the labours of my hands
+Can fulfil Thy law's demands;
+Could my zeal no respite know,
+Could my tears for ever flow,
+All for sin could not atone;
+Thou must save, and Thou alone.
+
+3
+Nothing in my hand I bring,
+Simply to Thy cross I cling;
+Naked, come to Thee for dress;
+Helpless, look to Thee for grace;
+Foul, I to the fountain fly;
+Wash me, Saviour, or I die.
+
+4
+While I draw this fleeting breath,
+When mine eyes shall close in death,
+When I soar to worlds unknown,
+See Thee on Thy judgment throne,
+Rock of Ages, cleft for me,
+Let me hide myself in Thee.
+
+Hymn 12: Blessed Assurance
+Words: Fanny J. Crosby
+
+1
+Blessed assurance, Jesus is mine!
+O what a foretaste of glory divine!
+Heir of salvation, purchase of God,
+Born of His Spirit, washed in His blood.
+
+Chorus
+This is my story, this is my song,
+Praising my Saviour all the day long;
+This is my story, this is my song,
+Praising my Saviour all the day long.
+
+2
+Perfect submission, perfect delight,
+Visions of rapture now burst on my sight;
+Angels descending bring from above
+Echoes of mercy, whispers of love.
+
+3
+Perfect submission, all is at rest,
+I in my Saviour am happy and blest,
+Watching and waiting, looking above,
+Filled with His goodness, lost in His love.
+
+Hymn 31: What a Friend We Have in Jesus
+Words: Joseph M. Scriven
+
+1
+What a Friend we have in Jesus,
+All our sins and griefs to bear!
+What a privilege to carry
+Everything to God in prayer!
+O what peace we often forfeit,
+O what needless pain we bear,
+All because we do not carry
+Everything to God in prayer!
+
+2
+Have we trials and temptations?
+Is there trouble anywhere?
+We should never be discouraged;
+Take it to the Lord in prayer.
+Can we find a friend so faithful
+Who will all our sorrows share?
+Jesus knows our every weakness;
+Take it to the Lord in prayer.
+
+3
+Are we weak and heavy laden,
+Cumbered with a load of care?
+Precious Saviour, still our refuge;
+Take it to the Lord in prayer.
+Do thy friends despise, forsake thee?
+Take it to the Lord in prayer!
+In His arms He'll take and shield thee;
+Thou wilt find a solace there.
+`;
+// #proto-end
+const bookLogo = (b, cls = "") => b && b.logo ? `<img class="${cls}" alt="" src="${esc(b.logo)}">` : `<span class="${cls} no-logo" aria-hidden="true">${esc((b && (b.short || b.name) || "?").slice(0, 3))}</span>`;
+function bookChips(el, selected, onPick){
+  el.innerHTML = "";
+  ui.hymnBooks.forEach(b => {
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "book-chip"; c.setAttribute("aria-pressed", b.id === selected);
+    c.innerHTML = bookLogo(b) + `<span class="bk-name"></span>`;
+    c.querySelector(".bk-name").textContent = b.name;
+    c.addEventListener("click", () => onPick(b.id));
+    el.appendChild(c);
+  });
+}
+
+/* ---------------- Hymn screen: book, number keypad, starting verse ---------------- */
+const hy = {book:"", num:"", start:0, search:""};
+const hyBook = () => bookById(hy.book);
+const hyHymn = () => { const b = hyBook(); return b && hy.num ? b.hymns.find(h => h.number === hy.num.toUpperCase()) : null; };
+function openHymn(reopen){
+  hy.book = (reopen && reopen.book) || ui.ot.book; hy.num = reopen ? reopen.num : "";
+  renderHy(); $("hyOverlay").hidden = false;
+}
+function renderHy(){
+  const books = ui.hymnBooks, b = hyBook(), h = hyHymn();
+  $("hyNote").hidden = !!books.length;
+  $("hyNote").textContent = "There are no hymn books yet. Add one in Settings → On-screen text.";
+  $("hyBooksField").hidden = books.length < 2;
+  bookChips($("hyBooks"), hy.book, id => { hy.book = id; renderHy(); });
+  $("hyBookTag").textContent = b ? b.name : "";
+  $("hyNum").textContent = hy.num || "Number";
+  $("hyNum").classList.toggle("empty", !hy.num);
+  const res = $("hyRes"); res.innerHTML = "";
+  // Hymns numbered like 124a: tapping 124 offers 124a, 124b … as buttons
+  const lettered = b && hy.num && !h ? b.hymns.filter(x => new RegExp(`^${hy.num}[A-Z]$`).test(x.number)).sort(byHymnNumber) : [];
+  if(!b){ /* nothing to show */ }
+  else if(!hy.num) res.innerHTML = `<p class="bc-msg">${esc(b.name)} has ${b.hymns.length} hymn${b.hymns.length === 1 ? "" : "s"}. Tap the number on the keypad.</p>`;
+  else if(lettered.length) lettered.forEach(x => {
+    const r = document.createElement("button"); r.type = "button"; r.className = "hy-hit";
+    r.innerHTML = `<span class="hy-hit-n"></span><span class="hy-hit-t"></span>`;
+    r.querySelector(".hy-hit-n").textContent = x.number; r.querySelector(".hy-hit-t").textContent = x.title;
+    r.addEventListener("click", () => { hy.num = x.number; renderHy(); });
+    res.appendChild(r);
+  });
+  else if(!h) res.innerHTML = `<p class="bc-msg err">There's no hymn ${esc(hy.num)} in ${esc(b.name)}.</p>`;
+  else {
+    const verses = h.verses.filter(v => v.kind === "verse").length, chorus = h.verses.some(v => v.kind === "chorus");
+    res.innerHTML = `<div class="hy-title"><span class="hy-title-n"></span><span class="hy-title-t"></span></div><p class="bc-msg"></p>`;
+    res.querySelector(".hy-title-n").textContent = h.number; res.querySelector(".hy-title-t").textContent = h.title;
+    res.querySelector(".bc-msg").textContent = `${verses} verse${verses === 1 ? "" : "s"}${chorus ? " and a chorus" : ""}. Enter puts the hymn number on the stream; Start then brings in the words.`;
+  }
+  $("hyEnter").disabled = !h;
+}
+function hyKey(k){
+  if(k === "back") hy.num = hy.num.slice(0, -1);
+  else if(k === "clear") hy.num = "";
+  else if(hy.num.length < 4 && /^\d$/.test(k)) hy.num = hy.num.replace(/[A-Z]$/, "") + k;
+  renderHy();
+}
+$("hyPad").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if(b) hyKey(b.dataset.k); });
+$("hyOverlay").addEventListener("keydown", e => { if(e.key === "Escape"){ e.preventDefault(); $("hyCancel").click(); } });
+$("hyCancel").addEventListener("click", () => $("hyOverlay").hidden = true);
+// Enter: the hymn book's logo and number go on the stream first (an intro slide that holds);
+// Next then opens the box into verse 1, two lines at a time.
+async function loadHymn(){
+  const b = hyBook(), h = hyHymn(); if(!b || !h) return;
+  ui.ot.book = b.id; saveOt();
+  const parts = hymnSlides(h, {perPage:+ui.ot.hyLines, repeatChorus:!!ui.ot.hyChorus});
+  // Every line of the hymn and the most lines shown at once, so OBS sizes the box once for the whole hymn
+  const base = {kind:"hymn", book:b.name, logo:b.logo || "", number:h.number, title:h.title,
+    allLines:[...new Set(h.verses.flatMap(v => v.lines))], rows:Math.max(1, ...parts.map(p => p.lines.length))};
+  const slides = [{...base, key:`h:${b.id}:${h.number}:intro`, intro:true, label:"", lines:[], page:1, pages:1},
+    ...parts.map((s, i) => ({
+      ...base, key:`h:${b.id}:${h.number}:${i}`, label:s.label, lines:s.lines, from:s.from, page:s.page, pages:s.pages}))];
+  $("hyOverlay").hidden = true;
+  await otLoad({kind:"hymn", hymn:h, title:`${b.short || b.name} ${h.number} · ${h.title}`, short:`Hymn ${h.number}`, slides,
+    reopen:{book:b.id, num:h.number},
+    sub:i => { const s = slides[i]; return s.intro ? "Hymn number on the stream · Start brings in the words"
+      : `${s.label}${s.pages > 1 ? ` (part ${s.page} of ${s.pages})` : ""} · ${i} of ${slides.length - 1}`; }}, 0, true);
+}
+$("hyEnter").addEventListener("click", loadHymn);
+
+/* ---------------- Bible screen: translation, then type a passage or pick book → chapter → verses ---------------- */
+const bibleApi = window.bgh ? window.bgh.bible : {
+  // #proto-start  the prototype has a few KJV passages; the desktop app has the whole KJV and the online translations
+  async status(){ return TRANSLATIONS.map(([abbr, name]) => ({abbr, name, ok:abbr === "KJV", note:abbr === "KJV" ? "Built in, works without internet" : "Desktop app only (needs an API key)"})); },
+  async lookup({translation, book, segments}){
+    const verses = [];
+    for(const s of segments) for(let c = s.c1; c <= s.c2; c++){
+      const max = BIBLE_BOOKS[book.i].chapters[c - 1];
+      for(let v = c === s.c1 ? s.v1 : 1; v <= (c === s.c2 ? s.v2 : max); v++){
+        const t = PROTO_KJV[`${book.usfm} ${c}:${v}`];
+        if(!t) return {ok:false, code:"PROTO", error:"The prototype only has John 3:16–21, Psalm 23 and Psalm 46:1–3. The desktop app has the whole KJV."};
+        verses.push({c, v, text:t});
+      }
+    }
+    return {ok:true, verses};
+  }
+  // #proto-end
+};
+const bb = {mode:"pick", tr:"KJV", ref:"", parsed:null, testament:null, book:null, chapter:null, v1:null, v2:null, status:null, busy:false, err:""};
+const testamentOf = b => b.i < 39 ? "ot" : "nt";
+const TESTAMENTS = {ot:["Old Testament", 0, 39], nt:["New Testament", 39, 66]};
+async function openBible(reopen){
+  bb.tr = (reopen && reopen.tr) || ot.trSession || ui.ot.bbTr; bb.err = ""; bb.busy = false;
+  bb.testament = bb.book = bb.chapter = bb.v1 = bb.v2 = null; bb.mode = "pick";
+  setBbRef(reopen ? reopen.ref : "");
+  renderBb(); $("bbOverlay").hidden = false;
+  try{ bb.status = await bibleApi.status(); }catch(e){ bb.status = null; }
+  renderBb();
+}
+// The typed passage and the picker follow each other
+function setBbRef(text, fromPicker){
+  bb.ref = text; bb.err = "";
+  bb.parsed = text.trim() ? parseBibleRef(text) : null;
+  if(!fromPicker && bb.parsed){
+    const p = bb.parsed, s = p.segments && p.segments[0];
+    bb.book = p.book || null;
+    if(bb.book) bb.testament = testamentOf(bb.book);
+    if(p.ok && p.segments.length === 1 && s.c1 === s.c2){ bb.chapter = s.c1; bb.v1 = s.v1; bb.v2 = s.v2; }
+    else if(p.ok){ bb.chapter = null; bb.v1 = bb.v2 = null; }
+  }
+}
+function pickerRef(){
+  const b = bb.book; if(!b) return "";
+  if(oneChapter(b)) return bb.v1 ? `${b.name} ${bb.v1}${bb.v2 && bb.v2 !== bb.v1 ? "-" + bb.v2 : ""}` : `${b.name} `;
+  if(!bb.chapter) return `${b.name} `;
+  if(!bb.v1) return `${b.name} ${bb.chapter}`;
+  return `${b.name} ${bb.chapter}:${bb.v1}${bb.v2 && bb.v2 !== bb.v1 ? "-" + bb.v2 : ""}`;
+}
+function trState(abbr){ const s = bb.status && bb.status.find(x => x.abbr === abbr); return s || {abbr, ok:abbr === "KJV", note:""}; }
+function renderBb(){
+  const it = ot.item && ot.item.kind === "verse" ? ot.item : null, reading = bb.mode === "read" && !!it;
+  // Translations, down the left. While reading, switching keeps the verse you're on.
+  const trSel = reading ? it.tr : bb.tr;
+  const tr = $("bbTr"); tr.innerHTML = "";
+  TRANSLATIONS.forEach(([abbr, name]) => {
+    const st = trState(abbr), b = document.createElement("button");
+    b.type = "button"; b.className = "tr-chip"; b.setAttribute("aria-pressed", abbr === trSel);
+    b.classList.toggle("off", !st.ok); b.textContent = abbr; b.title = `${name}${st.note ? " · " + st.note : ""}`;
+    b.addEventListener("click", () => { if(reading) bbSwitchTr(abbr); else { bb.tr = abbr; bb.err = ""; renderBb(); } });
+    tr.appendChild(b);
+  });
+  const cur = trState(trSel);
+  $("bbTrNote").textContent = cur.ok ? "" : `${trSel}: ${cur.note || "not available"}. Set it up in Settings → On-screen text, or choose another translation.`;
+  $("bbTrNote").hidden = cur.ok;
+  // Where you are: Bible › Testament › Book while choosing; the chapter while reading
+  const crumbs = $("bbCrumbs"); crumbs.innerHTML = "";
+  const crumb = (label, fn) => { const c = document.createElement("button"); c.type = "button"; c.className = "link-btn"; c.textContent = label; c.addEventListener("click", fn); crumbs.appendChild(c); };
+  if(reading){ const h = document.createElement("b"); h.textContent = `${it.short} · ${it.tr}`; crumbs.appendChild(h); }
+  else {
+    crumb("Bible", () => { bb.testament = bb.book = bb.chapter = null; renderBb(); });
+    if(bb.testament){ crumbs.append(" › "); crumb(TESTAMENTS[bb.testament][0], () => { bb.book = bb.chapter = null; renderBb(); }); }
+    if(bb.book){ crumbs.append(" › "); crumb(bb.book.name, () => { bb.chapter = null; renderBb(); }); }
+  }
+  $("bbChange").hidden = !reading;
+  // The middle: testaments → books → chapters, then the chapter's verse numbers
+  const step = $("bbStep"); step.innerHTML = ""; step.hidden = reading;
+  $("bbVerses").hidden = !reading; $("bbNow").hidden = !reading;
+  if(!reading){
+    const grid = (cls, items) => { const g = document.createElement("div"); g.className = cls; items.forEach(x => g.appendChild(x)); step.appendChild(g); };
+    const btn = (label, fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.addEventListener("click", fn); return b; };
+    const label = t => { const h = document.createElement("span"); h.className = "label"; h.textContent = t; step.appendChild(h); };
+    if(!bb.testament){
+      grid("tm-grid", Object.entries(TESTAMENTS).map(([k, [t, a, z]]) => {
+        const b = btn("", () => { bb.testament = k; renderBb(); });
+        b.innerHTML = `<b></b><small></small>`; b.querySelector("b").textContent = t;
+        b.querySelector("small").textContent = `${BIBLE_BOOKS[a].name} to ${BIBLE_BOOKS[z - 1].name} · ${z - a} books`;
+        return b;
+      }));
+    } else if(!bb.book){
+      const [t, a, z] = TESTAMENTS[bb.testament];
+      label(`${t}: choose a book`);
+      grid("bk-grid", BIBLE_BOOKS.slice(a, z).map(b => btn(b.name, () => { bb.book = b; bb.chapter = null; if(oneChapter(b)) bbOpenChapter(b, 1); else renderBb(); })));
+    } else if(!bb.chapter){
+      label(`${bb.book.name}: choose a chapter`);
+      grid("num-grid", bb.book.chapters.map((n, i) => btn(String(i + 1), () => bbOpenChapter(bb.book, i + 1))));
+    } else label(bb.busy ? `Getting ${bb.book.name} ${bb.chapter}…` : `${bb.book.name} ${bb.chapter}`);
+    const stepKey = !bb.testament ? "testaments" : !bb.book ? "books:" + bb.testament : "ch:" + bb.book.i;
+    if(stepKey !== bb.stepKey){ bb.stepKey = stepKey; $("bbMid").scrollTop = 0; }
+  } else renderBbVerses(it);
+  const err = reading ? bb.rErr : bb.err;
+  $("bbErr").hidden = !err; $("bbErr").textContent = err || "";
+  // The buttons on the right
+  const live = reading && ot.showing && it.started;
+  $("bbPrev").disabled = !reading || !it.started || ot.i === 0;
+  $("bbNext").disabled = !reading || (it.started && ot.i >= it.slides.length - 1);
+  $("bbNext").querySelector("span").textContent = reading && it.started ? "Next" : "Start";
+  $("bbHide").disabled = !reading || !it.started;
+  $("bbHide").innerHTML = live ? `<i data-lucide="eye-off"></i><span>Hide</span>` : `<i data-lucide="eye"></i><span>Show</span>`;
+  $("bbHide").className = "btn " + (live ? "live" : reading && it.started ? "danger" : "");
+  $("bbDone").disabled = !it;
+  // Cancel: while reading it tucks the Bible away (to reach the scenes); while choosing a new passage it goes back
+  $("bbCancel").innerHTML = reading ? `<i data-lucide="layout-grid"></i><span>Scenes</span>` : it ? `<span>Back to the verses</span>` : `<span>Cancel</span>`;
+  $("bbCancel").title = reading ? "See the scene buttons; tap Verse buttons under On screen to come back" : "";
+  if(window.lucide) lucide.createIcons();
+}
+// The verse numbers for the chapter being read: the one on the stream is red, ones already shown have a dot
+function renderBbVerses(it){
+  const s = it.slides[ot.i], live = ot.showing && it.started;
+  $("bbNow").classList.toggle("live", live);
+  $("bbNowH").textContent = !it.started ? "Ready" : `${s.reference}${live ? " · on the stream" : " · hidden"}`;
+  $("bbNowT").textContent = !it.started ? "Tap a verse number as it's read and it goes straight on the stream." : s.text;
+  const g = $("bbVerses");
+  if(g.dataset.key !== it.title || g.children.length !== it.slides.length){
+    g.innerHTML = ""; g.dataset.key = it.title;
+    it.slides.forEach((x, i) => {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = String(x.v);
+      b.setAttribute("aria-label", `Show verse ${x.v}`);
+      b.addEventListener("click", () => bbGo(i));
+      g.appendChild(b);
+    });
+  }
+  [...g.children].forEach((b, i) => {
+    const cur = it.started && i === ot.i;
+    b.classList.toggle("cur", cur); b.classList.toggle("live", cur && live); b.classList.toggle("seen", !cur && it.seen.has(i));
+    b.setAttribute("aria-pressed", cur);
+  });
+  const cb = it.started && g.children[ot.i], col = $("bbMid");
+  if(cb){ const top = cb.offsetTop - col.offsetTop; if(top < col.scrollTop + 70 || top + cb.offsetHeight > col.scrollTop + col.clientHeight) col.scrollTop = Math.max(0, top - 80); }
+}
+$("bbOverlay").addEventListener("keydown", e => { if(e.key === "Escape"){ e.preventDefault(); $("bbCancel").click(); } });
+$("bbCancel").addEventListener("click", () => {
+  const it = ot.item && ot.item.kind === "verse";
+  if(it && bb.mode === "read"){ $("bbOverlay").hidden = true; renderOt(); }   // Scenes
+  else if(it) bbShowRead();                                                     // Back to the verses
+  else $("bbOverlay").hidden = true;
+});
+/* Reading: a whole chapter, one verse per screen. The operator taps each verse number as it's read
+   (skipping ahead or going back as the preacher does); Back / Next are there as a convenience. */
+async function bbFetchChapter(book, chapter, tr){
+  const max = book.chapters[chapter - 1];
+  let r;
+  try{ r = await bibleApi.lookup({translation:tr, book:{i:book.i, name:book.name, usfm:book.usfm}, segments:[{c1:chapter, v1:1, c2:chapter, v2:max}]}); }
+  catch(e){ r = {ok:false, error:"Couldn't get the verses. Try again, or use KJV."}; }
+  if(!r.ok) return r;
+  const name = oneChapter(book) ? book.name : `${book.name} ${chapter}`;
+  const slides = r.verses.map((x, i) => ({kind:"verse", group:`${tr}:${name}`, key:`v:${tr}:${name}:${x.v}`,
+    reference:oneChapter(book) ? `${book.name} ${x.v}` : `${book.name} ${chapter}:${x.v}`, translation:tr,
+    verses:[{n:x.v, text:x.text}], text:x.text, page:i + 1, pages:r.verses.length, v:x.v}));
+  return {ok:true, slides, name};
+}
+async function bbOpenChapter(book, chapter){
+  if(!trState(bb.tr).ok){ bb.err = `${bb.tr} isn't available. Choose another translation.`; renderBb(); return; }
+  bb.book = book; bb.chapter = chapter; bb.busy = true; bb.err = ""; renderBb();
+  const r = await bbFetchChapter(book, chapter, bb.tr);
+  bb.busy = false;
+  if(!r.ok){ bb.chapter = null; bb.err = r.error; renderBb(); return; }
+  if(ot.showing) await otHide();
+  ot.trSession = bb.tr;
+  ot.item = {kind:"verse", title:`${r.name} · ${bb.tr}`, short:r.name, slides:r.slides, book, chapter, tr:bb.tr, started:false, seen:new Set(),
+    sub:i => !ot.item.started ? "Tap a verse number to start" : `${ot.item.slides[i].reference}${ot.showing ? " on the stream" : " · hidden"}`};
+  ot.i = 0;
+  bb.mode = "read"; $("bbOverlay").hidden = false;
+  renderBb(); renderOt();
+  $("bbMid").scrollTop = 0;
+}
+// Put verse number index n on the stream
+function bbGo(n){
+  const it = ot.item; if(!it || it.kind !== "verse" || n < 0 || n >= it.slides.length) return;
+  ot.i = n; it.started = true; it.seen.add(n);
+  otSend();
+}
+function bbStep(d){
+  const it = ot.item; if(!it) return;
+  if(!it.started) return bbGo(d > 0 ? 0 : -1);
+  bbGo(ot.i + d);
+}
+function bbShowRead(){ if(!ot.item || ot.item.kind !== "verse") return; bb.mode = "read"; renderBb(); renderOt(); $("bbOverlay").hidden = false; }
+function renderBbRead(){ if(!$("bbOverlay").hidden || bb.mode === "read") renderBb(); }
+async function bbSwitchTr(abbr){
+  const it = ot.item; if(!it || abbr === it.tr) return;
+  if(!trState(abbr).ok){ bb.rErr = `${abbr}: ${trState(abbr).note || "not available"}.`; renderBb(); return; }
+  bb.rErr = ""; $("bbNowH").textContent = `Getting ${abbr}…`;
+  const r = await bbFetchChapter(it.book, it.chapter, abbr);
+  if(!r.ok){ bb.rErr = r.error; renderBb(); return; }
+  if(ot.item !== it) return;
+  const v = it.slides[ot.i] && it.slides[ot.i].v;
+  it.slides = r.slides; it.tr = abbr; it.title = `${r.name} · ${abbr}`; ot.trSession = abbr; bb.tr = abbr;
+  ot.i = Math.max(0, it.slides.findIndex(x => x.v === v));
+  if(ot.showing) otSend(); else renderOt();
+}
+$("bbPrev").addEventListener("click", () => bbStep(-1));
+$("bbNext").addEventListener("click", () => bbStep(1));
+$("bbHide").addEventListener("click", () => { if(!ot.item || !ot.item.started) return; ot.showing ? otHide() : otSend(); });
+$("otBbOpen").addEventListener("click", bbShowRead);
+$("bbDone").addEventListener("click", async () => { await otDone(); bb.mode = "pick"; $("bbOverlay").hidden = true; });
+$("bbChange").addEventListener("click", () => { bb.mode = "pick"; bb.testament = ot.item ? testamentOf(ot.item.book) : null; bb.book = null; bb.chapter = null; bb.err = ""; renderBb(); });
+
+/* ---------------- Settings → On-screen text: hymn books ---------------- */
+function renderHbList(){
+  const el = $("hbList"); el.innerHTML = "";
+  if(!ui.hymnBooks.length) el.innerHTML = `<span class="path">No hymn books yet.</span>`;
+  ui.hymnBooks.forEach(b => {
+    const row = document.createElement("div"); row.className = "hb-row";
+    row.innerHTML = bookLogo(b, "hb-logo") + `<div><b></b><small></small></div>
+      <button type="button" class="btn" data-a="edit">Edit</button><button type="button" class="btn" data-a="update">Update from file</button>
+      <button type="button" class="btn" data-a="export" data-keep>Export text</button><button type="button" class="btn spk-rm" data-a="remove">Remove</button>`;
+    row.querySelector("b").textContent = b.name;
+    row.querySelector("small").textContent = `${b.hymns.length} hymn${b.hymns.length === 1 ? "" : "s"}${b.short ? " · " + b.short : ""}${b.id === ui.ot.book ? " · in use now" : ""}`;
+    row.querySelectorAll("button").forEach(x => x.addEventListener("click", () => hbAction(x.dataset.a, b, x)));
+    el.appendChild(row);
+  });
+  if(window.lucide) lucide.createIcons();
+  if(!$("setOverlay").hidden && $("setForm").classList.contains("locked")) lockSettings(true);
+}
+async function hbAction(a, b, btn){
+  if(a === "edit") return hbOpen({...b}, []);
+  if(a === "update"){ hbUpdating = b; $("hbFile").value = ""; $("hbFile").click(); return; }
+  if(a === "export") return saveText(`${b.name}.txt`, hymnBookText(b));
+  if(a === "remove"){
+    if(!btn.classList.contains("arm")){ btn.classList.add("arm"); btn.textContent = "Tap again to remove"; return; }
+    await hymnStore.remove(b.id); await loadHymnBooks(); renderHbList(); toast(`Removed ${b.name}`);
+  }
+}
+// Desktop app: a Save dialog; prototype: shown in a box to copy
+function saveText(name, text){
+  if(window.bgh){ window.bgh.saveFile(name, text, "text").then(p => { if(p) toast(`Saved ${p}`); }); return; }
+  $("bkTitle").textContent = name; $("bkName").textContent = name; $("bkText").value = text; $("bkOverlay").hidden = false;
+}
+let hbUpdating = null, hbDraft = null;
+$("hbAdd").addEventListener("click", () => { hbUpdating = null; $("hbFile").value = ""; $("hbFile").click(); });
+$("hbTemplate").addEventListener("click", () => saveText("Hymn book template.txt", HYMN_TEMPLATE));
+$("hbFile").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0]; if(!f) return;
+  const text = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(f); });
+  const {book, warnings} = parseHymnBook(text);
+  if(!book.hymns.length) return infoDlg("No hymns found in that file", warnings.map(w => w.msg).join(" ") || "Each hymn starts with a line like \"Hymn 1: Title\".");
+  const old = hbUpdating;
+  hbOpen({id:old ? old.id : "hb" + Date.now().toString(36), name:book.name || (old && old.name) || f.name.replace(/\.[^.]+$/, ""),
+    short:book.short || (old && old.short) || "", logo:old ? old.logo : "", hymns:book.hymns, file:f.name}, warnings, old);
+});
+function hbOpen(draft, warnings, replacing){
+  hbDraft = draft;
+  $("hbTitle").textContent = replacing ? `Update ${replacing.name}` : bookById(draft.id) ? `Edit ${draft.name}` : "Add hymn book";
+  const verses = draft.hymns.reduce((n, h) => n + h.verses.length, 0);
+  $("hbSum").textContent = `${draft.hymns.length} hymn${draft.hymns.length === 1 ? "" : "s"} and ${verses} verses` +
+    (draft.hymns.length ? `, numbered ${draft.hymns.slice().sort(byHymnNumber)[0].number} to ${draft.hymns.slice().sort(byHymnNumber).pop().number}` : "") +
+    (replacing ? `. This replaces the ${replacing.hymns.length} hymns saved now.` : ".");
+  $("hbName").value = draft.name; $("hbShort").value = draft.short || "";
+  hbRenderLogo();
+  const w = $("hbWarns"); w.innerHTML = "";
+  if(warnings.length){
+    w.innerHTML = `<span class="label">Check these in the file</span><ul></ul>`;
+    warnings.slice(0, 12).forEach(x => { const li = document.createElement("li"); li.textContent = `Line ${x.line}: ${x.msg}`; w.querySelector("ul").appendChild(li); });
+    if(warnings.length > 12){ const li = document.createElement("li"); li.textContent = `…and ${warnings.length - 12} more.`; w.querySelector("ul").appendChild(li); }
+  }
+  w.hidden = !warnings.length;
+  $("hbOverlay").hidden = false; $("hbName").focus();
+}
+function hbRenderLogo(){ $("hbLogo").innerHTML = bookLogo(hbDraft, "hb-logo"); $("hbLogoClear").hidden = !hbDraft.logo; }
+$("hbLogoBtn").addEventListener("click", () => { $("hbImg").value = ""; $("hbImg").click(); });
+$("hbLogoClear").addEventListener("click", () => { hbDraft.logo = ""; hbRenderLogo(); });
+// The logo is shrunk to fit 320 × 320 and kept with the book, so it travels to OBS with each hymn
+$("hbImg").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0]; if(!f) return;
+  try{
+    const url = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+    const img = new Image(); img.src = url; await img.decode();
+    const k = Math.min(1, 320 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    hbDraft.logo = c.toDataURL("image/png"); hbRenderLogo();
+  }catch(err){ toast("That image can't be used. Choose a PNG or JPG file."); }
+});
+$("hbCancel").addEventListener("click", () => { $("hbOverlay").hidden = true; });
+$("hbOverlay").addEventListener("keydown", e => { if(e.key === "Escape"){ e.preventDefault(); $("hbCancel").click(); } });
+$("hbSave").addEventListener("click", async () => {
+  hbDraft.name = $("hbName").value.trim() || "Hymn book"; hbDraft.short = $("hbShort").value.trim();
+  const clash = ui.hymnBooks.find(b => b.id !== hbDraft.id && b.name.toLowerCase() === hbDraft.name.toLowerCase());
+  if(clash) return toast(`There's already a hymn book called ${clash.name}. Use another name, or Update from file on that one.`);
+  hbDraft.savedAt = new Date().toISOString();
+  try{ await hymnStore.save(hbDraft); }catch(e){ return toast(`Couldn't save the hymn book: ${e.message}`); }
+  $("hbOverlay").hidden = true;
+  if(!ui.ot.book){ ui.ot.book = hbDraft.id; saveOt(); }
+  await loadHymnBooks(); renderHbList();
+  toast(`Saved ${hbDraft.name} (${hbDraft.hymns.length} hymns)`);
+});
+
+/* ---------------- Settings → On-screen text: Bible translations and keys ---------------- */
+async function renderTrList(){
+  const el = $("setTrList");
+  let st = null; try{ st = await bibleApi.status(); }catch(e){}
+  el.innerHTML = "";
+  TRANSLATIONS.forEach(([abbr, name]) => {
+    const s = (st || []).find(x => x.abbr === abbr) || {ok:abbr === "KJV", note:""};
+    const row = document.createElement("div"); row.className = "tr-st" + (s.ok ? " ok" : "");
+    row.innerHTML = `<i data-lucide="${s.ok ? "circle-check" : "circle-dashed"}"></i><b></b><span></span>`;
+    row.querySelector("b").textContent = abbr; row.querySelector("span").textContent = `${name}: ${s.note || (s.ok ? "ready" : "not set up")}`;
+    el.appendChild(row);
+  });
+  if(window.lucide) lucide.createIcons();
+}
+
+// Settings → On-screen text: fields filled when Settings opens; saved on Apply (hymn books save straight away)
+let otKeysAtOpen = {esv:"", ab:""};
+async function fillOtSettings(){
+  $("setHyLines").value = String(ui.ot.hyLines); $("setHyChorus").checked = !!ui.ot.hyChorus;
+  $("setBbTr").innerHTML = TRANSLATIONS.map(([a, n]) => `<option value="${esc(a)}">${esc(a)} · ${esc(n)}</option>`).join("");
+  $("setBbTr").value = ui.ot.bbTr; $("setBbPer").value = String(ui.ot.bbPer);
+  otKeysAtOpen = {esv:(await secret.get("esvKey")) || "", ab:(await secret.get("apiBibleKey")) || ""};
+  $("setEsvKey").value = otKeysAtOpen.esv; $("setAbKey").value = otKeysAtOpen.ab;
+  renderHbList(); renderTrList();
+}
+$("hyNote").addEventListener("click", () => { $("hyOverlay").hidden = true; settingsGoTo("ontext", "hbAdd"); });
 
 /* Silent mic warning: live, not muted, and no sound for the set number of seconds */
 ui.silenceSec = (() => { try{ return parseInt(localStorage.getItem("silenceSec"),10) || 20; }catch(e){ return 20; } })();
@@ -2512,7 +4336,7 @@ $("setVis").value = ui.defaultVis;
 /* Settings: a sidebar of categories, each its own page.
    Dots on a category: orange = needs attention, accent = unsaved changes. */
 const esc = v => String(v).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", golive:"Going live", alerts:"Alerts", screen:"Screen", backup:"Backup", help:"About & help", testing:"Testing"};
+const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", golive:"Going live", alerts:"Alerts", screen:"Screen", backup:"Backup", help:"About & help", testing:"Testing"};
 ui.setPage = (() => { try{ const p = localStorage.getItem("setPage"); return SET_PAGES[p] ? p : "connection"; }catch(e){ return "connection"; } })();
 function showSetPage(page, focusTab){
   if(!SET_PAGES[page] || !document.getElementById("tab-" + page)) page = "connection";
@@ -2551,6 +4375,7 @@ function setWarnings(){
   w.connection = ui.connected === false || ui.pluginOk === false;
   w.collections = !!ui.collection && (!ui.collCfg[ui.collection] || ui.spkMode === "error" || ui.schMode === "error" || !!ui.audioMissing);
   w.golive = ui.ytOk === false;
+  w.ontext = ui.connected !== false && (ot.plugin === false || ot.tdFound === false || (ltOn() && ui.lt.found === false));
   w.screen = matchTarget().kind === "ambiguous";
   return w;
 }
@@ -2588,6 +4413,17 @@ async function renderSetStatus(){
   else if(ui.ytOk === false) setStatus("setYtStatus", "warn", "triangle-alert", "OBS isn't signed in to YouTube", "In OBS, open Settings → Stream, choose YouTube, and press Connect Account.", showObs);
   else setStatus("setYtStatus", "warn", "triangle-alert", "Can't check YouTube sign-in", ui.connected === false ? "Not connected to OBS." : "The companion plug-in isn't responding.");
   if($("setShowObs")) $("setShowObs").addEventListener("click", async () => { try{ await obs.call("CallVendorRequest",{vendorName:"church-controller",requestType:"ShowOBS"}); }catch(e){} });
+  // On-screen text: are the plug-in's two sources in the loaded scene collection?
+  if(ui.connected !== false) await otSync();
+  const coll = ui.collection || "this scene collection";
+  if(ui.connected === false){ setStatus("setOtTdStatus", "warn", "triangle-alert", "Can't check OBS's sources", "Not connected to OBS."); $("setOtLtStatus").innerHTML = ""; $("setOtLtStatus").className = "set-status"; }
+  else if(ot.plugin === false){ setStatus("setOtTdStatus", "warn", "triangle-alert", "The companion plug-in needs updating", "Hymns, verses and lower thirds need the newer plug-in with the Scripture & Hymns and Lower Third sources."); $("setOtLtStatus").innerHTML = ""; $("setOtLtStatus").className = "set-status"; }
+  else {
+    if(ot.tdFound) setStatus("setOtTdStatus", "ok", "circle-check", "Scripture & Hymns source found", `In ${coll}. Hymns and verses show there.`);
+    else setStatus("setOtTdStatus", "warn", "triangle-alert", `No Scripture & Hymns source in ${coll}`, "In OBS, click + under Sources and choose Scripture & Hymns. Put it at the top of each scene where hymns and verses should appear.");
+    if(ui.lt.found) setStatus("setOtLtStatus", "ok", "circle-check", "Lower Third source found", `In ${coll}. Lower thirds are ${ui.lt.enabled ? "on" : "off"} in OBS.`);
+    else setStatus("setOtLtStatus", ltOn() ? "warn" : "", ltOn() ? "triangle-alert" : "info", `No Lower Third source in ${coll}`, "In OBS, click + under Sources and choose Lower Third. Put it at the top of each scene where speakers' names should appear.");
+  }
   if(window.lucide) lucide.createIcons();
   updateSetDots();
 }
@@ -2611,6 +4447,7 @@ async function openSettingsPanel(page = ui.setPage){
   workSpk = JSON.parse(JSON.stringify({home:ui.speakers.home, visiting:ui.speakers.visiting}));
   $("setHomeNew").value = ""; $("setHomeErr").hidden = true; $("setVisitNew").value = ""; $("setVisitErr").hidden = true;
   renderSetSpk();
+  await fillOtSettings();
   setSnap = snapSettings(); pageSnap0 = pageSnaps();
   ui.setUnlocked = false;
   lockSettings(isLiveOrRec());
@@ -2710,6 +4547,10 @@ function syncCfgFields(){
     folder: mode === "custom" ? ($("setFolder").value.trim() || "") : mode,
     audio: $("setAudio").value,
     wait: {title:$("setWaitTitle").value, w1:$("setWait1").value, w2:$("setWait2").value},
+    ltOn: $("setLtOnColl").checked,
+    ltTheme: $("setLtTheme").value,
+    ltSubB: $("setLtSubB").checked,
+    ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
     autoMic: {on: $("setAutoMic").checked,
       scenes: Object.fromEntries([...document.querySelectorAll("#setAutoMicList select")].map(el => [el.dataset.scene, el.value]))}};
 }
@@ -2740,6 +4581,11 @@ async function fillCfgFields(coll){
   const scenes = await listScenes(coll), auto = findWaitGroup(scenes) || [];
   const w = c && c.wait ? c.wait : {title:auto[0] || "", w1:auto[1] || "", w2:auto[2] || ""};
   fill($("setWaitTitle"), scenes, w.title); fill($("setWait1"), scenes, w.w1); fill($("setWait2"), scenes, w.w2);
+  $("setLtOnColl").checked = c ? (c.ltOn !== undefined ? !!c.ltOn : !!ui.ot.ltOn) : false;
+  $("setLtTheme").value = c && c.ltTheme === "conference" ? "conference" : "barrington";
+  $("setLtSubB").checked = !!(c && c.ltSubB);
+  $("setLtColor").value = (c && c.ltColor) || LT_COLOR;
+  renderLtColor();
   // Automatic mute: one row per scene
   const am = (c && c.autoMic) || {on:false, scenes:{}};
   $("setAutoMic").checked = !!am.on;
@@ -2783,6 +4629,57 @@ function renderFolderField(){
   $("setFolder").hidden = $("setFolderMode").value !== "custom" || noImg;
   $("setFolderHint").textContent = noImg ? "Not used without a schedule image source." : "Each image in the folder becomes a choice in Go Live and on the change button.";
 }
+/* Conference lower third colour: a hex code, shown at the Barrington theme's opacity (76%) */
+const LT_COLOR = "#132932";
+function hexColor(v){
+  const m = String(v || "").trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if(!m) return null;
+  const h = m[1].length === 3 ? m[1].replace(/./g, c => c + c) : m[1];
+  return "#" + h.toUpperCase();
+}
+const rgba = hex => `rgba(${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)},.76)`;
+ui.ltRecent = (() => { try{ const l = JSON.parse(localStorage.getItem("ltRecentColors")); return Array.isArray(l) ? l.filter(hexColor).slice(0, 2) : []; }catch(e){ return []; } })();
+function renderLtColor(){
+  const on = $("setLtOnColl").checked, conf = $("setLtTheme").value === "conference";
+  $("setLtThemeField").hidden = !on;
+  $("setLtColorField").hidden = !on || !conf;
+  $("setLtSubBField").hidden = !on || conf;
+  const v = $("setLtColor").value, hex = hexColor(v);
+  $("setLtSwatch").style.setProperty("--sw", rgba(hex || LT_COLOR));
+  $("setLtColorMsg").classList.toggle("err", !hex && !!v.trim());
+  $("setLtColorMsg").textContent = !hex && v.trim() ? "That isn't a hex code. Use # and 6 characters from 0–9 and A–F, like #132932."
+    : "A hex code, like #132932. It's shown at the same see-through level as the Barrington lower third.";
+  $("setLtColorReset").disabled = hex === LT_COLOR;
+  const r = $("setLtRecent"); r.innerHTML = "";
+  const recent = ui.ltRecent.filter(c => c !== hex);
+  if(recent.length){
+    const l = document.createElement("span"); l.textContent = "Recent:"; r.appendChild(l);
+    recent.forEach(c => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "btn";
+      b.innerHTML = `<i></i><span></span>`; b.querySelector("i").style.background = c; b.querySelector("span").textContent = c;
+      b.setAttribute("aria-label", `Use ${c}`);
+      b.addEventListener("click", () => { $("setLtColor").value = c; $("setLtColor").dispatchEvent(new Event("input", {bubbles:true})); });
+      r.appendChild(b);
+    });
+  }
+}
+// Remembers the last two colours entered (not counting the default)
+function rememberLtColor(hex){
+  if(!hex || hex === LT_COLOR) return;
+  ui.ltRecent = [hex, ...ui.ltRecent.filter(c => c !== hex)].slice(0, 2);
+  try{ localStorage.setItem("ltRecentColors", JSON.stringify(ui.ltRecent)); }catch(e){}
+}
+$("setLtTheme").addEventListener("change", renderLtColor);
+$("setLtOnColl").addEventListener("change", renderLtColor);
+$("setLtGo").addEventListener("click", () => { showSetPage("collections"); const el = $("setLtOnColl").closest(".set-section"); el.scrollIntoView?.({block:"center"}); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); });
+// Each valid colour counts the moment it's in the box, so a later mistype falls back to it on Apply
+$("setLtColor").addEventListener("input", () => {
+  const h = hexColor($("setLtColor").value);
+  if(h && cfgShown && !cfgLoading){ cfgTouched.add(cfgShown); syncCfgFields(); workCfg[cfgShown].ltColor = h; }
+  renderLtColor();
+});
+$("setLtColor").addEventListener("blur", () => { const h = hexColor($("setLtColor").value); if(h){ $("setLtColor").value = h; renderLtColor(); } });
+$("setLtColorReset").addEventListener("click", () => { $("setLtColor").value = LT_COLOR; $("setLtColor").dispatchEvent(new Event("input", {bubbles:true})); });
 $("setCfgColl").addEventListener("change", async e => { syncCfgFields(); cfgColl = e.target.value; await renderCfgFields(); updateSetDots(); });
 $("audNote").addEventListener("click", () => settingsGoTo("collections", "setAudio"));
 $("audNote").addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); settingsGoTo("collections", "setAudio"); } });
@@ -2901,7 +4798,8 @@ function backupData(){
       obs:{host:ui.obsAddr.host, port:ui.obsAddr.port},   // the password is left out on purpose
       speakers:ui.speakers, collCfg:ui.collCfg, audio:ui.src.audio, defaultVis:ui.defaultVis,
       silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, openObs:ui.openObs, startTitle:ui.startTitle, autoEnd:ui.autoEnd, autoEndSec:ui.autoEndSec,
-      screen:ui.screen, layout:ui.layout, theme:ui.theme, textSize:ui.textSize, useTable:ui.useTable
+      screen:ui.screen, layout:ui.layout, theme:ui.theme, textSize:ui.textSize, useTable:ui.useTable,
+      onscreen:ui.ot   // hymn books are exported on their own (Export text); API keys are never included
     }};
 }
 $("bkExport").addEventListener("click", () => {
@@ -2981,6 +4879,7 @@ function restoreBackup(st){
   if(st.theme){ ui.theme = st.theme; save("appTheme", ui.theme); applyTheme(); }
   if([1,1.15,1.3].includes(st.textSize)){ ui.textSize = st.textSize; save("textSize", String(ui.textSize)); applyTextSize(); applyLayout(); }
   if(typeof st.useTable === "boolean") ui.useTable = st.useTable;
+  if(st.onscreen){ ui.ot = {...ui.ot, ...st.onscreen}; saveOt(); ltSetEnabled(); renderOt(); }
   loadDefaultSources(); loadAudio(); renderSpkTrigger && renderSpkTrigger();
 }
 
@@ -3027,13 +4926,22 @@ function renderSetSpk(){
       const inp = document.createElement("input");
       inp.value = sp.name; inp.dataset.spk = ""; inp.setAttribute("aria-label", `${list === "home" ? "Home" : "Visiting"} speaker name`);
       inp.addEventListener("input", () => { sp.name = inp.value; });
+      // Subtitle for the lower third (for example where the speaker is from): visiting speakers only
+      const sub = document.createElement("input");
+      sub.value = sp.subtitle || ""; sub.dataset.spk = ""; sub.className = "spk-sub"; sub.placeholder = "SUBTITLE (OPTIONAL), FOR EXAMPLE PENNSAUKEN GOSPEL HALL";
+      sub.setAttribute("aria-label", `Subtitle for ${sp.name}`);
+      // Subtitles are always in capitals
+      sub.value = sub.value.toUpperCase();
+      sub.addEventListener("input", () => { const at = sub.selectionStart; sub.value = sub.value.toUpperCase(); sub.setSelectionRange(at, at); sp.subtitle = sub.value; });
       const del = document.createElement("button");
       del.type = "button"; del.className = "btn spk-rm"; del.textContent = "Remove";
       del.addEventListener("click", () => {
         if(!del.classList.contains("arm")){ del.classList.add("arm"); del.textContent = "Tap again to remove"; return; }
         workSpk[list] = workSpk[list].filter(x => x !== sp); renderSetSpk();
       });
-      row.append(inp, del); $(el).appendChild(row);
+      const names = document.createElement("div"); names.className = "spk-names"; names.append(inp);
+      if(list === "visiting") names.append(sub);
+      row.append(names, del); $(el).appendChild(row);
     });
   });
   updateSetDots();
@@ -3086,7 +4994,7 @@ $("setForm").addEventListener("submit", e => {
   ui.defaultVis = $("setVis").value;
   // Speakers: tidy spaces, drop blanks and duplicates (ignoring case), keep ids so selections survive renames
   const seen = new Set();
-  const clean = list => list.map(x => ({id:x.id, name:x.name.trim().replace(/\s+/g," ")}))
+  const clean = list => list.map(x => ({id:x.id, name:x.name.trim().replace(/\s+/g," "), ...(x.subtitle && x.subtitle.trim() ? {subtitle:x.subtitle.trim().replace(/\s+/g," ")} : {})}))
     .filter(x => x.name && !seen.has(nameKey(x.name)) && seen.add(nameKey(x.name)));
   ui.speakers = {homeLabel: $("setHomeLbl").value.trim() || "Barrington Speakers", max: Math.min(10, Math.max(1, parseInt($("setMax").value,10) || 3)), home: clean(workSpk.home), visiting: clean(workSpk.visiting)};
   saveSpeakers();
@@ -3094,11 +5002,18 @@ $("setForm").addEventListener("submit", e => {
   // Per-collection speakers and service type
   syncCfgFields();
   const before = JSON.stringify(ui.collCfg[ui.collection] || null);
+  Object.values(workCfg).forEach(c => { if(c && c.ltTheme === "conference" && c.ltColor) rememberLtColor(c.ltColor); });
   ui.collCfg = workCfg; saveCollCfg();
-  if(JSON.stringify(ui.collCfg[ui.collection] || null) !== before){ loadDefaultSources(); loadAudio(); refreshScenes(); }
+  if(JSON.stringify(ui.collCfg[ui.collection] || null) !== before){ loadDefaultSources(); loadAudio(); refreshScenes(); ltSetEnabled(); ltSetTheme(); renderOt(); }
   // #proto-start
   if($("setFail")) obs.protoFail = $("setFail").value || null;
   // #proto-end
+  // On-screen text
+  ui.ot = {...ui.ot, hyLines:+$("setHyLines").value, hyChorus:$("setHyChorus").checked, bbTr:$("setBbTr").value, bbPer:+$("setBbPer").value};
+  saveOt();
+  if($("setEsvKey").value !== otKeysAtOpen.esv) secret.set("esvKey", $("setEsvKey").value.trim());
+  if($("setAbKey").value !== otKeysAtOpen.ab) secret.set("apiBibleKey", $("setAbKey").value.trim());
+  renderOt();
   ui.silenceSec = Math.min(120, Math.max(5, parseInt($("setSilence").value,10) || 20));
   ui.silenceDb = parseInt($("setSilenceDb").value, 10); try{ localStorage.setItem("silenceDb", String(ui.silenceDb)); }catch(err){}
   ui.keepAwake = $("setAwake").checked;
@@ -3195,8 +5110,8 @@ ui.lastFolder = ""; ui.files = [];
 ui.src = (() => { const d = {audio:"PYLE USB Mixer"}; try{ return {...d, ...JSON.parse(localStorage.getItem("sources") || "{}")}; }catch(e){ return d; } })();
 // One set per collection: text source, image source, folder ("auto" = the image's folder, "" = None, otherwise a path)
 const CFG_SAMPLE = {
-  "Sunday Service": {text:"Speaker Names", image:"Schedule", folder:"auto"},
-  "Special Events": {text:"Speaker Names", image:"Schedule", folder:"auto"},
+  "Sunday Service": {text:"Speaker Names", image:"Schedule", folder:"auto", ltOn:true},
+  "Special Events": {text:"Speaker Names", image:"Schedule", folder:"auto", ltOn:true, ltTheme:"conference"},
   "Wednesday Bible Study": {text:"Lower Third", image:"", folder:""}
 };
 // Desktop app: starts with no collections set up (the prototype shows sample ones)
@@ -3279,18 +5194,19 @@ async function loadDefaultSources(){
 function renderText(){ renderQcBtn(); if(!$("qcOverlay").hidden) renderQc(); }
 // Main-screen button: only the parts this collection has; hidden when it has neither
 function renderQcBtn(){
-  const so = ui.spkMode !== "off", vo = ui.schMode !== "off";
+  const so = ui.spkMode !== "off" || ltOn(), vo = ui.schMode !== "off";
   $("qcBtn").hidden = !so && !vo;
   if(!so && !vo && !$("qcOverlay").hidden) $("qcOverlay").hidden = true;
   $("qcBtnSpkK").hidden = $("qcBtnSpk").hidden = !so;
   $("qcBtnSvcK").hidden = $("qcBtnSvc").hidden = !vo;
   $("qcBtn").querySelector(".qc-top").lastChild.textContent = !so ? `Change ${svcLabel()}` : !vo ? "Change Speakers" : `Change Speaker and ${svcLabel()}`;
   $("qcBtnSvcK").textContent = svcLabel();
-  $("qcBtnSpk").textContent = ui.spkMode === "error" ? (ui.spkErr === "file" ? "Reads from a file in OBS" : "Source not found") : (ui.speaker || "Not set");
+  $("qcBtnSpk").textContent = ui.spkMode === "error" ? (ui.spkErr === "file" ? "Reads from a file in OBS" : "Source not found")
+    : ui.spkMode === "off" ? (formatNames(ui.ltPicked) || "Not set") : (ui.speaker || "Not set");
   $("qcBtnSvc").textContent = ui.schMode === "error"
     ? ({source:"Source not found", folder:"Folder can't be opened", empty:"No images in folder"})[ui.schErr]
     : (ui.schedule ? noExt(base(ui.schedule)) + (scheduleInFolder() ? "" : " (not in folder)") : "Not set");
-  $("qcBtnSpk").classList.toggle("dim", ui.spkMode !== "on" || !ui.speaker);
+  $("qcBtnSpk").classList.toggle("dim", ui.spkMode === "off" ? !ui.ltPicked.length : (ui.spkMode !== "on" || !ui.speaker));
   $("qcBtnSvc").classList.toggle("dim", ui.schMode !== "on" || !ui.schedule);
   $("qcBtnNote").hidden = true;
   // A collection that hasn't been set up yet (different from choosing None)
@@ -3369,6 +5285,8 @@ obs.on("CurrentSceneCollectionChanged", async d => {
   toast(`Switched to ${d.sceneCollectionName}`);
   await loadDefaultSources();
   await loadAudio();
+  ot.showing = false; ui.lt.showing = "";
+  await otSync();
 });
 obs.on("InputMuteStateChanged", d => { if(d.inputName !== srcAudio()) return; ui.muted = d.inputMuted; renderMute(); if(!ui.muted) lastSoundAt = Date.now(); });
 let lastSoundAt = Date.now();
@@ -3530,12 +5448,38 @@ function drawCamera(c, W, H, t, n){
   if(n === 2){ c.fillStyle = "rgba(10,12,16,.8)"; for(let i=0;i<14;i++){ c.beginPath(); c.arc(W*(i/13), H*1.02, H*.09, 0, Math.PI*2); c.fill(); } }
   txt(c, `CAM ${n}`, 28, 36, 26, {al:"left", col:"rgba(255,255,255,.55)", sp:3});
   const lines = (ui.spkMode === "on" ? ui.speaker || "" : "").split("\n").filter(Boolean);
+  if(drawOnScreen(c, W, H)) return;
   if(lines.length){
     const y = H*.74, h = 24 + lines.length*44;
     c.fillStyle = "rgba(12,18,28,.86)"; c.fillRect(W*.06, y, W*.46, h);
     c.fillStyle = "#3b8cff"; c.fillRect(W*.06, y, 8, h);
     lines.forEach((l,i) => txt(c, l, W*.06+30, y+34+i*44, i ? 30 : 38, {al:"left", w:i?500:700, f:i?BODY:DISP}));
   }
+}
+// What the plug-in's sources would show over the camera (prototype monitors only)
+function drawOnScreen(c, W, H){
+  const s = ot.showing && ot.item && ot.item.slides[ot.i], name = ui.lt.showing;
+  if(!s && !name) return false;
+  c.fillStyle = "rgba(19,41,50,.76)";
+  if(name){
+    // Box at the left with a cropped B behind the name (see the plug-in's lower-third/index.html)
+    const h = W * .082, y = H - H * .066 - h, x = W * .063;
+    c.font = `500 ${W*.021}px ${BODY}`;
+    const w = Math.max(W * .338, c.measureText(name).width + W * .065);
+    c.save(); c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, W*.0055) : c.rect(x, y, w, h); c.fill(); c.clip();
+    c.fillStyle = "#122932"; c.font = `700 ${h*2.05}px Spectral, Georgia, serif`; c.textBaseline = "middle"; c.textAlign = "left";
+    c.fillText("B", x + W*.0175, y + h*.62); c.restore();
+    txt(c, name, x + W*.0325, y + h/2, W*.021, {al:"left", w:500, f:BODY});
+    c.fillStyle = "rgba(19,41,50,.76)";
+    if(s) return true;   // one at a time in the prototype drawing
+  }
+  if(s){
+    const bw = W * .64, x = (W - bw) / 2, h = H * .15, y = H - H * .066 - h;
+    c.beginPath(); c.roundRect ? c.roundRect(x, y, bw, h, W*.0055) : c.rect(x, y, bw, h); c.fill();
+    const body = s.kind === "hymn" ? s.lines : [s.reference + " · " + s.translation, s.text.length > 90 ? s.text.slice(0, 88) + "…" : s.text];
+    body.slice(0, 3).forEach((l, i) => txt(c, l, W/2, y + h/2 + (i - (body.length - 1)/2) * H*.05, H*.036, {w:500, f:BODY}));
+  }
+  return true;
 }
 function drawScene(c, name, t, clear = true){
   const W = c.canvas.width, H = c.canvas.height, svc = serviceName();
@@ -3619,6 +5563,7 @@ async function syncAll(){
   renderStudio(); renderOutputs(); renderMute(); renderCollection();
   await loadDefaultSources();
   await loadAudio();
+  await otSync();
 }
 function renderConnText(){
   $("connText").textContent = window.bgh ? "Connected to OBS" : "Prototype · simulated OBS connection";
@@ -3630,6 +5575,7 @@ if(window.bgh) window.bgh.onMessage(text => toast(text));
 // WebSocket server off, wrong password), the lost-connection banner shows and the controller keeps trying.
 (async function init(){
   requestAnimationFrame(frame);
+  renderOt(); loadHymnBooks();
   if(window.bgh) window.bgh.version().then(v => { const el = document.querySelector("#page-help .path"); if(el) el.textContent = `Version ${v} · for OBS Studio 32.2.2`; });
   try{
     if(window.bgh) await obs.connect();

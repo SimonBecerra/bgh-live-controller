@@ -32,6 +32,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "bible.js",
+      "bible/**/*",
       "app/**/*",
       "build/icon.ico",
       "package.json"

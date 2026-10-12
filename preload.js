@@ -17,7 +17,16 @@ contextBridge.exposeInMainWorld("bgh", {
   },
   keepAwake: on => ipcRenderer.invoke("keep-awake", !!on),
   setOpenWithObs: enabled => ipcRenderer.invoke("open-with-obs", !!enabled),
-  saveFile: (name, text) => ipcRenderer.invoke("save-file", name, text),
+  saveFile: (name, text, kind) => ipcRenderer.invoke("save-file", name, text, kind),
+  bible: {
+    status: () => ipcRenderer.invoke("bible-status"),
+    lookup: q => ipcRenderer.invoke("bible-lookup", q)
+  },
+  hymns: {
+    list: () => ipcRenderer.invoke("hymns-list"),
+    save: book => ipcRenderer.invoke("hymns-save", book),
+    remove: id => ipcRenderer.invoke("hymns-remove", id)
+  },
   toggleFullscreen: () => ipcRenderer.invoke("toggle-fullscreen"),
   isFullscreen: () => ipcRenderer.invoke("is-fullscreen"),
   onFullscreenChanged: fn => ipcRenderer.on("fullscreen-changed", (e, on) => fn(on)),
