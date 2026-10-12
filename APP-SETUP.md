@@ -64,15 +64,28 @@ its Settings → Backup → Export settings, copy the text, and save it in Notep
 
 ## Updating the app later
 
-Change the files in the `bgh-live-controller` repository (Claude will tell you which), wait for the green
-check under **Actions**, download the new installer, and run it on the church laptop. It installs over the old
-version and keeps all your settings and your saved password.
+Updates install themselves (from version 1.2.0 on):
+
+- **The controller:** when a new version is published, the controller downloads it in the background and an
+  **UPDATE READY** button appears at the top. Tap it to restart into the new version (about 10 seconds; OBS
+  keeps running and streaming). If you don't, it installs by itself the next time the controller is closed.
+- **The OBS plug-in:** when there's a new plug-in, the controller asks **OBS plug-in update ready → Update now**.
+  It closes OBS the normal way, puts in the new plug-in (with its designs and fonts) and opens OBS again.
+  It never does this while you're live or recording; it asks again after the service.
+  The first time, Windows asks for permission once, to remove the copy that was installed by hand.
+- **Settings → Connection → Updates** shows both versions and has **Check for updates** and **Update now**.
+
+How a change gets published: Claude pushes it to GitHub and raises the version number in `package.json`.
+GitHub builds the installer and publishes it as a release; the plug-in repository publishes each plug-in build
+the same way (its "plugin-latest" release). Without a new version number, a change is built but not offered
+as an update.
 
 ## Where things are kept on the laptop
 
 - Settings, speakers and automatic backups: `%APPDATA%\BGH LIVE Controller`
 - The OBS password: in the same folder, encrypted by Windows so only your Windows account can read it
 - The "open with OBS" setting the plug-in reads: `%APPDATA%\BGH LIVE Controller\open-with-obs.json`
+- The OBS plug-in, as the controller installs it: `C:\ProgramData\obs-studio\plugins\church-controller`
 
 ---
 
@@ -81,10 +94,14 @@ version and keeps all your settings and your saved password.
 ```yaml
 # Builds the Windows installer every time something is committed.
 # The installer appears under Actions → the newest run → Artifacts.
+# On main, a new version number is also published as a GitHub release, which is where the controller
+# looks for updates: it downloads them by itself and shows "Update ready".
 name: Build installer
 on:
   push:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   windows:
     runs-on: windows-latest
@@ -104,4 +121,21 @@ jobs:
           name: BGH-LIVE-Controller-installer
           path: dist/*.exe
           if-no-files-found: error
+      - name: Publish the update
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = "v$version"
+          gh release view $tag 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Version $version is already published. Change the version in package.json to publish an update."
+            exit 0
+          }
+          $files = @(Get-ChildItem dist/*.exe, dist/*.exe.blockmap, dist/latest.yml | ForEach-Object { $_.FullName })
+          if ($files.Count -lt 3) { Write-Error "The installer, its blockmap or latest.yml is missing"; exit 1 }
+          gh release create $tag @files --title "BGH LIVE Controller $version" --notes "Installed automatically: the controller downloads this update and shows Update ready."
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 ```
