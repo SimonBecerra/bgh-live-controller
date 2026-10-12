@@ -678,6 +678,9 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
           </div>
           <div class="set-section">
             <h4>Starting and closing</h4>
+            <label class="check" for="setOpenObs"><input type="checkbox" id="setOpenObs">
+              <span>Open OBS when the controller starts<small>OBS opens behind the controller, which stays in front. Nothing happens if OBS is already open.</small></span>
+            </label>
             <label class="check" for="setOpenWithObs"><input type="checkbox" id="setOpenWithObs">
               <span>Open the controller when OBS starts<small>The companion plug-in opens the controller on the touchscreen whenever OBS opens.</small></span>
             </label>
@@ -814,7 +817,7 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
             <label class="check" for="setScreenFollow"><input type="checkbox" id="setScreenFollow" checked>
               <span id="setScreenFollowTxt">Move to this monitor when it's plugged in<small>Only this monitor. Plugging in anything else, like a projector or TV, doesn't move the controller.</small></span>
             </label>
-            <label class="check" for="setScreenWindowed"><input type="checkbox" id="setScreenWindowed" checked>
+            <label class="check" for="setScreenWindowed" data-desktop-hide><input type="checkbox" id="setScreenWindowed" checked>
               <span>Use a window on the main monitor<small>When your chosen monitor isn't connected, so the controller doesn't cover OBS.</small></span>
             </label>
             <div class="btn-row">
@@ -1424,6 +1427,8 @@ const obs = new MockOBS();
 // #proto-end
 // #real const obs = new ObsConnection();   // desktop app: obs-websocket-js wrapper with the same call/on/off
 if(window.bgh) document.querySelectorAll("[data-proto]").forEach(el => el.remove());
+// Desktop app: always maximized on the chosen monitor, so the window/fullscreen choice isn't needed
+if(window.bgh) document.querySelectorAll("[data-desktop-hide]").forEach(el => el.hidden = true);
 const $ = id => document.getElementById(id);
 let BUTTONS = [], sceneEls = [];
 /* Automatic mute: which scenes have the mic on or off, guessed from the name until set in Settings */
@@ -1978,6 +1983,8 @@ async function loadBroadcasts(){
     gl.bcList = r.broadcasts || [];
   }catch(e){ gl.bcList = null; gl.bcErr = {code:normCode(e.code, e.message), msg:e.message}; }
   gl.bcLoading = false; glRender();
+  // OBS's dialog came to the front to read the list; bring the controller back to show it
+  if(window.bgh) window.bgh.bringToFront();
 }
 const bcWhen = iso => { const d = new Date(iso); return d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}) + " · " + d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}); };
 function renderBc(){
@@ -2216,6 +2223,7 @@ $("cpuChip").addEventListener("click", () => {
 
 /* Open with OBS / close with OBS (the desktop app and the companion plug-in do the actual launching and closing) */
 ui.openWithObs = (() => { try{ return localStorage.getItem("openWithObs") === "1"; }catch(e){ return false; } })();
+ui.openObs = (() => { try{ return localStorage.getItem("openObs") === "1"; }catch(e){ return false; } })();
 ui.closeWithObs = (() => { try{ return localStorage.getItem("closeWithObs") === "1"; }catch(e){ return false; } })();
 
 /* Which monitor the controller opens on.
@@ -2271,7 +2279,7 @@ function renderScreens(){
   sel.value = m.kind === "main" ? "main" : m.kind === "found" ? "d:" + m.d.id : "saved";
   const p = screenPlacement(cur, $("setScreenWindowed").checked);
   $("setScreenNow").textContent = `Connected now: ${protoDisplays.map(describe).join("; ")}. ` +
-    `The controller is on ${p.display.label}, ${p.full ? "fullscreen" : "in a window"}` +
+    `The controller is on ${p.display.label}, ${window.bgh ? "maximized" : p.full ? "fullscreen" : "in a window"}` +
     (m.kind === "missing" ? `, until ${cur.label} is connected.` : m.kind === "ambiguous" ? `, until you choose which ${cur.label} to use.` : ".");
   const name = cur === "main" ? "" : cur.label;
   $("setScreenFollow").closest("label").hidden = !name;
@@ -2290,7 +2298,7 @@ function askWhichScreen(list){
     b.innerHTML = `<span></span><span class="cur-tag">${i + 1}</span>`; b.firstChild.textContent = describe(d);
     b.addEventListener("click", () => {
       ui.screen.target = descriptor(d); try{ localStorage.setItem("screen", JSON.stringify(ui.screen)); }catch(e){}
-      $("pickOverlay").hidden = true; place(); toast(`The controller moved to ${d.label} (${d.pos}) and went fullscreen.`);
+      $("pickOverlay").hidden = true; place(); toast(`The controller moved to ${d.label} (${d.pos}) ${window.bgh ? "and maximized" : "and went fullscreen"}.`);
       if(!$("setOverlay").hidden){ $("setScreen").value = ""; renderScreens(); }
     });
     $("pickList").appendChild(b);
@@ -2324,16 +2332,16 @@ function screensChanged(added, removed){
     // Fix 3: it came back within 10 seconds, so nothing moved
     if(screenGraceT){ clearTimeout(screenGraceT); screenGraceT = null; return toast(`${added.label} is back. The controller stayed where it was.`); }
     // Coming back after a dropout while live: return to it without asking
-    if(ui.screenCorner){ ui.screenCorner = false; $("screenBanner").hidden = true; place(); return toast(`${added.label} is back. The controller moved there and went fullscreen.`); }
+    if(ui.screenCorner){ ui.screenCorner = false; $("screenBanner").hidden = true; place(); return toast(`${added.label} is back. The controller moved there ${window.bgh ? "and maximized" : "and went fullscreen"}.`); }
     if(!ui.screen.follow) return toast(`${added.label} connected. The controller stays where it is.`);
     // Fix 2: never move by itself in the middle of a stream or recording; ask instead
     if(isLiveOrRec()){
       confirmDlg(`${added.label} is connected`, `You're ${ui.stream.active ? "live" : "recording"}. Move the controller to ${added.label} now? Nothing else changes.`, "Move now", "primary", "Not now")
-        .then(ok => { if(ok) place(); toast(ok ? `The controller moved to ${added.label} and went fullscreen.` : `The controller stays here. You can move it later from Settings → Screen.`); });
+        .then(ok => { if(ok) place(); toast(ok ? `The controller moved to ${added.label} ${window.bgh ? "and maximized" : "and went fullscreen"}.` : `The controller stays here. You can move it later from Settings → Screen.`); });
       return;
     }
     place();
-    return toast(`${added.label} connected. The controller moved there and went fullscreen.`);
+    return toast(`${added.label} connected. The controller moved there ${window.bgh ? "and maximized" : "and went fullscreen"}.`);
   }
   if(removed){
     if(!isTarget(removed)) return toast(`${removed.label} was unplugged. The controller stays where it is.`);
@@ -2349,7 +2357,7 @@ function screensChanged(added, removed){
         $("screenBanner").hidden = false;
       } else {
         place();
-        toast(`${removed.label} is still disconnected. The controller moved to ${main.label}${ui.screen.windowed ? " in a window" : ""}.`);
+        toast(`${removed.label} is still disconnected. The controller moved to ${main.label}${window.bgh ? " and maximized" : ui.screen.windowed ? " in a window" : ""}.`);
       }
       if(!$("setOverlay").hidden) renderScreens();
     }, 10000);
@@ -2556,7 +2564,7 @@ async function openSettingsPanel(page = ui.setPage){
   try{ await renderCfgFields(); }catch(e){ $("setCfgState").textContent = "Connect to OBS to see this collection's sources and scenes."; }
   $("setMax").value = ui.speakers.max;
   $("setSilence").value = ui.silenceSec; $("setSilenceDb").value = ui.silenceDb; $("setMeasureMsg").textContent = ""; renderSilencePreview(); $("setAwake").checked = ui.keepAwake;
-  $("setOpenWithObs").checked = ui.openWithObs; $("setCloseWithObs").checked = ui.closeWithObs;
+  $("setOpenWithObs").checked = ui.openWithObs; $("setCloseWithObs").checked = ui.closeWithObs; $("setOpenObs").checked = ui.openObs;
   $("setScreen").innerHTML = ""; screenDraft = null; renderScreens(); $("setScreenFollow").checked = ui.screen.follow; $("setScreenWindowed").checked = ui.screen.windowed;
   $("setLayout").value = ui.layout; $("setTheme").value = ui.theme; $("setTextSize").value = String(ui.textSize); renderTextSizeNote(); renderAutoBackups();
   $("setHomeLbl").value = homeLabel(); $("setHomeHdr").textContent = homeLabel();
@@ -2851,7 +2859,7 @@ function backupData(){
     settings:{
       obs:{host:ui.obsAddr.host, port:ui.obsAddr.port},   // the password is left out on purpose
       speakers:ui.speakers, collCfg:ui.collCfg, audio:ui.src.audio, defaultVis:ui.defaultVis,
-      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs,
+      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, openObs:ui.openObs,
       screen:ui.screen, layout:ui.layout, theme:ui.theme, textSize:ui.textSize, useTable:ui.useTable
     }};
 }
@@ -2921,7 +2929,8 @@ function restoreBackup(st){
   if(st.silenceSec){ ui.silenceSec = st.silenceSec; save("silenceSec", String(ui.silenceSec)); }
   if(typeof st.silenceDb === "number"){ ui.silenceDb = st.silenceDb; save("silenceDb", String(ui.silenceDb)); }
   if(typeof st.keepAwake === "boolean"){ ui.keepAwake = st.keepAwake; save("keepAwake", ui.keepAwake ? "1" : "0"); applyWakeLock(); }
-  if(typeof st.openWithObs === "boolean"){ ui.openWithObs = st.openWithObs; save("openWithObs", ui.openWithObs ? "1" : "0"); }
+  if(typeof st.openWithObs === "boolean"){ ui.openWithObs = st.openWithObs; save("openWithObs", ui.openWithObs ? "1" : "0"); if(window.bgh) window.bgh.setOpenWithObs(ui.openWithObs); }
+  if(typeof st.openObs === "boolean"){ ui.openObs = st.openObs; save("openObs", ui.openObs ? "1" : "0"); if(window.bgh) window.bgh.setOpenObs(ui.openObs); }
   if(typeof st.closeWithObs === "boolean"){ ui.closeWithObs = st.closeWithObs; save("closeWithObs", ui.closeWithObs ? "1" : "0"); }
   if(st.screen){ ui.screen = st.screen; save("screen", ui.screen); }
   if(st.layout){ ui.layout = st.layout; save("layout", ui.layout); applyLayout(); }
@@ -3052,6 +3061,8 @@ $("setForm").addEventListener("submit", e => {
   // Desktop app: also writes %APPDATA%\BGH LIVE Controller\open-with-obs.json ({enabled, exePath}) for the plug-in to read
   ui.openWithObs = $("setOpenWithObs").checked; ui.closeWithObs = $("setCloseWithObs").checked;
   if(window.bgh) window.bgh.setOpenWithObs(ui.openWithObs);
+  ui.openObs = $("setOpenObs").checked; try{ localStorage.setItem("openObs", ui.openObs ? "1" : "0"); }catch(err){}
+  if(window.bgh) window.bgh.setOpenObs(ui.openObs);
   // Desktop app: Electron's screen module places the window; "display-added" moves it when a monitor is plugged in
   const prevScreen = JSON.stringify(ui.screen);
   ui.screen = {target:selToTarget($("setScreen").value), follow:$("setScreenFollow").checked, windowed:$("setScreenWindowed").checked};
@@ -3510,6 +3521,7 @@ function frame(ts){
 async function syncAll(){
   const s = await obs.call("GetSnapshot");
   ui.everConnected = true;
+  if(window.bgh) window.bgh.obsConnected();
   Object.assign(ui, {program:s.program, preview:s.preview, studio:s.studio, transition:s.transition, rec:s.rec, stream:s.stream});
   ui.collection = s.collection;
   buildButtons((await obs.call("GetSceneList")).scenes.map(x => x.sceneName));
@@ -3522,6 +3534,7 @@ function renderConnText(){
   $("connText").title = `OBS at ${ui.obsAddr.host}:${ui.obsAddr.port}`;
 }
 $("cbSettings").addEventListener("click", () => settingsGoTo("connection", "setHost"));
+if(window.bgh) window.bgh.onMessage(text => toast(text));
 // Startup: connect, pull everything from OBS, then follow events. If OBS isn't reachable yet (not open,
 // WebSocket server off, wrong password), the lost-connection banner shows and the controller keeps trying.
 (async function init(){
