@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld("bgh", {
   onFullscreenChanged: fn => ipcRenderer.on("fullscreen-changed", (e, on) => fn(on)),
   setZoom: z => webFrame.setZoomFactor(Number(z) || 1),
   bringToFront: () => ipcRenderer.invoke("bring-to-front"),
+  setOpenObs: on => ipcRenderer.invoke("set-open-obs", !!on),
+  obsConnected: () => ipcRenderer.invoke("obs-connected"),
+  onMessage: fn => ipcRenderer.on("app-message", (e, text) => fn(text)),
   quit: () => ipcRenderer.invoke("quit"),
   version: () => ipcRenderer.invoke("version"),
   openedByObs: () => ipcRenderer.invoke("opened-by-obs")

@@ -7,12 +7,14 @@ const { app, BrowserWindow, ipcMain, screen, safeStorage, powerSaveBlocker, dial
 const path = require("node:path");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
-const { spawn } = require("node:child_process");
+const { spawn, execFile } = require("node:child_process");
 
 app.setName("BGH LIVE Controller");
 if (!app.requestSingleInstanceLock()) { app.quit(); return; }
 
 let win = null;
+// Opened by OBS (the plug-in's "Open the controller when OBS starts"): comes up maximized and in front of OBS
+let openedByObs = process.argv.includes("--opened-by-obs");
 let awakeId = null;
 const userData = () => app.getPath("userData");   // %APPDATA%\BGH LIVE Controller
 
@@ -46,6 +48,7 @@ async function place({ displayId, full, corner }) {
   const wa = d.workArea;
   if (win.isFullScreen()) { win.setFullScreen(false); await wait(350); }
   win.setAlwaysOnTop(false);
+  if (win.isMaximized()) win.unmaximize();
   if (corner) {
     // While live and the touchscreen is gone: a small window in a corner of the main monitor, above OBS
     const w = Math.min(620, wa.width), h = Math.min(480, wa.height);
@@ -53,14 +56,11 @@ async function place({ displayId, full, corner }) {
     win.setAlwaysOnTop(true, "floating");
     return;
   }
-  if (full) {
-    win.setBounds({ x: wa.x + 40, y: wa.y + 40, width: Math.min(1280, wa.width - 80), height: Math.min(800, wa.height - 80) });
-    await wait(50);
-    win.setFullScreen(true);
-    return;
-  }
-  const w = Math.min(windowedBounds?.width || 1280, wa.width), h = Math.min(windowedBounds?.height || 800, wa.height);
+  // Maximized on the chosen monitor: fills it with the taskbar, title bar and window buttons still showing.
+  // Restoring gives a normal window on the same monitor. (The ⛶ button still offers true fullscreen.)
+  const w = Math.min(windowedBounds?.width || 1280, wa.width - 80), h = Math.min(windowedBounds?.height || 800, wa.height - 80);
   win.setBounds({ x: wa.x + Math.round((wa.width - w) / 2), y: wa.y + Math.round((wa.height - h) / 2), width: w, height: h });
+  win.maximize();
 }
 
 // "Identify monitors": each monitor shows its number and name for 4 seconds
@@ -180,6 +180,50 @@ function bringToFront() {
   return true;
 }
 ipcMain.handle("bring-to-front", () => bringToFront());
+
+/* ---------------------------------------------------------------- open OBS with the controller */
+// Settings → Connection → "Open OBS when the controller starts". Kept in a file so it's known at startup.
+const launchFile = () => path.join(userData(), "launch.json");
+function readLaunch() { try { return JSON.parse(fs.readFileSync(launchFile(), "utf8")); } catch (e) { return {}; } }
+ipcMain.handle("set-open-obs", (e, on) => {
+  fs.mkdirSync(userData(), { recursive: true });
+  fs.writeFileSync(launchFile(), JSON.stringify({ ...readLaunch(), openObs: !!on }));
+  return true;
+});
+const run = (cmd, args) => new Promise(res => execFile(cmd, args, { windowsHide: true }, (err, out) => res(err ? "" : String(out))));
+async function obsRunning() { return /obs64\.exe/i.test(await run("tasklist", ["/FI", "IMAGENAME eq obs64.exe", "/NH"])); }
+// Where OBS is installed: its own registry entry, then the usual folder
+async function findObs() {
+  const reg = await run("reg", ["query", "HKLM\\SOFTWARE\\OBS Studio", "/ve"]);
+  const m = reg.match(/REG_SZ\s+(.+)/);
+  const dirs = [m && m[1].trim(), path.join(process.env.ProgramFiles || "C:\\Program Files", "obs-studio")].filter(Boolean);
+  for (const d of dirs) { const exe = path.join(d, "bin", "64bit", "obs64.exe"); if (fs.existsSync(exe)) return exe; }
+  return null;
+}
+// While OBS starts, the controller stays above it; released a few seconds after OBS answers (or after 25 s)
+let holdTimer = null;
+function holdInFront(ms) {
+  if (!win) return;
+  win.setAlwaysOnTop(true, "floating");
+  clearTimeout(holdTimer);
+  holdTimer = setTimeout(releaseFront, ms);
+}
+function releaseFront() {
+  clearTimeout(holdTimer); holdTimer = null;
+  if (win && !win.isDestroyed()) { win.setAlwaysOnTop(false); bringToFront(); }
+}
+ipcMain.handle("obs-connected", () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = setTimeout(releaseFront, 4000); } });
+async function openObsIfWanted() {
+  if (process.platform !== "win32" || openedByObs || !readLaunch().openObs) return;
+  if (await obsRunning()) return;
+  const exe = await findObs();
+  if (!exe) { win?.webContents.send("app-message", "Couldn't find OBS to open it. Open OBS yourself, or reinstall it in its usual folder."); return; }
+  try {
+    // OBS needs to start in its own folder
+    spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: "ignore" }).unref();
+    holdInFront(25000);
+  } catch (e) { win?.webContents.send("app-message", "Couldn't open OBS. Open it yourself."); }
+}
 ipcMain.handle("version", () => app.getVersion());
 ipcMain.handle("opened-by-obs", () => process.argv.includes("--opened-by-obs"));
 
@@ -194,9 +238,14 @@ function createWindow() {
   });
   win.loadFile(path.join(__dirname, "app", "index.html"));
   // Opened by OBS (the plug-in's "Open the controller when OBS starts"): come up in front of OBS
-  win.once("ready-to-show", () => { win.show(); if (process.argv.includes("--opened-by-obs")) bringToFront(); });
+  // Always starts maximized. Opened by OBS: also brought in front of OBS. Set to open OBS: opens it behind.
+  win.once("ready-to-show", () => {
+    win.maximize(); win.show();
+    if (openedByObs) bringToFront();
+    openObsIfWanted();
+  });
   // Remember the window's size for windowed mode
-  win.on("resized", () => { if (!win.isFullScreen() && !win.isAlwaysOnTop()) windowedBounds = win.getBounds(); });
+  win.on("resized", () => { if (!win.isFullScreen() && !win.isAlwaysOnTop() && !win.isMaximized()) windowedBounds = win.getBounds(); });
   win.on("enter-full-screen", () => win.webContents.send("fullscreen-changed", true));
   win.on("leave-full-screen", () => win.webContents.send("fullscreen-changed", false));
   // Nothing opens inside the controller: links go to the normal browser
@@ -207,8 +256,11 @@ function createWindow() {
   win.on("closed", () => { win = null; });
 }
 
-app.on("second-instance", () => {
-  // Opened again (for example by OBS starting while the controller is already open): bring it in front
+app.on("second-instance", (e, argv) => {
+  // Opened again (for example by OBS starting while the controller is already open): bring it in front,
+  // maximized if it's in a window
+  if (argv.includes("--opened-by-obs")) openedByObs = true;
+  if (win && !win.isFullScreen()) win.maximize();
   bringToFront();
 });
 
