@@ -1,7 +1,8 @@
 // BGH LIVE Controller: desktop app (Electron main process).
 // The controller itself is app/index.html; this file gives it a window and the few things a web page can't do:
 // choosing a monitor, reading the Schedule folder and OBS's saved scene collections, keeping the password
-// encrypted, keeping the screen awake, saving files, and the "open with OBS" setting for the plug-in.
+// encrypted, keeping the screen awake, saving files, the "open with OBS" setting for the plug-in,
+// Bible text (bible.js) and the hymn books.
 "use strict";
 const { app, BrowserWindow, ipcMain, screen, safeStorage, powerSaveBlocker, dialog, shell, Menu } = require("electron");
 const path = require("node:path");
@@ -135,6 +136,36 @@ function setSecret(key, value) {
   return true;
 }
 
+/* ---------------------------------------------------------------- Bible text and hymn books */
+const createBible = require("./bible");
+const bible = createBible({dataDir:path.join(__dirname, "bible"), userData:userData(), getSecret:async k => getSecret(k)});
+// Each hymn book is one file in %APPDATA%\BGH LIVE Controller\hymnbooks, named by its id
+const hymnDir = () => path.join(userData(), "hymnbooks");
+const hymnFile = id => { if(!/^[a-z0-9_-]{1,40}$/i.test(String(id))) throw new Error("Bad hymn book id"); return path.join(hymnDir(), `${id}.json`); };
+async function listHymnBooks(){
+  let files = [];
+  try{ files = (await fsp.readdir(hymnDir())).filter(f => f.endsWith(".json")); }catch(e){ return []; }
+  const out = [];
+  for(const f of files){
+    try{ const b = JSON.parse(await fsp.readFile(path.join(hymnDir(), f), "utf8")); if(b && b.id && Array.isArray(b.hymns)) out.push(b); }
+    catch(e){ /* a damaged file: skip it */ }
+  }
+  return out;
+}
+async function saveHymnBook(book){
+  if(!book || !Array.isArray(book.hymns)) throw new Error("Not a hymn book");
+  const file = hymnFile(book.id);
+  await fsp.mkdir(hymnDir(), {recursive:true});
+  await fsp.writeFile(file + ".tmp", JSON.stringify(book), "utf8");
+  await fsp.rename(file + ".tmp", file);   // written whole, so a crash can't leave half a book
+  return true;
+}
+ipcMain.handle("bible-status", () => bible.status());
+ipcMain.handle("bible-lookup", (e, q) => bible.lookup(q || {}));
+ipcMain.handle("hymns-list", () => listHymnBooks());
+ipcMain.handle("hymns-save", (e, book) => saveHymnBook(book));
+ipcMain.handle("hymns-remove", async (e, id) => { await fsp.rm(hymnFile(id), {force:true}); return true; });
+
 /* ---------------------------------------------------------------- IPC */
 ipcMain.handle("displays", () => (lastDisplays = describeDisplays()));
 ipcMain.handle("place", (e, opts) => place(opts || {}));
@@ -159,8 +190,9 @@ ipcMain.handle("open-with-obs", (e, enabled) => {
   fs.writeFileSync(path.join(userData(), "open-with-obs.json"), JSON.stringify({ enabled: !!enabled, exePath: process.execPath }));
   return true;
 });
-ipcMain.handle("save-file", async (e, name, text) => {
-  const r = await dialog.showSaveDialog(win, { defaultPath: path.join(app.getPath("documents"), String(name)), filters: [{ name: "Settings backup", extensions: ["json"] }] });
+ipcMain.handle("save-file", async (e, name, text, kind) => {
+  const filters = kind === "text" ? [{ name: "Text file", extensions: ["txt"] }] : [{ name: "Settings backup", extensions: ["json"] }];
+  const r = await dialog.showSaveDialog(win, { defaultPath: path.join(app.getPath("documents"), String(name)), filters });
   if (r.canceled || !r.filePath) return null;
   await fsp.writeFile(r.filePath, String(text), "utf8");
   return r.filePath;

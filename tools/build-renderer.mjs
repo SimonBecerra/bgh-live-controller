@@ -31,7 +31,7 @@ swap(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2[^"]*">
 swap(/<script src="https:\/\/unpkg\.com\/lucide@[^"]*"><\/script>/,
   `<script src="vendor/lucide.min.js"></script><script src="vendor/obs-ws.global.js"></script><script src="obs-connection.js"></script>`);
 // Only local files, plus the WebSocket to OBS
-swap(/<head>/, `<head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:">`);
+swap(/<head>/, `<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:">`);
 if(/https:\/\/(unpkg|fonts\.googleapis|cdn)/.test(html)) throw new Error("Build stopped: the page still loads something from the internet");
 
 writeFileSync(join(out, "index.html"), html);
