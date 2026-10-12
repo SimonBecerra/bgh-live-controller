@@ -1,7 +1,8 @@
 // BGH LIVE Controller: desktop app (Electron main process).
 // The controller itself is app/index.html; this file gives it a window and the few things a web page can't do:
 // choosing a monitor, reading the Schedule folder and OBS's saved scene collections, keeping the password
-// encrypted, keeping the screen awake, saving files, the "open with OBS" setting for the plug-in,
+// encrypted, keeping the screen awake, saving files, opening and closing OBS with the controller, the
+// "open with OBS" setting for the plug-in,
 // Bible text (bible.js) and the hymn books.
 "use strict";
 const { app, BrowserWindow, ipcMain, screen, safeStorage, powerSaveBlocker, dialog, shell, Menu } = require("electron");
@@ -199,7 +200,9 @@ ipcMain.handle("save-file", async (e, name, text, kind) => {
 });
 ipcMain.handle("toggle-fullscreen", () => { if (win) win.setFullScreen(!win.isFullScreen()); return win ? win.isFullScreen() : false; });
 ipcMain.handle("is-fullscreen", () => (win ? win.isFullScreen() : false));
-ipcMain.handle("quit", () => app.quit());
+// Used when OBS closed normally and "Close the controller when OBS closes" is on: OBS is already closing,
+// so this never tries to close OBS again
+ipcMain.handle("quit", () => { allowClose = true; app.quit(); });
 // After going live on a one-monitor setup: bring the controller back in front of OBS.
 // Windows doesn't let a background app simply take focus, so it's briefly made "always on top".
 function bringToFront() {
@@ -213,6 +216,13 @@ function bringToFront() {
 }
 ipcMain.handle("bring-to-front", () => bringToFront());
 
+// Settings → Connection → "Open the BGH LIVE Controller when Windows starts" (Windows' own startup list)
+ipcMain.handle("get-start-at-login", () => app.getLoginItemSettings().openAtLogin);
+ipcMain.handle("set-start-at-login", (e, on) => {
+  app.setLoginItemSettings({ openAtLogin: !!on, path: process.execPath, args: ["--at-startup"] });
+  return app.getLoginItemSettings().openAtLogin;
+});
+
 /* ---------------------------------------------------------------- open OBS with the controller */
 // Settings → Connection → "Open OBS when the controller starts". Kept in a file so it's known at startup.
 const launchFile = () => path.join(userData(), "launch.json");
@@ -220,6 +230,11 @@ function readLaunch() { try { return JSON.parse(fs.readFileSync(launchFile(), "u
 ipcMain.handle("set-open-obs", (e, on) => {
   fs.mkdirSync(userData(), { recursive: true });
   fs.writeFileSync(launchFile(), JSON.stringify({ ...readLaunch(), openObs: !!on }));
+  return true;
+});
+ipcMain.handle("set-close-obs", (e, on) => {
+  fs.mkdirSync(userData(), { recursive: true });
+  fs.writeFileSync(launchFile(), JSON.stringify({ ...readLaunch(), closeObs: !!on }));
   return true;
 });
 const run = (cmd, args) => new Promise(res => execFile(cmd, args, { windowsHide: true }, (err, out) => res(err ? "" : String(out))));
@@ -256,6 +271,34 @@ async function openObsIfWanted() {
     holdInFront(25000);
   } catch (e) { win?.webContents.send("app-message", "Couldn't open OBS. Open it yourself."); }
 }
+/* ---------------------------------------------------------------- close OBS with the controller */
+// Settings → Connection → "Close OBS when the controller closes". Closing the window asks the page first
+// (it checks whether OBS is live or recording), then OBS is asked to close the normal way, like clicking its ×,
+// so it saves its settings and scene collection. Never forced.
+let allowClose = false, closeAsked = false, closeTimer = null;
+function onWindowClose(e) {
+  if (allowClose || !readLaunch().closeObs) return;
+  e.preventDefault();
+  if (closeAsked) return;
+  closeAsked = true;
+  win.webContents.send("closing");
+  closeTimer = setTimeout(() => finishClose("both"), 4000);   // the page didn't answer: close anyway
+}
+async function finishClose(choice) {
+  clearTimeout(closeTimer); closeTimer = null;
+  closeAsked = false;
+  if (choice === "wait") return void (closeAsked = true);   // a question is on screen; its answer comes next
+  if (choice === "cancel" || !win || win.isDestroyed()) return;
+  if (choice === "both") await closeObs();
+  allowClose = true;
+  win.close();
+}
+async function closeObs() {
+  if (process.platform !== "win32" || !(await obsRunning())) return;
+  // Without /F this sends OBS's windows the normal "close" message
+  await run("taskkill", ["/IM", "obs64.exe"]);
+}
+ipcMain.handle("close-answer", (e, choice) => finishClose(String(choice)));
 ipcMain.handle("version", () => app.getVersion());
 ipcMain.handle("opened-by-obs", () => process.argv.includes("--opened-by-obs"));
 
@@ -285,6 +328,9 @@ function createWindow() {
   win.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("file:")) e.preventDefault(); });
   // If the page ever crashes, load it again instead of leaving a blank screen
   win.webContents.on("render-process-gone", () => { setTimeout(() => { if (win && !win.isDestroyed()) win.reload(); }, 1000); });
+  win.on("close", onWindowClose);
+  // Windows is shutting down or signing out: close straight away
+  win.on("session-end", () => { allowClose = true; });
   win.on("closed", () => { win = null; });
 }
 
