@@ -168,6 +168,17 @@ ipcMain.handle("save-file", async (e, name, text) => {
 ipcMain.handle("toggle-fullscreen", () => { if (win) win.setFullScreen(!win.isFullScreen()); return win ? win.isFullScreen() : false; });
 ipcMain.handle("is-fullscreen", () => (win ? win.isFullScreen() : false));
 ipcMain.handle("quit", () => app.quit());
+// After going live on a one-monitor setup: bring the controller back in front of OBS.
+// Windows doesn't let a background app simply take focus, so it's briefly made "always on top".
+ipcMain.handle("bring-to-front", () => {
+  if (!win || win.isDestroyed()) return false;
+  const wasOnTop = win.isAlwaysOnTop();
+  if (win.isMinimized()) win.restore();
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.show(); win.moveTop(); win.focus();
+  setTimeout(() => { if (win && !win.isDestroyed() && !wasOnTop) win.setAlwaysOnTop(false); }, 400);
+  return true;
+});
 ipcMain.handle("version", () => app.getVersion());
 ipcMain.handle("opened-by-obs", () => process.argv.includes("--opened-by-obs"));
 
