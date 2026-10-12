@@ -40,6 +40,16 @@ contextBridge.exposeInMainWorld("bgh", {
   setStartAtLogin: on => ipcRenderer.invoke("set-start-at-login", !!on),
   obsConnected: () => ipcRenderer.invoke("obs-connected"),
   onMessage: fn => ipcRenderer.on("app-message", (e, text) => fn(text)),
+  plugin: {
+    status: () => ipcRenderer.invoke("plugin-status"),
+    install: () => ipcRenderer.invoke("plugin-install")
+  },
+  appUpdate: {
+    status: () => ipcRenderer.invoke("app-update-status"),
+    check: () => ipcRenderer.invoke("app-update-check"),
+    install: () => ipcRenderer.invoke("app-update-install"),
+    onChange: fn => ipcRenderer.on("app-update", (e, u) => fn(u))
+  },
   quit: () => ipcRenderer.invoke("quit"),
   version: () => ipcRenderer.invoke("version"),
   openedByObs: () => ipcRenderer.invoke("opened-by-obs")

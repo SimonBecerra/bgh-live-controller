@@ -1,9 +1,13 @@
 # Builds the Windows installer every time something is committed.
 # The installer appears under Actions → the newest run → Artifacts.
+# On main, a new version number is also published as a GitHub release, which is where the controller
+# looks for updates: it downloads them by itself and shows "Update ready".
 name: Build installer
 on:
   push:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   windows:
     runs-on: windows-latest
@@ -23,3 +27,20 @@ jobs:
           name: BGH-LIVE-Controller-installer
           path: dist/*.exe
           if-no-files-found: error
+      - name: Publish the update
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = "v$version"
+          gh release view $tag 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Version $version is already published. Change the version in package.json to publish an update."
+            exit 0
+          }
+          $files = @(Get-ChildItem dist/*.exe, dist/*.exe.blockmap, dist/latest.yml | ForEach-Object { $_.FullName })
+          if ($files.Count -lt 3) { Write-Error "The installer, its blockmap or latest.yml is missing"; exit 1 }
+          gh release create $tag @files --title "BGH LIVE Controller $version" --notes "Installed automatically: the controller downloads this update and shows Update ready."
+          if ($LASTEXITCODE -ne 0) { exit 1 }

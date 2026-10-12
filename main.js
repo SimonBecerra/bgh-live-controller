@@ -5,8 +5,9 @@
 // "open with OBS" setting for the plug-in,
 // Bible text (bible.js) and the hymn books.
 "use strict";
-const { app, BrowserWindow, ipcMain, screen, safeStorage, powerSaveBlocker, dialog, shell, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, screen, safeStorage, powerSaveBlocker, dialog, shell, Menu, net } = require("electron");
 const path = require("node:path");
+const os = require("node:os");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const { spawn, execFile } = require("node:child_process");
@@ -299,6 +300,170 @@ async function closeObs() {
   await run("taskkill", ["/IM", "obs64.exe"]);
 }
 ipcMain.handle("close-answer", (e, choice) => finishClose(String(choice)));
+/* ---------------------------------------------------------------- the OBS plug-in: install and update */
+/*
+ * The plug-in lives where OBS 32 looks for plug-ins that aren't part of OBS itself, so updating it never needs
+ * Windows' administrator permission:
+ *   C:\ProgramData\obs-studio\plugins\church-controller\bin\64bit\church-controller.dll
+ *   C:\ProgramData\obs-studio\plugins\church-controller\data\...   (designs, fonts, version.txt)
+ * GitHub publishes every new build of the plug-in as the "plugin-latest" release of SimonBecerra/church-controller
+ * (church-controller-windows.zip and version.txt). An older copy put in OBS's own Program Files folder by hand is
+ * removed the first time (OBS would load both), which needs Windows' permission once.
+ */
+const PLUGIN_URL = (process.env.BGH_PLUGIN_URL || "https://github.com/SimonBecerra/church-controller/releases/download/plugin-latest/").replace(/\/?$/, "/");
+const pluginDir = () => path.join(process.env.ProgramData || "C:\\ProgramData", "obs-studio", "plugins", "church-controller");
+const readTrim = f => { try { return fs.readFileSync(f, "utf8").trim(); } catch (e) { return ""; } };
+// The copy put in by hand: OBS's own folders, next to obs64.exe
+async function legacyPlugin() {
+  const exe = await findObs();
+  const root = exe ? path.resolve(path.dirname(exe), "..", "..") : path.join(process.env.ProgramFiles || "C:\\Program Files", "obs-studio");
+  const dll = path.join(root, "obs-plugins", "64bit", "church-controller.dll");
+  const data = path.join(root, "data", "obs-plugins", "church-controller");
+  return { dll, pdb: dll.replace(/\.dll$/i, ".pdb"), data, present: fs.existsSync(dll) || fs.existsSync(data) };
+}
+// Like execFile, but also says whether it worked
+const runCode = (cmd, args, opts = {}) => new Promise(res => execFile(cmd, args, { windowsHide: true, ...opts }, (err, out, errOut) => res({ ok: !err, out: String(out || ""), err: String(errOut || (err && err.message) || "") })));
+let pluginState = { installed: "", latest: "", legacy: false, needed: false, error: "" };
+async function pluginStatus() {
+  const installed = readTrim(path.join(pluginDir(), "data", "version.txt"));
+  const legacy = process.platform === "win32" ? (await legacyPlugin()).present : false;
+  let latest = "", error = "";
+  try {
+    const r = await net.fetch(PLUGIN_URL + "version.txt", { cache: "no-store" });
+    if (r.ok) latest = (await r.text()).trim();
+    else error = r.status === 404 ? "No plug-in has been published yet." : `GitHub answered ${r.status}.`;
+  } catch (e) { error = "Couldn't reach GitHub to check for a plug-in update."; }
+  pluginState = { installed, latest, legacy, error, needed: !!latest && (installed !== latest || legacy), firstTime: !installed };
+  return pluginState;
+}
+async function waitFor(test, ms) {
+  for (const end = Date.now() + ms; Date.now() < end;) { if (await test()) return true; await wait(500); }
+  return test();
+}
+const psQuote = p => "'" + String(p).replace(/'/g, "''") + "'";
+// Runs a PowerShell script as administrator (Windows asks "Do you want to allow…"). False if refused or failed.
+async function runElevated(lines) {
+  const ps1 = path.join(os.tmpdir(), `bgh-plugin-${Date.now()}.ps1`);
+  fs.writeFileSync(ps1, ["$ErrorActionPreference = 'Stop'", ...lines].join("\r\n"), "utf8");
+  const cmd = `$p = Start-Process -FilePath powershell.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',${psQuote('"' + ps1 + '"')}; exit $p.ExitCode`;
+  const r = await runCode("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", cmd]);
+  try { fs.rmSync(ps1, { force: true }); } catch (e) {}
+  return r.ok;
+}
+let pluginBusy = false;
+async function installPlugin() {
+  if (process.platform !== "win32") return { ok: false, code: "WINDOWS_ONLY", message: "The plug-in can only be installed on Windows." };
+  if (pluginBusy) return { ok: false, code: "BUSY", message: "The plug-in is already being updated." };
+  pluginBusy = true;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bgh-plugin-"));
+  const exe = await findObs();
+  let wasRunning = false;
+  const done = async result => {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) {}
+    // Open OBS again if it was open, with the controller staying in front
+    if (wasRunning && exe && !(await obsRunning())) {
+      try { spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: "ignore" }).unref(); holdInFront(25000); } catch (e) {}
+    }
+    pluginBusy = false;
+    if (result.ok) await pluginStatus();
+    return result;
+  };
+  try {
+    // 1. Download and unpack first, so OBS is closed for as short a time as possible
+    const r = await net.fetch(PLUGIN_URL + "church-controller-windows.zip", { cache: "no-store" });
+    if (!r.ok) return done({ ok: false, code: "DOWNLOAD", message: `Couldn't download the plug-in (GitHub answered ${r.status}).` });
+    const zip = path.join(tmp, "plugin.zip");
+    fs.writeFileSync(zip, Buffer.from(await r.arrayBuffer()));
+    const tar = path.join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe");   // built into Windows 10 and 11
+    const x = await runCode(tar, ["-xf", zip, "-C", tmp]);
+    const src = path.join(tmp, "church-controller");
+    if (!x.ok || !fs.existsSync(path.join(src, "bin", "64bit", "church-controller.dll")))
+      return done({ ok: false, code: "UNPACK", message: "The downloaded plug-in couldn't be unpacked." });
+    const version = readTrim(path.join(src, "data", "version.txt"));
+
+    // 2. Close OBS the normal way (it saves everything); a plug-in can't be replaced while OBS is using it
+    wasRunning = await obsRunning();
+    if (wasRunning) {
+      await run("taskkill", ["/IM", "obs64.exe"]);
+      if (!(await waitFor(async () => !(await obsRunning()), 30000)))
+        return done({ ok: false, code: "OBS_OPEN", message: "OBS didn't close. Close OBS yourself, then press Update again." });
+    }
+
+    // 3. Put the new plug-in in place
+    const dest = pluginDir();
+    const legacy = await legacyPlugin();
+    let copied = false;
+    if (!legacy.present) {
+      try {
+        fs.rmSync(dest, { recursive: true, force: true });
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.cpSync(src, dest, { recursive: true, force: true });
+        copied = true;
+      } catch (e) { /* no permission: done as administrator below */ }
+    }
+    if (!copied) {
+      // First time (the old copy in Program Files has to go, or OBS would load both) or no permission:
+      // one script, run as administrator, so Windows asks once
+      const lines = [];
+      if (legacy.present) lines.push(
+        `Remove-Item -LiteralPath ${psQuote(legacy.dll)} -Force -ErrorAction SilentlyContinue`,
+        `Remove-Item -LiteralPath ${psQuote(legacy.pdb)} -Force -ErrorAction SilentlyContinue`,
+        `Remove-Item -LiteralPath ${psQuote(legacy.data)} -Recurse -Force -ErrorAction SilentlyContinue`,
+        `if (Test-Path -LiteralPath ${psQuote(legacy.dll)}) { exit 2 }`);
+      lines.push(
+        `if (Test-Path -LiteralPath ${psQuote(dest)}) { Remove-Item -LiteralPath ${psQuote(dest)} -Recurse -Force }`,
+        `New-Item -ItemType Directory -Force -Path ${psQuote(path.dirname(dest))} | Out-Null`,
+        `Copy-Item -LiteralPath ${psQuote(src)} -Destination ${psQuote(dest)} -Recurse -Force`);
+      if (!(await runElevated(lines)) || (await legacyPlugin()).present)
+        return done({ ok: false, code: "DENIED", message: "Windows' permission is needed once, to remove the old copy of the plug-in from OBS's Program Files folder. Press Update again and choose Yes." });
+    }
+    // 4. Check it's really there
+    if (readTrim(path.join(dest, "data", "version.txt")) !== version || !fs.existsSync(path.join(dest, "bin", "64bit", "church-controller.dll")))
+      return done({ ok: false, code: "COPY", message: "The plug-in couldn't be copied into place." });
+    return done({ ok: true, version, reopened: wasRunning });
+  } catch (e) {
+    return done({ ok: false, code: "ERROR", message: `The plug-in update stopped: ${e.message}` });
+  }
+}
+ipcMain.handle("plugin-status", () => pluginStatus());
+ipcMain.handle("plugin-install", () => installPlugin());
+
+/* ---------------------------------------------------------------- the controller updates itself */
+// New versions are published as GitHub releases of SimonBecerra/bgh-live-controller. Downloaded quietly in the
+// background; installed when the person taps "Restart to update", or by itself the next time the controller is closed.
+let autoUpdater = null;
+try { ({ autoUpdater } = require("electron-updater")); } catch (e) { /* not bundled (development) */ }
+let appUpdate = { state: "idle", version: "", error: "" };
+function sendUpdate(patch) {
+  appUpdate = { ...appUpdate, ...patch };
+  if (win && !win.isDestroyed()) win.webContents.send("app-update", appUpdate);
+}
+function setupAppUpdates() {
+  if (!autoUpdater || !app.isPackaged) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on("checking-for-update", () => sendUpdate({ state: "checking", error: "" }));
+  autoUpdater.on("update-not-available", () => sendUpdate({ state: "current" }));
+  autoUpdater.on("update-available", i => sendUpdate({ state: "downloading", version: i.version }));
+  autoUpdater.on("update-downloaded", i => sendUpdate({ state: "ready", version: i.version }));
+  autoUpdater.on("error", e => sendUpdate({ state: "error", error: String(e && e.message || e).split("\n")[0] }));
+  const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  setTimeout(check, 8000);
+  setInterval(check, 4 * 3600 * 1000);
+}
+ipcMain.handle("app-update-status", () => ({ ...appUpdate, version: appUpdate.version, current: app.getVersion(), enabled: !!autoUpdater && app.isPackaged }));
+ipcMain.handle("app-update-check", async () => {
+  if (!autoUpdater || !app.isPackaged) return { ...appUpdate, enabled: false };
+  try { await autoUpdater.checkForUpdates(); } catch (e) { sendUpdate({ state: "error", error: String(e.message || e).split("\n")[0] }); }
+  return appUpdate;
+});
+ipcMain.handle("app-update-install", () => {
+  if (!autoUpdater || appUpdate.state !== "ready") return false;
+  allowClose = true;   // restarting to update never closes OBS
+  setImmediate(() => autoUpdater.quitAndInstall(true, true));
+  return true;
+});
+
 ipcMain.handle("version", () => app.getVersion());
 ipcMain.handle("opened-by-obs", () => process.argv.includes("--opened-by-obs"));
 
@@ -347,5 +512,6 @@ app.whenReady().then(() => {
   screen.on("display-added", (e, d) => displaysChanged("added", d));
   screen.on("display-removed", (e, d) => displaysChanged("removed", d));
   createWindow();
+  setupAppUpdates();
 });
 app.on("window-all-closed", () => app.quit());

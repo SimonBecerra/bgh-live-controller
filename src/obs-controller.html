@@ -170,6 +170,13 @@ body.portrait .set-nav .nav-proto{margin-top:0;border-top:none}
 .bk-auto{display:flex;flex-direction:column;gap:8px}
 .safe-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--line-2);background:var(--panel);color:var(--muted);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;white-space:nowrap}
 .safe-btn svg{width:18px;height:18px}
+/* Update ready: a new version of the controller is downloaded */
+.upd-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--fg);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;white-space:nowrap}
+.upd-btn svg{width:18px;height:18px;color:var(--accent)}
+.upd-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid var(--line)}
+.upd-row:first-of-type{border-top:0}
+.upd-row > div{display:grid;gap:2px;min-width:0}
+.upd-row .btn{flex:none;min-height:46px}
 .safe-btn .safe-st{padding:2px 8px;border-radius:999px;background:var(--panel-2);color:var(--fg);font-size:12px}
 .safe-btn[aria-pressed=true]{border-color:var(--pvw);background:var(--pvw-soft);color:var(--fg)}
 .safe-btn[aria-pressed=true] svg{color:var(--pvw)}
@@ -797,6 +804,7 @@ body.compact .lt-chip{min-height:42px}
     <span class="health" id="health" hidden role="status" aria-live="polite"><span class="hdot"></span><span class="mono" id="healthTxt"></span></span>
     <span class="disk-note" id="diskNote" role="status" hidden><i data-lucide="hard-drive"></i><span id="diskTxt"></span></span>
     <span class="stat" id="statRec" role="status"><span class="tally"></span><span class="lbl">NOT RECORDING</span><span class="tm mono" id="recTime"></span></span>
+    <button class="upd-btn" id="updBtn" type="button" hidden title="A new version of the controller is ready"><i data-lucide="download"></i><span>UPDATE READY</span></button>
     <button class="safe-btn" id="safeBtn" type="button" aria-pressed="false" title="Safe mode stops accidental changes to the livestream"><i data-lucide="lock-open" class="safe-ico"></i><span class="safe-lbl">SAFE MODE</span><b class="safe-st">OFF</b></button>
     <button class="icon-btn" id="fsBtn" aria-label="Enter fullscreen"><i data-lucide="maximize"></i></button>
     <button class="icon-btn" id="settingsBtn" aria-label="Settings">
@@ -1041,6 +1049,11 @@ body.compact .lt-chip{min-height:42px}
             <label class="check" for="setCloseWithObs"><input type="checkbox" id="setCloseWithObs">
               <span>Close the controller when OBS closes<small>Only when OBS is closed normally. If OBS crashes, the controller stays open and reconnects.</small></span>
             </label>
+          </div>
+          <div class="set-section" id="setUpdSec">
+            <h4>Updates</h4>
+            <div class="upd-row"><div><b>BGH LIVE Controller</b><span class="path" id="setUpdApp"></span></div><button type="button" class="btn" id="setUpdAppBtn">Check for updates</button></div>
+            <div class="upd-row"><div><b>OBS plug-in</b><span class="path" id="setUpdPlug"></span></div><button type="button" class="btn" id="setUpdPlugBtn">Check</button></div>
           </div>
           <div class="set-section">
             <h4>Transitions</h4>
@@ -4356,6 +4369,80 @@ async function askClose(answer){
 if(window.bgh && window.bgh.onClosing) window.bgh.onClosing(() => askClose(v => window.bgh.closeAnswer(v)));
 if(window.bgh && window.bgh.setCloseObs) window.bgh.setCloseObs(ui.closeObs);
 
+/* Updates (desktop app). The controller downloads new versions of itself from GitHub in the background and installs
+   them when you tap "Update ready" (or the next time it closes). It also installs and updates the OBS plug-in:
+   OBS closes for a moment, the new plug-in goes in, and OBS opens again. Never while live or recording. */
+ui.appUpd = {state:"idle"}; ui.plug = null; ui.pluginUpdating = false; ui.plugPending = false;
+let plugAsked = "";
+function renderUpdates(){
+  const u = ui.appUpd, pl = ui.plug, desk = !!(window.bgh && window.bgh.appUpdate);
+  $("updBtn").hidden = !desk || u.state !== "ready";
+  $("updBtn").title = `Version ${u.version || ""} is ready. Tap to restart the controller and update.`;
+  $("setUpdApp").textContent = !desk ? "In the desktop app, new versions download by themselves and install when you restart the controller." :
+    u.enabled === false ? `Version ${u.current || ""}. Automatic updates work in the installed app.` :
+    u.state === "ready" ? `Version ${u.version} is downloaded. Tap Update ready at the top, or it installs the next time the controller closes.` :
+    u.state === "downloading" ? `Downloading version ${u.version}…` :
+    u.state === "checking" ? "Checking…" :
+    u.state === "error" ? `Couldn't check for updates. ${u.error || ""}` : `Version ${u.current || ""}. Up to date.`;
+  $("setUpdPlug").textContent = !desk ? "In the desktop app, the controller installs the plug-in in OBS and keeps it up to date." :
+    !pl ? "Not checked yet." :
+    pl.needed ? (pl.legacy ? "An update is ready. The first time, Windows asks for permission once." : "An update is ready.") :
+    pl.error && !pl.latest ? pl.error : `Up to date (${pl.installed}).`;
+  $("setUpdPlugBtn").textContent = pl && pl.needed ? "Update now" : "Check";
+}
+async function checkPlugin(ask){
+  if(!window.bgh || !window.bgh.plugin) return;
+  try{ ui.plug = await window.bgh.plugin.status(); }catch(e){}
+  renderUpdates();
+  if(ask && ui.plug && ui.plug.needed && plugAsked !== ui.plug.latest) offerPlugin();
+}
+async function offerPlugin(){
+  if(isLiveOrRec() || ui.pluginUpdating){ ui.plugPending = true; return; }   // asked again once the service is over
+  ui.plugPending = false; plugAsked = ui.plug.latest;
+  const ok = await confirmDlg("OBS plug-in update ready",
+    "A new version of the BGH LIVE plug-in for OBS is ready. Updating closes OBS for a moment, puts in the new plug-in and opens OBS again." +
+    (ui.plug.legacy ? " This first time, Windows asks for permission once, to remove the old copy that was installed by hand. Choose Yes." : ""),
+    "Update now", "primary", "Later");
+  if(ok) installPluginNow();
+}
+async function installPluginNow(){
+  if(!window.bgh || !window.bgh.plugin) return toast("The plug-in is installed by the desktop app.");
+  if(isLiveOrRec()) return infoDlg("Not while live", "The plug-in can't be updated while you're live or recording, because OBS has to close for a moment. Update it after the service.");
+  ui.pluginUpdating = true; $("setUpdPlugBtn").disabled = true;
+  toast("Updating the OBS plug-in. OBS closes for a moment and opens again.");
+  let r;
+  try{ r = await window.bgh.plugin.install(); }catch(e){ r = {ok:false, message:e.message}; }
+  if(r.ok) toast(r.reopened ? "OBS plug-in updated. OBS is opening again." : "OBS plug-in updated. It's used the next time OBS opens.");
+  else infoDlg("The plug-in wasn't updated", r.message || "Something went wrong.");
+  // Keep "Close the controller when OBS closes" from acting until OBS is back
+  setTimeout(() => { ui.pluginUpdating = false; }, r.ok && r.reopened ? 20000 : 0);
+  $("setUpdPlugBtn").disabled = false;
+  await checkPlugin(false);
+}
+function plugAfterService(){ setTimeout(() => { if(ui.plugPending && !isLiveOrRec()) offerPlugin(); }, 2000); }
+obs.on("StreamStateChanged", plugAfterService);
+obs.on("RecordStateChanged", plugAfterService);
+$("updBtn").addEventListener("click", async () => {
+  const ok = await confirmDlg(`Update to version ${ui.appUpd.version}?`,
+    "The controller closes, installs the update and opens again in about 10 seconds. " +
+    (isLiveOrRec() ? "OBS keeps streaming and recording; only the controller restarts." : "OBS stays open."),
+    "Restart and update", "primary", "Later");
+  if(ok) window.bgh.appUpdate.install();
+});
+$("setUpdAppBtn").addEventListener("click", async () => {
+  if(!window.bgh || !window.bgh.appUpdate) return toast("Updates are checked by the desktop app.");
+  ui.appUpd = {...ui.appUpd, state:"checking"}; renderUpdates();
+  try{ ui.appUpd = {...ui.appUpd, ...(await window.bgh.appUpdate.check())}; }catch(e){}
+  renderUpdates();
+});
+$("setUpdPlugBtn").addEventListener("click", () => ui.plug && ui.plug.needed ? installPluginNow() : checkPlugin(false));
+if(window.bgh && window.bgh.appUpdate){
+  window.bgh.appUpdate.onChange(u => { ui.appUpd = {...ui.appUpd, ...u}; renderUpdates(); });
+  window.bgh.appUpdate.status().then(u => { ui.appUpd = {...ui.appUpd, ...u}; renderUpdates(); }).catch(() => {});
+  setTimeout(() => checkPlugin(true), 6000);
+}
+renderUpdates();
+
 /* Connection to OBS: banner, greyed-out controls, automatic reconnect, then a full re-sync */
 ui.connected = true;
 let reconnecting = false;
@@ -4366,8 +4453,9 @@ obs.on("ConnectionClosed", async () => {
   if(reconnecting) return;
   ui.connected = false; reconnecting = true;
   $("connBannerTitle").textContent = ui.obsExiting ? "OBS was closed." : ui.everConnected ? "Lost connection to OBS." : "Can't reach OBS yet.";
-  if(ui.obsExiting && ui.closeWithObs && window.bgh){ window.bgh.quit(); return; }
-  if(ui.obsExiting && ui.closeWithObs){
+  if(ui.pluginUpdating) $("connBannerTitle").textContent = "Updating the OBS plug-in…";
+  else if(ui.obsExiting && ui.closeWithObs && window.bgh){ window.bgh.quit(); return; }
+  if(ui.obsExiting && ui.closeWithObs && !ui.pluginUpdating){
     // Desktop app: closes here. The prototype explains and keeps running.
     infoDlg("OBS closed normally", "\"Close the controller when OBS closes\" is on, so the desktop app would close now. If OBS had crashed instead, the controller would stay open and reconnect when OBS is reopened.");
   }
