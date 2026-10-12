@@ -1,7 +1,7 @@
 {
   "name": "bgh-live-controller",
   "productName": "BGH LIVE Controller",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Touchscreen controller for OBS Studio at Barrington Gospel Hall",
   "author": "Barrington Gospel Hall",
   "main": "main.js",

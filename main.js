@@ -170,7 +170,7 @@ ipcMain.handle("is-fullscreen", () => (win ? win.isFullScreen() : false));
 ipcMain.handle("quit", () => app.quit());
 // After going live on a one-monitor setup: bring the controller back in front of OBS.
 // Windows doesn't let a background app simply take focus, so it's briefly made "always on top".
-ipcMain.handle("bring-to-front", () => {
+function bringToFront() {
   if (!win || win.isDestroyed()) return false;
   const wasOnTop = win.isAlwaysOnTop();
   if (win.isMinimized()) win.restore();
@@ -178,7 +178,8 @@ ipcMain.handle("bring-to-front", () => {
   win.show(); win.moveTop(); win.focus();
   setTimeout(() => { if (win && !win.isDestroyed() && !wasOnTop) win.setAlwaysOnTop(false); }, 400);
   return true;
-});
+}
+ipcMain.handle("bring-to-front", () => bringToFront());
 ipcMain.handle("version", () => app.getVersion());
 ipcMain.handle("opened-by-obs", () => process.argv.includes("--opened-by-obs"));
 
@@ -192,7 +193,8 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false }
   });
   win.loadFile(path.join(__dirname, "app", "index.html"));
-  win.once("ready-to-show", () => win.show());
+  // Opened by OBS (the plug-in's "Open the controller when OBS starts"): come up in front of OBS
+  win.once("ready-to-show", () => { win.show(); if (process.argv.includes("--opened-by-obs")) bringToFront(); });
   // Remember the window's size for windowed mode
   win.on("resized", () => { if (!win.isFullScreen() && !win.isAlwaysOnTop()) windowedBounds = win.getBounds(); });
   win.on("enter-full-screen", () => win.webContents.send("fullscreen-changed", true));
@@ -206,10 +208,8 @@ function createWindow() {
 }
 
 app.on("second-instance", () => {
-  // Opened again (for example by OBS starting): bring the existing controller forward
-  if (!win) return;
-  if (win.isMinimized()) win.restore();
-  win.show(); win.focus();
+  // Opened again (for example by OBS starting while the controller is already open): bring it in front
+  bringToFront();
 });
 
 app.whenReady().then(() => {
