@@ -1,0 +1,67 @@
+{
+  "name": "bgh-live-controller",
+  "productName": "BGH LIVE Controller",
+  "version": "1.0.0",
+  "description": "Touchscreen controller for OBS Studio at Barrington Gospel Hall",
+  "author": "Barrington Gospel Hall",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "build:renderer": "node tools/build-renderer.mjs",
+    "start": "npm run build:renderer && electron .",
+    "dist": "npm run build:renderer && electron-builder --win nsis --x64 --publish never"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/spectral": "5.3.0",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "jsdom": "26.1.0",
+    "lucide": "0.460.0",
+    "obs-websocket-js": "5.0.8"
+  },
+  "build": {
+    "appId": "org.barringtongospelhall.livecontroller",
+    "productName": "BGH LIVE Controller",
+    "copyright": "Barrington Gospel Hall",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BGH LIVE Controller",
+      "artifactName": "BGH-LIVE-Controller-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "linux": {
+      "target": "dir"
+    },
+    "publish": null
+  }
+}
