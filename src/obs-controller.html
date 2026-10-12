@@ -168,6 +168,12 @@ body.portrait .set-nav .nav-proto{margin-top:0;border-top:none}
 @keyframes flash{0%,30%{box-shadow:0 0 0 3px var(--accent);border-radius:10px}100%{box-shadow:0 0 0 3px transparent}}
 .set-note{display:block;font-size:13px;line-height:1.4;color:var(--fg);border-left:3px solid var(--warn);padding:2px 0 2px 10px}
 .bk-auto{display:flex;flex-direction:column;gap:8px}
+.automic{display:flex;flex-direction:column;gap:10px;padding-left:16px;border-left:2px solid var(--line-2)}
+.automic-list{display:flex;flex-direction:column;gap:6px}
+.automic-row{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:10px;align-items:center}
+.automic-row span{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.automic-row select{min-height:46px}
+.aud-auto{margin-left:6px;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--accent)}
 .bk-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
 .bk-row > div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:15px}
 .bk-row small{color:var(--muted);font-size:13px}
@@ -719,7 +725,14 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
             <div class="field"><label class="label" for="setAudio">Audio input</label>
               <select id="setAudio" data-cfg></select>
               <span class="path">The audio source the Mute button and level meter use in this scene collection.</span></div>
-          </div>
+            <label class="check" for="setAutoMic"><input type="checkbox" id="setAutoMic" data-cfg>
+              <span>Automatic mute while live<small>When the livestream starts, the audio input is muted. While live, it unmutes when you go from a waiting scene to a camera or slideshow, and mutes when you go from a camera or slideshow to Black or Ending. Recording on its own never changes it, and the Mute button still works any time.</small></span>
+            </label>
+            <div class="automic" id="setAutoMicBox" hidden>
+              <span class="label">Mic for each scene</span>
+              <div class="automic-list" id="setAutoMicList"></div>
+              <span class="path">Going from a "Mic off" scene to a "Mic on" scene unmutes; going the other way mutes. "No change" scenes never change it.</span>
+            </div>
           <div class="set-section">
             <h4>Waiting button</h4>
             <div class="wait-grid">
@@ -1413,6 +1426,13 @@ const obs = new MockOBS();
 if(window.bgh) document.querySelectorAll("[data-proto]").forEach(el => el.remove());
 const $ = id => document.getElementById(id);
 let BUTTONS = [], sceneEls = [];
+/* Automatic mute: which scenes have the mic on or off, guessed from the name until set in Settings */
+function autoMicDefault(name){
+  const n = String(name).toLowerCase();
+  if(/\b(web)?cam(era)?s?\s*\d*\b/.test(n) || /\b(slide ?shows?|slides|presentation|powerpoint|lyrics)\b/.test(n)) return "on";
+  if(/\b(waiting|title|live soon|starting|starting soon|countdown|black|blank|ending|end|thanks?|thank you)\b/.test(n)) return "off";
+  return "none";
+}
 // Icons by whole words in the scene name, so "Camp Meeting" isn't a camera and "Weekend" isn't an ending
 function iconFor(name){
   const n = name.toLowerCase();
@@ -2641,7 +2661,9 @@ function syncCfgFields(){
   workCfg[cfgColl] = {text:$("setText").value, image:$("setImg").value,
     folder: mode === "custom" ? ($("setFolder").value.trim() || "") : mode,
     audio: $("setAudio").value,
-    wait: {title:$("setWaitTitle").value, w1:$("setWait1").value, w2:$("setWait2").value}};
+    wait: {title:$("setWaitTitle").value, w1:$("setWait1").value, w2:$("setWait2").value},
+    autoMic: {on: $("setAutoMic").checked,
+      scenes: Object.fromEntries([...document.querySelectorAll("#setAutoMicList select")].map(el => [el.dataset.scene, el.value]))}};
 }
 async function renderCfgFields(){
   const coll = cfgColl;
@@ -2670,6 +2692,20 @@ async function fillCfgFields(coll){
   const scenes = await listScenes(coll), auto = findWaitGroup(scenes) || [];
   const w = c && c.wait ? c.wait : {title:auto[0] || "", w1:auto[1] || "", w2:auto[2] || ""};
   fill($("setWaitTitle"), scenes, w.title); fill($("setWait1"), scenes, w.w1); fill($("setWait2"), scenes, w.w2);
+  // Automatic mute: one row per scene
+  const am = (c && c.autoMic) || {on:false, scenes:{}};
+  $("setAutoMic").checked = !!am.on;
+  $("setAutoMicList").innerHTML = "";
+  scenes.forEach(n => {
+    const row = document.createElement("label"); row.className = "automic-row";
+    row.innerHTML = `<span></span><select data-cfg><option value="on">Mic on</option><option value="off">Mic off</option><option value="none">No change</option></select>`;
+    row.querySelector("span").textContent = n;
+    const sel = row.querySelector("select");
+    sel.dataset.scene = n; sel.value = (am.scenes && am.scenes[n]) || autoMicDefault(n);
+    sel.setAttribute("aria-label", `Mic for ${n}`);
+    $("setAutoMicList").appendChild(row);
+  });
+  $("setAutoMicBox").hidden = !am.on;
   const f = c ? c.folder : "auto";
   $("setFolderMode").value = f === "auto" || f === "" ? f : "custom";
   $("setFolder").value = f === "auto" || f === "" ? "" : f;
@@ -2681,11 +2717,13 @@ function renderCfgState(){
     : "Not set up yet. The choices below are suggestions; change any of them, or tap Use these choices, then press Apply.";
   $("setCfgUse").hidden = set || touched;
 }
+function touchCfg(){ const c = cfgShown; if(!c || cfgLoading || cfgTouched.has(c)) return; cfgTouched.add(c); syncCfgFields(); renderCfgState(); }
 document.querySelectorAll("#page-collections [data-cfg]").forEach(el => {
   if(el.id === "setCfgColl") return;
-  const touch = () => { const c = cfgShown; if(!c || cfgLoading || cfgTouched.has(c)) return; cfgTouched.add(c); syncCfgFields(); renderCfgState(); };
-  el.addEventListener("input", touch); el.addEventListener("change", touch);
+  el.addEventListener("input", touchCfg); el.addEventListener("change", touchCfg);
 });
+$("setAutoMicList").addEventListener("change", touchCfg);   // the per-scene choices are made fresh for each collection
+$("setAutoMic").addEventListener("change", () => { $("setAutoMicBox").hidden = !$("setAutoMic").checked; });
 $("setCfgUse").addEventListener("click", () => {
   cfgTouched.add(cfgColl); syncCfgFields(); renderCfgState(); updateSetDots();
   $("setCfgColl").focus();
@@ -3060,6 +3098,8 @@ $("collClose").addEventListener("click", () => $("collOverlay").hidden = true);
 function renderMute(){
   const a = srcAudio();
   $("audChip").textContent = a || "None";
+  const am = cfg() && cfg().autoMic;
+  if(a && am && am.on){ const t = document.createElement("span"); t.className = "aud-auto"; t.textContent = "AUTO"; t.title = "Automatic mute while live is on"; $("audChip").appendChild(t); }
   $("muteBtn").disabled = ui.audioMissing;
   $("audNote").hidden = !ui.audioMissing;
   $("audNote").textContent = a ? `No "${a}" audio input in ${ui.collection}. Tap to pick another in Settings.` : `No audio input is set for ${ui.collection}. Tap to choose one in Settings.`;
@@ -3230,8 +3270,27 @@ function toast(msg){ $("toast").textContent = msg; $("toast").hidden = false; cl
 obs.on("SceneTransitionStarted", d => { ui.lastTransition = d.transitionName; });
 obs.on("CurrentProgramSceneChanged", d => {
   fade = (ui.program && ui.lastTransition && ui.lastTransition !== "Cut") ? {from:ui.program, t0:performance.now(), dur:500} : null;
+  const prev = ui.program;
   ui.program = d.sceneName; renderScenes();
+  autoMute(prev, d.sceneName);
 });
+/* Automatic mute (Settings → Scene collections → Audio). Works however Program changes: a scene button,
+   CUT, OBS itself, or the Advanced Scene Switcher. Only changes the mic when it isn't already that way. */
+function autoMute(prev, next){
+  const c = cfg();
+  if(!c || !c.autoMic || !c.autoMic.on || !prev || !next || prev === next) return;
+  if(!ui.stream.active) return;   // only while livestreaming; recording alone never changes the mic
+  if(!srcAudio() || ui.audioMissing) return;
+  const kind = n => (c.autoMic.scenes && c.autoMic.scenes[n]) || autoMicDefault(n);
+  const from = kind(prev), to = kind(next);
+  let mute = null;
+  if(from === "off" && to === "on" && ui.muted) mute = false;
+  if(from === "on" && to === "off" && !ui.muted) mute = true;
+  if(mute === null) return;
+  obs.call("SetInputMute", {inputName:srcAudio(), inputMuted:mute})
+    .then(() => toast(mute ? `Mic muted automatically for ${next}` : `Mic unmuted automatically for ${next}`))
+    .catch(() => toast(`Couldn't ${mute ? "mute" : "unmute"} the mic automatically. Use the Mute button.`));
+}
 obs.on("CurrentPreviewSceneChanged", d => { ui.preview = d.sceneName; renderScenes(); });
 obs.on("StudioModeStateChanged", d => { ui.studio = d.studioModeEnabled; if(!ui.studio) ui.preview = null; renderStudio(); });
 obs.on("CurrentSceneTransitionChanged", d => { ui.transition = d.transitionName; renderScenes(); });
@@ -3268,7 +3327,19 @@ obs.on("StreamStateChanged", d => {
   const startedHere = d.outputActive && !!ui.streamPending;   // Go Live from the controller (either way)
   ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive();
   if(startedHere) comeBackAfterGoingLive();
+  if(d.outputActive) autoMuteAtStart();
 });
+/* Automatic mute while live: the stream starts muted (you normally start on Waiting or Live Soon).
+   If you somehow start straight on a "Mic on" scene, like a camera, it's left on. */
+function autoMuteAtStart(){
+  const c = cfg();
+  if(!c || !c.autoMic || !c.autoMic.on || !srcAudio() || ui.audioMissing || ui.muted) return;
+  const kind = (c.autoMic.scenes && c.autoMic.scenes[ui.program]) || autoMicDefault(ui.program || "");
+  if(kind === "on") return;
+  obs.call("SetInputMute", {inputName:srcAudio(), inputMuted:true})
+    .then(() => toast("Live: mic muted until you switch to a camera or slideshow"))
+    .catch(() => toast("Couldn't mute the mic automatically. Use the Mute button."));
+}
 /* Going live brings OBS to the front for its YouTube dialog. With one monitor that covers the controller,
    so once the stream has started, the controller comes back in front. With the controller on its own
    monitor, nothing is covered and nothing moves. */
@@ -3290,6 +3361,9 @@ async function refreshScenes(){
 obs.on("SceneNameChanged", d => {
   const c = cfg();
   if(c && c.wait){ ["title","w1","w2"].forEach(k => { if(c.wait[k] === d.oldSceneName) c.wait[k] = d.sceneName; }); saveCollCfg(); }
+  if(c && c.autoMic && c.autoMic.scenes && d.oldSceneName in c.autoMic.scenes){
+    c.autoMic.scenes[d.sceneName] = c.autoMic.scenes[d.oldSceneName]; delete c.autoMic.scenes[d.oldSceneName]; saveCollCfg();
+  }
   toast(`Scene "${d.oldSceneName}" was renamed to "${d.sceneName}" in OBS`);
   refreshScenes();
 });
