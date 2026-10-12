@@ -3446,6 +3446,7 @@ async function ltSetTheme(){
 const ltThemeOff = d => (d.theme && d.theme !== ltTheme()) || (ltTheme() === "conference" && d.color && hexColor(d.color) !== ltColor());
 async function ltToggle(i){
   if(ot.item) return;   // a hymn or passage is in use
+  closeOtMenus();
   if(ui.lt.found === false) await otSync();   // added in OBS since the last check?
   try{
     const name = ltNames()[i];
@@ -3514,6 +3515,14 @@ $("otDone").addEventListener("click", otDone);
 $("otUp").addEventListener("click", () => otStep(1));
 $("otNowT").addEventListener("click", () => { if(!ot.item) return; ot.item.kind === "hymn" ? openHymn(ot.item.reopen) : bbShowRead(); });
 const otBusy = kind => (ot.item && ot.item.kind !== kind) || (!ot.item && ltOn() && !!ui.lt.showing);
+/* One menu at a time: opening Hymn cancels the Bible menu, opening Bible cancels the Hymn menu, and tapping a
+   speaker's name cancels either. Only menus still being chosen in are cancelled; a passage being read stays. */
+function closeOtMenus(except){
+  let closed = false;
+  if(except !== "hymn" && !$("hyOverlay").hidden){ $("hyOverlay").hidden = true; closed = true; }
+  if(except !== "bible" && !$("bbOverlay").hidden && !(ot.item && ot.item.kind === "verse")){ bb.mode = "pick"; $("bbOverlay").hidden = true; closed = true; }
+  if(closed) renderOt();
+}
 $("otHymnBtn").addEventListener("click", () => { if(!otBusy("hymn")) openHymn(); });
 $("otBibleBtn").addEventListener("click", () => { if(!otBusy("bible")) openBible(); });
 $("otNote").addEventListener("click", () => settingsGoTo("ontext"));
@@ -3675,6 +3684,7 @@ const hy = {book:"", num:"", start:0, search:""};
 const hyBook = () => bookById(hy.book);
 const hyHymn = () => { const b = hyBook(); return b && hy.num ? b.hymns.find(h => h.number === hy.num.toUpperCase()) : null; };
 function openHymn(reopen){
+  closeOtMenus("hymn");
   hy.book = (reopen && reopen.book) || ui.ot.book; hy.num = reopen ? reopen.num : "";
   renderHy(); $("hyOverlay").hidden = false;
 }
@@ -3759,6 +3769,7 @@ const bb = {mode:"pick", tr:"KJV", ref:"", parsed:null, testament:null, book:nul
 const testamentOf = b => b.i < 39 ? "ot" : "nt";
 const TESTAMENTS = {ot:["Old Testament", 0, 39], nt:["New Testament", 39, 66]};
 async function openBible(reopen){
+  closeOtMenus("bible");
   bb.tr = (reopen && reopen.tr) || ot.trSession || ui.ot.bbTr; bb.err = ""; bb.busy = false;
   bb.testament = bb.book = bb.chapter = bb.v1 = bb.v2 = null; bb.mode = "pick";
   setBbRef(reopen ? reopen.ref : "");
