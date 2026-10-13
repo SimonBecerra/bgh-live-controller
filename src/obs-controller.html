@@ -4246,7 +4246,11 @@ ui.startTitle = (() => { try{ return localStorage.getItem("startTitle") === "1";
 ui.autoEnd = (() => { try{ return localStorage.getItem("autoEnd") === "1"; }catch(e){ return false; } })();
 ui.autoEndSec = (() => { try{ const v = parseInt(localStorage.getItem("autoEndSec"), 10); return [15,30,60,120].includes(v) ? v : 30; }catch(e){ return 30; } })();
 ui.closeWithObs = (() => { try{ return localStorage.getItem("closeWithObs") === "1"; }catch(e){ return false; } })();
-ui.closeObs = (() => { try{ return localStorage.getItem("closeObs") === "1"; }catch(e){ return false; } })();
+// On by default. Earlier versions saved it as off, so it's switched on once (closeObsDefault); after that, off stays off.
+ui.closeObs = (() => { try{
+  if(localStorage.getItem("closeObsDefault") !== "on"){ localStorage.setItem("closeObsDefault", "on"); localStorage.setItem("closeObs", "1"); }
+  return localStorage.getItem("closeObs") !== "0";
+}catch(e){ return true; } })();
 
 /* Which monitor the controller opens on.
    The chosen monitor is remembered by Windows' ID, its name and size, and its position next to the main screen,
