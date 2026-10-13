@@ -468,6 +468,23 @@ ipcMain.handle("app-update-install", () => {
   return true;
 });
 
+/* CPU: the controller's own share of the whole processor (all its Electron processes added up), the same way OBS
+   reports its own, plus the whole computer's, both since the last call. Electron gives each process's use as a share
+   of one core, so it's divided by the number of cores. */
+let sysCpuPrev = null;
+function sysCpu() {
+  const t = os.cpus().reduce((a, c) => { const tot = Object.values(c.times).reduce((x, y) => x + y, 0); return { idle: a.idle + c.times.idle, total: a.total + tot }; }, { idle: 0, total: 0 });
+  const prev = sysCpuPrev; sysCpuPrev = t;
+  if (!prev || t.total <= prev.total) return null;
+  return 100 * (1 - (t.idle - prev.idle) / (t.total - prev.total));
+}
+ipcMain.handle("app-cpu", () => {
+  const cores = Math.max(1, os.cpus().length);
+  const m = app.getAppMetrics();
+  const percent = m.reduce((t, p) => t + ((p.cpu && p.cpu.percentCPUUsage) || 0), 0) / cores;
+  const memMB = m.reduce((t, p) => t + ((p.memory && p.memory.workingSetSize) || 0), 0) / 1024;
+  return { percent, memMB, system: sysCpu(), cores };
+});
 ipcMain.handle("version", () => app.getVersion());
 ipcMain.handle("opened-by-obs", () => process.argv.includes("--opened-by-obs"));
 
