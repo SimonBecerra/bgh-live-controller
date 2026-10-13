@@ -76,6 +76,8 @@ body{font-feature-settings:"cv11" 1}
 
 /* Top bar */
 .top{grid-area:top;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px}
+/* One row on laptop screens too: the connection line goes under the name instead of pushing buttons down */
+@media (min-width:900px){.top{flex-wrap:nowrap}.top > *{flex:none}.top > .brand{flex:1 1 0;min-width:0}}
 .brand{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;margin-right:auto;min-width:0}
 .brand-name{display:flex;align-items:center;gap:10px}
 .brand-icon{width:32px;height:32px;flex:none;display:block}
@@ -96,6 +98,24 @@ body{font-feature-settings:"cv11" 1}
 .icon-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @keyframes pulse{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.stat.on .tally{animation:none}}
+/* Viewer count: a chip beside LIVE while streaming; tap it for the peak and a small graph */
+.live-grp{display:inline-flex;align-items:center}
+.views-wrap{position:relative;display:inline-flex}
+.live-grp:has(#statViews:not([hidden])) #statLive{border-top-right-radius:0;border-bottom-right-radius:0;padding-right:10px}
+.stat.views{cursor:pointer;font:inherit;font-size:13px;font-weight:700;gap:5px;padding:0 12px 0 10px;min-width:56px;justify-content:center;
+  border-radius:0 999px 999px 0;border-color:var(--pgm);border-left:1px solid rgba(255,255,255,.4);background:color-mix(in srgb,var(--pgm) 72%,#000);color:#fff}
+.stat.views svg{width:15px;height:15px;color:rgba(255,255,255,.8)}
+.stat.views.none{color:rgba(255,255,255,.7)}
+.stat.views[aria-expanded="true"]{background:color-mix(in srgb,var(--pgm) 55%,#000)}
+@media (min-width:900px) and (max-width:1700px){.top{column-gap:10px}}
+.views-pop{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:60;width:230px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--panel);box-shadow:0 12px 32px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:6px}
+.views-pop[hidden]{display:none}
+.vp-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted)}
+.vp-row b{font-size:18px;color:var(--fg)}
+.vp-spark svg{width:100%;height:40px;display:block}
+.vp-line{fill:none;stroke:var(--pgm);stroke-width:2;vector-effect:non-scaling-stroke}
+.vp-area{fill:var(--pgm);opacity:.15}
+.vp-note{margin:0;font-size:12px;line-height:1.4;color:var(--muted)}
 .form{display:grid;gap:12px}
 .form input{background:var(--bg);border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;font-size:16px;width:100%;box-sizing:border-box;color:var(--fg);min-height:46px}
 /* Full-screen settings */
@@ -170,6 +190,30 @@ body.portrait .set-nav .nav-proto{margin-top:0;border-top:none}
 .bk-auto{display:flex;flex-direction:column;gap:8px}
 .safe-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--line-2);background:var(--panel);color:var(--muted);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;white-space:nowrap}
 .safe-btn svg{width:18px;height:18px}
+/* Ready check: two checkmarks; a red dot when something needs attention */
+.ready-btn{position:relative}
+.ready-btn svg{width:22px;height:22px}
+.ready-btn.ok svg{color:var(--pvw)}
+.ready-dot{position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--pgm);border:2px solid var(--bg)}
+.dialog.ready-dlg{width:min(680px,calc(100vw - 32px));max-width:680px;max-height:calc(100vh - 48px);display:flex;flex-direction:column;gap:12px}
+.ready-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ready-head h2{margin:0}
+.ready-sum{font-size:14px;font-weight:600;color:var(--muted)}
+.ready-sum.bad{color:var(--pgm)}
+.ready-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0}
+.rc{display:grid;grid-template-columns:28px minmax(0,1fr);gap:4px 12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2)}
+.rc.bad{border-color:var(--pgm);background:var(--pgm-soft)}
+.rc.warn{border-color:var(--warn)}
+.rc > svg{width:24px;height:24px;margin-top:1px}
+.rc.ok > svg{color:var(--pvw)}.rc.bad > svg{color:var(--pgm)}.rc.warn > svg,.rc.wait > svg{color:var(--warn)}
+.rc b{font-size:16px}
+.rc p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.rc .rc-body{grid-column:2;display:flex;flex-direction:column;gap:6px}
+.rc ol{margin:4px 0 0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:3px}
+.rc .rc-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.rc .rc-acts .btn{min-height:42px;font-size:14px;flex:none;width:auto}
+.rc-meter{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px;max-width:320px}
+.rc-meter i{display:block;height:100%;width:0;background:var(--pvw);transition:width .15s linear}
 /* Update ready: a new version of the controller is downloaded */
 .upd-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--fg);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;white-space:nowrap}
 .upd-btn svg{width:18px;height:18px;color:var(--accent)}
@@ -498,6 +542,7 @@ textarea:disabled,select:disabled{opacity:.5}
 .cb-btn{flex:none;min-height:44px;font-size:14px;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.5);color:#fff;align-self:center}
 body.offline .main, body.offline .rail, body.offline .top > :not(.brand){opacity:.4;pointer-events:none}
 .sub-check{margin-left:24px;padding-left:16px;border-left:2px solid var(--line-2)}
+#setViewsBox{display:flex;flex-direction:column;gap:14px}#setViewsBox[hidden]{display:none}#setViewsBox .btn-row{margin:0}
 .btn-row{display:flex;flex-wrap:wrap;gap:8px}
 .btn-row .btn{flex:none;min-height:46px;font-size:14px}
 .screen-banner{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:25;display:flex;align-items:flex-start;gap:10px;max-width:min(720px,calc(100% - 32px));padding:12px 16px;border-radius:12px;background:var(--panel);border:1px solid var(--warn);box-shadow:0 10px 28px rgba(0,0,0,.45);font-size:14px;line-height:1.4}
@@ -806,12 +851,20 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
       </div>
       <div class="conn"><span class="dot"></span><span id="connText">Connecting to OBS…</span></div>
     </div>
-    <span class="stat" id="statLive" role="status"><span class="tally"></span><span class="lbl">OFFLINE</span><span class="tm mono" id="strTime"></span></span>
+    <span class="live-grp"><span class="stat" id="statLive" role="status"><span class="tally"></span><span class="lbl">OFFLINE</span><span class="tm mono" id="strTime"></span></span>
+    <span class="views-wrap"><button class="stat views" id="statViews" type="button" hidden aria-expanded="false" aria-controls="viewsPop"><i data-lucide="eye"></i><span class="mono" id="viewsNum">–</span></button>
+      <div class="views-pop" id="viewsPop" hidden role="dialog" aria-label="Viewers">
+        <div class="vp-row"><span>Watching now</span><b class="mono" id="vpNow">–</b></div>
+        <div class="vp-row"><span>Most at once</span><b class="mono" id="vpPeak">–</b></div>
+        <div class="vp-spark" aria-hidden="true"><svg id="vpSpark" viewBox="0 0 200 40" preserveAspectRatio="none"><path class="vp-area"/><path class="vp-line"/></svg></div>
+        <p class="vp-note" id="vpNote"></p>
+      </div></span></span>
     <span class="health" id="health" hidden role="status" aria-live="polite"><span class="hdot"></span><span class="mono" id="healthTxt"></span></span>
     <span class="disk-note" id="diskNote" role="status" hidden><i data-lucide="hard-drive"></i><span id="diskTxt"></span></span>
     <span class="stat" id="statRec" role="status"><span class="tally"></span><span class="lbl">NOT RECORDING</span><span class="tm mono" id="recTime"></span></span>
     <button class="upd-btn" id="updBtn" type="button" hidden title="A new version of the controller is ready"><i data-lucide="download"></i><span>UPDATE READY</span></button>
     <button class="safe-btn" id="safeBtn" type="button" aria-pressed="false" title="Safe mode stops accidental changes to the livestream"><i data-lucide="lock-open" class="safe-ico"></i><span class="safe-lbl">SAFE MODE</span><b class="safe-st">OFF</b></button>
+    <button class="icon-btn ready-btn" id="readyBtn" type="button" aria-label="Ready check" title="Ready check"><i data-lucide="check-check"></i><span class="ready-dot" id="readyDot" hidden></span></button>
     <button class="icon-btn" id="fsBtn" aria-label="Enter fullscreen"><i data-lucide="maximize"></i></button>
     <button class="icon-btn" id="settingsBtn" aria-label="Settings">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
@@ -1244,6 +1297,20 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <div class="field sub-check" id="setAutoEndBox"><label class="label" for="setAutoEndSec">End the stream after</label>
               <select id="setAutoEndSec"><option value="15">15 seconds on Ending</option><option value="30">30 seconds on Ending</option><option value="60">1 minute on Ending</option><option value="120">2 minutes on Ending</option></select></div>
           </div>
+          <div class="set-section">
+            <h4>Viewer count</h4>
+            <label class="check" for="setViews"><input type="checkbox" id="setViews">
+              <span>Show how many are watching<small>While live, a small count sits beside LIVE. Tap it for the most watching at once and a graph. YouTube updates it about every 30 seconds.</small></span>
+            </label>
+            <div class="sub-check" id="setViewsBox">
+              <div class="field"><label class="label" for="setYtChannel">YouTube channel</label><input id="setYtChannel" autocomplete="off" spellcheck="false" placeholder="@YourChannel or the channel's address">
+                <span class="path">The channel the livestream goes to. Paste its address or its @handle.</span></div>
+              <div class="field"><label class="label" for="setYtKey">YouTube API key</label><input id="setYtKey" type="password" autocomplete="off" spellcheck="false">
+                <span class="path">Free: in Google Cloud Console, create a project, turn on "YouTube Data API v3", then create an API key. A one-hour service uses about 250 of the 10,000 free units each day. Saved encrypted, like the Bible keys.</span></div>
+              <div class="btn-row"><button type="button" class="btn" id="setViewsTest" data-keep>Test</button></div>
+              <span class="path" id="setViewsMsg"></span>
+            </div>
+          </div>
         </section>
 
         <section class="set-page" id="page-alerts" data-page="alerts" role="tabpanel" aria-labelledby="tab-alerts" tabindex="-1" hidden>
@@ -1376,6 +1443,8 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <button type="button" class="btn" data-sim="closeApp">Close the controller window (×)</button>
               <button type="button" class="btn" data-sim="lowDisk">Disk space: plenty → 1.2 GB → 0.2 GB</button>
               <button type="button" class="btn" data-sim="silent">Toggle a silent mixer</button>
+              <button type="button" class="btn" data-sim="cam">Camera 1: picture → no signal → black → unplugged → hidden → other device → missing</button>
+              <button type="button" class="btn" data-sim="views">Viewer count: counting → YouTube hides it → no key → can't find the stream → no internet</button>
               <button type="button" class="btn" data-sim="badNet">Toggle a struggling internet connection</button>
               <button type="button" class="btn" data-sim="overload">Toggle an overloaded computer</button>
               <button type="button" class="btn" data-sim="signIn">Toggle OBS signed in to YouTube</button>
@@ -1616,6 +1685,13 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
 </div>
 <input type="file" id="hbFile" accept=".txt,text/plain" hidden>
 <input type="file" id="hbImg" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+<div class="overlay" id="readyOverlay" hidden>
+  <div class="dialog ready-dlg" role="dialog" aria-modal="true" aria-labelledby="readyH">
+    <div class="ready-head"><h2 id="readyH">Ready check</h2><span class="ready-sum" id="readySum" aria-live="polite"></span></div>
+    <div class="ready-list" id="readyList"></div>
+    <div class="apply-row"><button type="button" class="btn" id="readyAgain"><i data-lucide="refresh-cw"></i> Check again</button><button type="button" class="btn primary" id="readyClose">Done</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
@@ -1665,6 +1741,7 @@ class MockOBS {
         "Schedule":{kind:"image_source", file:FOLDER+"Afternoon Ministry Service.png"},
         "Church Logo":{kind:"image_source", file:"C:\\Users\\Media\\Livestream\\Logos\\Hall Logo.png"},
         "PYLE USB Mixer":{kind:"wasapi_input_capture", muted:false},
+        "Video":{kind:"dshow_input", video_device_id:"Cam Link 4K:\\\\?\\usb#vid_0fd9&pid_00a1&mi_00#6&1d5aba85&0&0000#{65e8773d-8f56-11d0-a3b9-00a0c9223196}\\global"},
         "Pulpit Mic":{kind:"wasapi_input_capture", muted:false},
         "Desktop Audio":{kind:"wasapi_output_capture", muted:false},
         "Lower Third":{kind:"church_lower_third"},
@@ -1743,6 +1820,29 @@ class MockOBS {
         this._input(d.inputName).muted = d.inputMuted;
         this.emit("InputMuteStateChanged",{inputName:d.inputName,inputMuted:d.inputMuted}); return {};
       case "GetInputMute": return {inputMuted:!!this._input(d.inputName).muted};
+      // Prototype: the Ready check's camera: what's in a scene, a small picture of the camera, its Activate button
+      case "GetSceneItemList": {
+        const ins = this.inputsByColl[s.collection] || {}, cam = this.cam || "ok";
+        const items = /^cam/i.test(d.sceneName) && ins.Video && cam !== "missing" ? [{sceneItemId:1, sourceName:"Video", inputKind:"dshow_input", sceneItemEnabled:cam !== "hidden", isGroup:false}] : [];
+        if(ins["Lower Third"]) items.push({sceneItemId:2, sourceName:"Lower Third", inputKind:"church_lower_third", sceneItemEnabled:true, isGroup:false});
+        return {sceneItems:items};
+      }
+      case "SetSceneItemEnabled": if(this.cam === "hidden" && d.sceneItemEnabled) this.cam = "ok"; return {};
+      case "GetSourceScreenshot": {
+        const cam = this.cam || "ok";
+        if(cam === "unplugged") throw new Error("Failed to render screenshot.");
+        const c = document.createElement("canvas"); c.width = d.imageWidth || 64; c.height = Math.round(c.width * 9 / 16);
+        const g = c.getContext("2d");
+        if(cam === "black"){ g.fillStyle = "#000"; g.fillRect(0, 0, c.width, c.height); }
+        else if(cam === "nosignal"){ g.fillStyle = "#1c1c1c"; g.fillRect(0, 0, c.width, c.height); g.fillStyle = "#bbb"; g.font = `${c.height/5}px sans-serif`; g.textAlign = "center"; g.fillText("No signal", c.width/2, c.height/2); }
+        else { drawCamera(g, c.width, c.height, performance.now() / 1000, 1);
+          const im = g.getImageData(0, 0, c.width, c.height); for(let i = 0; i < im.data.length; i += 4){ const n = (Math.random() - .5) * 18; im.data[i] += n; im.data[i+1] += n; im.data[i+2] += n; } g.putImageData(im, 0, 0); }
+        return {imageData:c.toDataURL("image/png")};
+      }
+      case "PressInputPropertiesButton":
+        if(d.propertyName === "activate"){ this.camPress = (this.camPress || 0) + 1; if(this.camPress % 2 === 0 && this.cam === "nosignal") this.cam = "ok"; }
+        return {};
+      case "OpenInputPropertiesDialog": toast(`Simulated: OBS opens the properties of "${d.inputName}"`); if(this.cam === "otherdevice"){ this._input("Video").video_device_id = this.goodDev; this.cam = "ok"; } return {};
       case "GetInputList": return {inputs:Object.entries(this.inputsByColl[s.collection] || {}).map(([n,v]) => ({inputName:n, inputKind:v.kind}))};
       case "GetInputSettings": return {inputSettings:structuredClone(this._input(d.inputName))};
       case "SetInputSettings":
@@ -4517,6 +4617,146 @@ async function askClose(answer){
 if(window.bgh && window.bgh.onClosing) window.bgh.onClosing(() => askClose(v => window.bgh.closeAnswer(v)));
 if(window.bgh && window.bgh.setCloseObs) window.bgh.setCloseObs(ui.closeObs);
 
+/* Ready check (the ✓✓ button at the top). Checks what usually goes wrong before a service and says how to fix it:
+   OBS connected, Camera 1 showing a live picture, the mic picking up sound, OBS signed in to YouTube, disk space.
+   A quick check runs every 20 seconds; a red dot on the button means something needs attention.
+   Camera 1: the controller takes two tiny pictures of the camera source a moment apart. A live camera always
+   changes a little between them; the same picture twice means the camera is asleep or off, or the capture card
+   is showing its "no signal" screen. No picture at all means OBS isn't getting video from the capture card. */
+const rd = {checks:[], busy:false, prev:null, timer:null};
+const CAM_KIND = /dshow_input|av_capture_input|macos-avcapture|v4l2_input|decklink-input|ndi_source/i;
+const camGood = (() => { try{ return JSON.parse(localStorage.getItem("readyCamDev") || "{}"); }catch(e){ return {}; } })();
+const devName = id => String(id || "").split(":")[0] || "no device";
+async function framePixels(dataUrl){
+  const img = new Image(); img.src = dataUrl; await img.decode();
+  const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const g = c.getContext("2d"); g.drawImage(img, 0, 0);
+  return g.getImageData(0, 0, c.width, c.height).data;
+}
+function frameStats(px){
+  let sum = 0, sq = 0, n = px.length / 4;
+  for(let i = 0; i < px.length; i += 4){ const y = .299 * px[i] + .587 * px[i+1] + .114 * px[i+2]; sum += y; sq += y * y; }
+  const mean = sum / n; return {mean, std:Math.sqrt(Math.max(0, sq / n - mean * mean))};
+}
+const frameDiff = (a, b) => { let d = 0; for(let i = 0; i < a.length; i += 4) d += Math.abs(a[i] - b[i]) + Math.abs(a[i+1] - b[i+1]) + Math.abs(a[i+2] - b[i+2]); return d / (a.length / 4 * 3); };
+const CAM_STEPS = {
+  nopic:["Make sure the capture card (Cam Link) is plugged into the laptop's USB port.", "Make sure the HDMI cable is plugged into the capture card and into the camera.", "Turn the camera on.", "Then press Reactivate camera."],
+  still:["Wake the camera or turn it on: it may have gone to sleep.", "Check the HDMI cable at the camera and at the capture card: the capture card shows a still \"no signal\" screen when nothing reaches it.", "Then press Reactivate camera."],
+  black:["Check the lens cap and that the camera is on and not showing a menu.", "Check the HDMI cable at the camera and at the capture card.", "Then press Reactivate camera."]
+};
+async function checkCamera(){
+  const scene = camScene(1);
+  if(!scene) return {id:"cam", state:"warn", title:"Camera 1", text:"This scene collection has no Camera 1 scene."};
+  const items = ((await obs.call("GetSceneItemList", {sceneName:scene})).sceneItems || []).filter(i => !i.isGroup && CAM_KIND.test(i.inputKind || ""));
+  if(!items.length) return {id:"cam", state:"bad", title:"Camera 1", text:`"${scene}" has no camera source.`,
+    steps:["In OBS, select the " + scene + " scene, press + under Sources and choose Video Capture Device.", "Choose the capture card (Cam Link 4K) as its device."]};
+  const it = items.find(i => i.sceneItemEnabled) || items[0], name = it.sourceName;
+  if(!it.sceneItemEnabled) return {id:"cam", state:"bad", title:"Camera 1", text:`The camera source "${name}" is hidden in ${scene} (its eye is off in OBS).`,
+    acts:[["Show it", () => obs.call("SetSceneItemEnabled", {sceneName:scene, sceneItemId:it.sceneItemId, sceneItemEnabled:true})]]};
+  const st = (await obs.call("GetInputSettings", {inputName:name})).inputSettings || {}, dev = st.video_device_id || "";
+  const key = `${ui.collection}|${name}`, good = camGood[key];
+  const openProps = ["Open its settings in OBS", async () => { await obs.call("OpenInputPropertiesDialog", {inputName:name}); try{ await vcall("ShowOBS"); }catch(e){} }];
+  const reactivate = ["Reactivate camera", async () => {
+    // The source's own Deactivate / Activate button, pressed twice
+    await obs.call("PressInputPropertiesButton", {inputName:name, propertyName:"activate"}); await sleep(1500);
+    await obs.call("PressInputPropertiesButton", {inputName:name, propertyName:"activate"}); await sleep(2500);
+  }];
+  if(/dshow/i.test(it.inputKind) && !dev) return {id:"cam", state:"bad", title:"Camera 1", text:`"${name}" has no device chosen.`, steps:["Open its settings and choose the capture card (Cam Link 4K) as the device."], acts:[openProps]};
+  if(good && dev && dev !== good) return {id:"cam", state:"bad", title:"Camera 1",
+    text:`"${name}" is set to ${devName(dev)}, but it last worked with ${devName(good)}.`, steps:[`Open its settings and choose ${devName(good)} as the device again.`], acts:[openProps]};
+  // Two tiny pictures, 0.7 seconds apart
+  let a, b;
+  try{
+    const shot = async () => framePixels((await obs.call("GetSourceScreenshot", {sourceName:name, imageFormat:"png", imageWidth:64})).imageData);
+    a = await shot(); await sleep(700); b = await shot();
+  }catch(e){
+    return {id:"cam", state:"bad", title:"Camera 1", text:`OBS isn't getting any picture from "${name}" (${devName(dev)}).`, steps:CAM_STEPS.nopic, acts:[reactivate, openProps]};
+  }
+  const f = frameStats(b), moving = frameDiff(a, b) > 0.3;
+  if(f.mean < 10 && f.std < 6) return {id:"cam", state:"bad", title:"Camera 1", text:`The picture from "${name}" is black.`, steps:CAM_STEPS.black, acts:[reactivate, openProps]};
+  if(!moving) return {id:"cam", state:"bad", title:"Camera 1", text:`The picture from "${name}" isn't moving: the camera is asleep or off, or the capture card is showing its "no signal" screen.`, steps:CAM_STEPS.still, acts:[reactivate, openProps]};
+  if(dev && camGood[key] !== dev){ camGood[key] = dev; try{ localStorage.setItem("readyCamDev", JSON.stringify(camGood)); }catch(e){} }
+  return {id:"cam", state:"ok", title:"Camera 1", text:`Live picture from "${name}" (${devName(dev)}).`};
+}
+function checkMic(){
+  const src = srcAudio(), quiet = Math.floor((Date.now() - lastSoundAt) / 1000);
+  if(!src) return {id:"mic", state:"bad", title:"Microphone", text:"No audio input is chosen for this scene collection.", acts:[["Choose it in Settings", () => { closeReady(); settingsGoTo("collections", "setAudio"); }]]};
+  if(ui.audioMissing) return {id:"mic", state:"bad", title:"Microphone", text:`"${src}" isn't in OBS.`, acts:[["Choose it in Settings", () => { closeReady(); settingsGoTo("collections", "setAudio"); }]]};
+  const muted = ui.muted ? " It's muted right now (fine before the service)." : "";
+  if(quiet >= 15) return {id:"mic", state:"bad", title:"Microphone", meter:true,
+    text:`No sound from "${src}" for ${quiet} seconds.${muted} Say something into a microphone: the bar below should move.`,
+    steps:["Check that the mixer is on.", "Check the USB cable from the mixer to the laptop.", "Turn up the microphone's channel and the master fader on the mixer.", "Check that the microphone is switched on."]};
+  return {id:"mic", state:"ok", title:"Microphone", meter:true, text:`Picking up sound from "${src}".${muted}`};
+}
+async function checkYouTube(){
+  try{
+    const r = await vcall("GetYouTubeStatus");
+    return r.signedIn ? {id:"yt", state:"ok", title:"YouTube", text:"OBS is signed in to YouTube."}
+      : {id:"yt", state:"bad", title:"YouTube", text:"OBS isn't signed in to YouTube, so Go Live won't work.", steps:["In OBS, open Settings → Stream, choose YouTube - RTMPS, press Connect Account and sign in."], acts:[["Show OBS", () => vcall("ShowOBS")]]};
+  }catch(e){ return {id:"yt", state:"warn", title:"YouTube", text:"Couldn't ask OBS about YouTube: the companion plug-in isn't answering."}; }
+}
+async function checkDisk(){
+  try{
+    const gb = (await obs.call("GetStats")).availableDiskSpace / 1024;
+    return gb < 5 ? {id:"disk", state:"bad", title:"Recording space", text:`Only ${gb.toFixed(1)} GB free on the recording drive.`, steps:["Delete or move old recordings from the recording folder."]}
+      : gb < 20 ? {id:"disk", state:"warn", title:"Recording space", text:`${gb.toFixed(0)} GB free: enough for a few hours of recording.`}
+      : {id:"disk", state:"ok", title:"Recording space", text:`${gb.toFixed(0)} GB free.`};
+  }catch(e){ return {id:"disk", state:"warn", title:"Recording space", text:"Couldn't read the free space."}; }
+}
+async function readyRun(full = true){
+  if(rd.busy) return; rd.busy = true;
+  try{
+    if(ui.connected === false){
+      rd.checks = [{id:"obs", state:"bad", title:"OBS", text:"Not connected to OBS, so nothing else can be checked.", steps:["Open OBS.", "Check Tools → WebSocket Server Settings in OBS, and the password in Settings → Connection."]}];
+    } else {
+      const cam = await checkCamera().catch(e => ({id:"cam", state:"warn", title:"Camera 1", text:`Couldn't check: ${e.message}`}));
+      rd.checks = [{id:"obs", state:"ok", title:"OBS", text:"Connected."}, cam, checkMic(), await checkYouTube(), await checkDisk()];
+    }
+  } finally { rd.busy = false; }
+  renderReady();
+}
+function renderReady(){
+  const bad = rd.checks.filter(c => c.state === "bad").length;
+  $("readyDot").hidden = !bad;
+  $("readyBtn").classList.toggle("ok", !!rd.checks.length && !bad && !rd.checks.some(c => c.state === "warn"));
+  $("readyBtn").setAttribute("aria-label", bad ? `Ready check: ${bad} thing${bad === 1 ? "" : "s"} need${bad === 1 ? "s" : ""} attention` : "Ready check: all good");
+  if($("readyOverlay").hidden) return;
+  $("readySum").textContent = !rd.checks.length ? "Checking…" : bad ? `${bad} thing${bad === 1 ? "" : "s"} to fix` : "Ready to go";
+  $("readySum").classList.toggle("bad", !!bad);
+  const list = $("readyList"), open = rd.checks.map(c => c.id).join();
+  list.innerHTML = "";
+  rd.checks.forEach(c => {
+    const row = document.createElement("div"); row.className = `rc ${c.state}`;
+    row.innerHTML = `<i data-lucide="${c.state === "ok" ? "circle-check" : c.state === "bad" ? "circle-x" : "circle-alert"}"></i><div class="rc-body"><b></b><p></p></div>`;
+    row.querySelector("b").textContent = c.title; row.querySelector("p").textContent = c.text;
+    const body = row.querySelector(".rc-body");
+    if(c.meter){ const m = document.createElement("div"); m.className = "rc-meter"; m.innerHTML = "<i></i>"; body.appendChild(m); }
+    if(c.steps && c.state !== "ok"){ const ol = document.createElement("ol"); c.steps.forEach(t => { const li = document.createElement("li"); li.textContent = t; ol.appendChild(li); }); body.appendChild(ol); }
+    if(c.acts && c.acts.length){
+      const a = document.createElement("div"); a.className = "rc-acts";
+      c.acts.forEach(([label, fn]) => { const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = label;
+        b.addEventListener("click", async () => { b.disabled = true; try{ await fn(); }catch(e){ toast(`Couldn't do that: ${e.message}`); } b.disabled = false; readyRun(); });
+        a.appendChild(b); });
+      body.appendChild(a);
+    }
+    list.appendChild(row);
+  });
+  if(window.lucide) lucide.createIcons();
+}
+// The mic bar in the popup follows the level meter
+obs.on("InputVolumeMeters", () => {
+  const bar = !$("readyOverlay").hidden && document.querySelector(".rc-meter i");
+  if(bar) bar.style.width = Math.max(0, Math.min(100, (ui.lastPeak + 60) / 60 * 100)) + "%";
+});
+function openReady(){ $("readyOverlay").hidden = false; renderReady(); readyRun(); clearInterval(rd.timer); rd.timer = setInterval(() => readyRun(), 3000); $("readyClose").focus(); }
+function closeReady(){ $("readyOverlay").hidden = true; clearInterval(rd.timer); rd.timer = null; }
+$("readyBtn").addEventListener("click", openReady);
+$("readyClose").addEventListener("click", closeReady);
+$("readyAgain").addEventListener("click", () => readyRun());
+$("readyOverlay").addEventListener("keydown", e => { if(e.key === "Escape"){ e.preventDefault(); closeReady(); } });
+setInterval(() => { if($("readyOverlay").hidden && !document.hidden) readyRun(false); }, 20000);
+setTimeout(() => readyRun(false), 4000);
+
 /* Updates (desktop app). The controller downloads new versions of itself from GitHub in the background and installs
    them when you tap "Update ready" (or the next time it closes). It also installs and updates the OBS plug-in:
    OBS closes for a moment, the new plug-in goes in, and OBS opens again. Never while live or recording. */
@@ -4738,6 +4978,8 @@ async function openSettingsPanel(page = ui.setPage){
   $("setSilence").value = ui.silenceSec; $("setSilenceDb").value = ui.silenceDb; $("setMeasureMsg").textContent = ""; renderSilencePreview(); $("setAwake").checked = ui.keepAwake;
   $("setOpenWithObs").checked = ui.openWithObs; $("setCloseWithObs").checked = ui.closeWithObs; $("setCloseObs").checked = ui.closeObs; $("setOpenObs").checked = ui.openObs; $("setStartAtLogin").checked = ui.startAtLogin;
   $("setStartTitle").checked = ui.startTitle; $("setAutoEnd").checked = ui.autoEnd; $("setAutoEndSec").value = String(ui.autoEndSec); $("setAutoEndBox").hidden = !ui.autoEnd;
+  $("setViews").checked = vw.cfg.on; $("setViewsBox").hidden = !vw.cfg.on; $("setYtChannel").value = vw.cfg.channel; $("setViewsMsg").textContent = "";
+  vw.keyAtOpen = (await secret.get("ytKey")) || ""; $("setYtKey").value = vw.keyAtOpen;
   $("setScreen").innerHTML = ""; screenDraft = null; renderScreens(); $("setScreenFollow").checked = ui.screen.follow; $("setScreenWindowed").checked = ui.screen.windowed;
   $("setLayout").value = ui.layout; $("setTheme").value = ui.theme; $("setTextSize").value = String(ui.textSize); renderTextSizeNote(); renderAutoBackups();
   $("setHomeLbl").value = homeLabel(); $("setHomeHdr").textContent = homeLabel();
@@ -5100,6 +5342,14 @@ document.querySelectorAll("[data-sim]").forEach(b => b.addEventListener("click",
     checkDiskWhileRec();
     return toast(obs.diskMB > 10000 ? "Simulated: plenty of disk space" : `Simulated: ${(obs.diskMB / 1024).toFixed(1)} GB free`);
   }
+  if(k === "cam"){
+    const order = ["ok", "nosignal", "black", "unplugged", "hidden", "otherdevice", "missing"];
+    obs.cam = order[(order.indexOf(obs.cam || "ok") + 1) % order.length];
+    const v = obs.inputsByColl[obs.s.collection] && obs.inputsByColl[obs.s.collection].Video;
+    if(v){ obs.goodDev = obs.goodDev || v.video_device_id; v.video_device_id = obs.cam === "otherdevice" ? "OBS Virtual Camera:\\\\?\\root#image#0000" : obs.goodDev; }
+    readyRun(false);
+    return toast(`Simulated camera: ${({ok:"picture", nosignal:"no-signal screen (still)", black:"black", unplugged:"capture card unplugged", hidden:"source hidden in Camera 1", otherdevice:"source set to another device", missing:"no camera source in Camera 1"})[obs.cam]}`);
+  }
   if(k === "silent"){ obs.silent = !obs.silent; return toast(obs.silent ? "Simulated: mixer silent" : "Simulated: mixer has sound again"); }
   if(k === "touchscreen" || k === "projector" || k === "genericPair"){
     // Windows may hand out a new ID each time a monitor is plugged in; the name, size and position still match
@@ -5120,6 +5370,11 @@ document.querySelectorAll("[data-sim]").forEach(b => b.addEventListener("click",
   if(k === "removeScene"){ if(!obs.removeScene("Black")) toast("This scene collection has no Black scene"); return; }
   if(k === "signIn"){ obs.ytSignedIn = !obs.ytSignedIn; setTimeout(refreshSetStatus, 0); return toast(obs.ytSignedIn ? "Simulated: OBS signed in to YouTube" : "Simulated: OBS not signed in to YouTube"); }
   if(k === "overload"){ obs.overload = !obs.overload; return toast(obs.overload ? "Simulated: computer overloaded" : "Simulated: computer keeping up"); }
+  if(k === "views"){
+    const order = ["ok","hidden","nokey","nostream","offline"], names = {ok:"counting normally", hidden:"YouTube hides the count", nokey:"no API key", nostream:"stream not found on YouTube", offline:"no internet"};
+    obs.vwSim = order[(order.indexOf(obs.vwSim || "ok") + 1) % order.length]; vwPoll(true);
+    return toast("Simulated viewer count: " + names[obs.vwSim]);
+  }
   if(k === "badNet"){ obs.badNet = !obs.badNet; return toast(obs.badNet ? "Simulated: internet struggling" : "Simulated: internet healthy"); }
   if(k === "deleteImage"){
     const i = SCHEDULE_FILES.indexOf(base(ui.schedule)); if(i > -1) SCHEDULE_FILES.splice(i,1);
@@ -5181,7 +5436,7 @@ function backupData(){
     settings:{
       obs:{host:ui.obsAddr.host, port:ui.obsAddr.port},   // the password is left out on purpose
       speakers:ui.speakers, collCfg:ui.collCfg, audio:ui.src.audio, defaultVis:ui.defaultVis,
-      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, closeObs:ui.closeObs, openObs:ui.openObs, startAtLogin:ui.startAtLogin, startTitle:ui.startTitle, autoEnd:ui.autoEnd, autoEndSec:ui.autoEndSec,
+      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, closeObs:ui.closeObs, openObs:ui.openObs, startAtLogin:ui.startAtLogin, startTitle:ui.startTitle, autoEnd:ui.autoEnd, autoEndSec:ui.autoEndSec, viewers:vwStored(),
       screen:ui.screen, layout:ui.layout, theme:ui.theme, textSize:ui.textSize, useTable:ui.useTable,
       onscreen:ui.ot   // hymn books are exported on their own (Export text); API keys are never included
     }};
@@ -5256,6 +5511,7 @@ function restoreBackup(st){
   if(typeof st.startTitle === "boolean"){ ui.startTitle = st.startTitle; save("startTitle", ui.startTitle ? "1" : "0"); }
   if(typeof st.autoEnd === "boolean"){ ui.autoEnd = st.autoEnd; save("autoEnd", ui.autoEnd ? "1" : "0"); }
   if([15,30,60,120].includes(st.autoEndSec)){ ui.autoEndSec = st.autoEndSec; save("autoEndSec", String(ui.autoEndSec)); }
+  if(st.viewers && typeof st.viewers === "object"){ const v = {on:st.viewers.on !== false, channel:String(st.viewers.channel || "")}; save("viewers", JSON.stringify(v)); try{ vw.cfg = v; }catch(e){} }
   if(typeof st.startAtLogin === "boolean"){ ui.startAtLogin = st.startAtLogin; save("startAtLogin", ui.startAtLogin ? "1" : "0"); if(window.bgh) window.bgh.setStartAtLogin(ui.startAtLogin); }
   if(typeof st.openObs === "boolean"){ ui.openObs = st.openObs; save("openObs", ui.openObs ? "1" : "0"); if(window.bgh) window.bgh.setOpenObs(ui.openObs); }
   if(typeof st.closeWithObs === "boolean"){ ui.closeWithObs = st.closeWithObs; save("closeWithObs", ui.closeWithObs ? "1" : "0"); }
@@ -5418,6 +5674,7 @@ $("setForm").addEventListener("submit", e => {
   ui.startTitle = $("setStartTitle").checked; ui.autoEnd = $("setAutoEnd").checked; ui.autoEndSec = parseInt($("setAutoEndSec").value, 10) || 30;
   try{ localStorage.setItem("startTitle", ui.startTitle ? "1" : "0"); localStorage.setItem("autoEnd", ui.autoEnd ? "1" : "0"); localStorage.setItem("autoEndSec", String(ui.autoEndSec)); }catch(err){}
   if(!ui.autoEnd) cancelAutoEnd();
+  vwSaveSettings();
   // Desktop app: Electron's screen module places the window; "display-added" moves it when a monitor is plugged in
   const prevScreen = JSON.stringify(ui.screen);
   ui.screen = {target:selToTarget($("setScreen").value), follow:$("setScreenFollow").checked, windowed:$("setScreenWindowed").checked};
@@ -5755,6 +6012,129 @@ function cancelAutoEnd(){
   $("endBanner").hidden = true;
 }
 $("endKeep").addEventListener("click", () => { cancelAutoEnd(); ui.autoEndSkip = ui.program; toast("Still live. It won't end by itself until you leave Ending and come back."); });
+/* Viewer count. While live, a chip beside LIVE shows how many are watching on YouTube.
+   Desktop app: main.js asks the YouTube Data API v3 (window.bgh.youtube.viewers), with the key kept encrypted:
+     1. channels.list?forHandle=@… once, to turn an @handle or address into a channel ID (1 unit)
+     2. the channel's newest uploads (playlistItems.list, 1 unit) + videos.list to find the one that's live,
+        falling back to search.list?eventType=live (100 units) only if that doesn't find it
+     3. videos.list?part=liveStreamingDetails&id=… every 30 seconds for concurrentViewers (1 unit each)
+   The prototype makes up a believable count instead. */
+// Settings for the count (not the key: keys never go in a backup)
+function vwStored(){ try{ return {on:true, channel:"", ...JSON.parse(localStorage.getItem("viewers") || "{}")}; }catch(e){ return {on:true, channel:""}; } }
+const vw = {
+  cfg:vwStored(),
+  keyAtOpen:"", t0:null, now:null, peak:0, hist:[], state:"", last:0, busy:false, next:0, videoId:null
+};
+const VW_EVERY = window.bgh ? 30000 : 5000;   // the prototype refreshes faster so there's something to watch
+const vwFmt = n => n >= 10000 ? Math.round(n / 1000) + "k" : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n);
+async function vwFetch(){
+  // #proto-start
+  if(!window.bgh){
+    const sim = obs.vwSim || "ok";
+    if(sim === "nokey") return {state:"nokey"};
+    if(sim === "offline") return {state:"offline"};
+    if(sim === "nostream") return {state:"nostream"};
+    if(sim === "hidden") return {state:"hidden"};
+    const m = (Date.now() - ui.stream.t0) / 60000 * 6;   // 6× quicker than a real service
+    const target = 4 + 48 * (1 - Math.exp(-m / 4));
+    return {count:Math.max(1, Math.round(target + (Math.random() - .5) * 6))};
+  }
+  // #proto-end
+  if(!vw.cfg.channel) return {state:"nokey"};
+  if(!window.bgh.youtube) return {state:"notyet"};
+  try{
+    const r = await window.bgh.youtube.viewers({channel:vw.cfg.channel, videoId:vw.videoId});   // the key is read in main.js
+    if("videoId" in r) vw.videoId = r.videoId;
+    return r;   // {count} or {state:"nostream"|"hidden"|"nokey"|"nochannel"|"badkey"|"quota"|"offline"}
+  }catch(e){ return {state:"offline"}; }
+}
+async function vwPoll(force){
+  if(!vw.cfg.on || !ui.stream.active || vw.busy) return;
+  if(!force && Date.now() < vw.next) return;
+  vw.busy = true; vw.next = Date.now() + VW_EVERY;
+  try{
+    const r = await vwFetch();
+    if(!ui.stream.active) return;
+    if(typeof r.count === "number"){
+      vw.now = r.count; vw.state = "count"; vw.last = Date.now();
+      vw.peak = Math.max(vw.peak, r.count); vw.hist.push({t:Date.now(), c:r.count});
+      if(vw.hist.length > 240) vw.hist.shift();
+    }else vw.state = r.state;
+  }finally{ vw.busy = false; vwRender(); }
+}
+function vwAgo(t){
+  const s = Math.round((Date.now() - t) / 1000);
+  return s < 5 ? "just now" : s < 60 ? s + " seconds ago" : Math.round(s / 60) === 1 ? "a minute ago" : Math.round(s / 60) + " minutes ago";
+}
+function vwRender(){
+  const show = vw.cfg.on && ui.stream.active;
+  $("statViews").hidden = !show;
+  if(!show){ vwClose(); return; }
+  // Lost internet: keep showing the last count, dimmed. Anything else: a dash.
+  const counting = vw.state === "count", stale = vw.now != null && vw.state === "offline";
+  $("viewsNum").textContent = (counting || stale) ? vwFmt(vw.now) : vw.state === "" ? "…" : "–";
+  $("statViews").classList.toggle("none", !counting);
+  $("statViews").setAttribute("aria-label", counting ? `${vw.now} watching on YouTube` : "Viewer count not available");
+  $("statViews").title = counting ? `${vw.now} watching on YouTube` : "Viewer count";
+  $("vpNow").textContent = (counting || stale) ? vw.now.toLocaleString() : "–";
+  $("vpPeak").textContent = vw.peak ? vw.peak.toLocaleString() : "–";
+  const notes = {
+    "":"Looking for the livestream on YouTube…",
+    nostream:"YouTube doesn't show the channel as live yet. It can take a minute or two after going live. Unlisted and private streams can't be counted.",
+    nochannel:"YouTube couldn't find the channel. Check it in Settings › Going live.",
+    hidden:"YouTube isn't sharing the count for this stream. That happens when the channel hides it, or the stream is private.",
+    nokey:"Add the YouTube channel and API key in Settings › Going live to see how many are watching.",
+    badkey:"YouTube didn't accept the API key. Check it in Settings › Going live.",
+    quota:"Today's free YouTube allowance is used up. The count comes back tomorrow.",
+    offline:"Couldn't reach YouTube." + (stale ? ` This is the count from ${vwAgo(vw.last)}.` : ""),
+    notyet:"This version of the controller can't fetch the count yet."
+  };
+  $("vpNote").textContent = counting ? `Updated ${vwAgo(vw.last)}. YouTube's count runs about 30 seconds behind.` : notes[vw.state] || "";
+  // Graph of the count since going live
+  const h = vw.hist, line = $("vpSpark").querySelector(".vp-line"), area = $("vpSpark").querySelector(".vp-area");
+  $("vpSpark").parentElement.hidden = h.length < 2;
+  if(h.length >= 2){
+    const max = Math.max(...h.map(p => p.c), 5), t0 = h[0].t, span = Math.max(1, h[h.length - 1].t - t0);
+    const pts = h.map(p => [(p.t - t0) / span * 200, 38 - p.c / max * 34]);
+    const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    line.setAttribute("d", d); area.setAttribute("d", d + " L200 40 L0 40 Z");
+  }
+}
+function vwOpen(){ $("viewsPop").hidden = false; $("statViews").setAttribute("aria-expanded", "true"); vwRender(); }
+function vwClose(){ $("viewsPop").hidden = true; $("statViews").setAttribute("aria-expanded", "false"); }
+$("statViews").addEventListener("click", e => { e.stopPropagation(); $("viewsPop").hidden ? vwOpen() : vwClose(); });
+$("viewsPop").addEventListener("click", e => e.stopPropagation());
+document.addEventListener("click", vwClose);
+document.addEventListener("keydown", e => { if(e.key === "Escape") vwClose(); });
+// Starts fresh each time the stream starts; says the peak when it ends
+setInterval(() => {
+  const t0 = ui.stream.active ? ui.stream.t0 : null;
+  if(t0 !== vw.t0){
+    if(vw.t0 && !t0 && vw.peak) toast(`The livestream ended. Most watching at once: ${vw.peak.toLocaleString()}.`);
+    vw.t0 = t0; vw.now = null; vw.peak = 0; vw.hist = []; vw.state = ""; vw.videoId = null; vw.next = 0;
+  }
+  vwPoll(); vwRender();   // also keeps "Updated … ago" current
+}, 1000);
+function vwSaveSettings(){
+  vw.cfg = {on:$("setViews").checked, channel:$("setYtChannel").value.trim()};
+  try{ localStorage.setItem("viewers", JSON.stringify(vw.cfg)); }catch(e){}
+  if($("setYtKey").value !== vw.keyAtOpen) secret.set("ytKey", $("setYtKey").value.trim());
+  vw.videoId = null; vw.next = 0; vwRender();
+}
+$("setViews").addEventListener("change", () => { $("setViewsBox").hidden = !$("setViews").checked; });
+$("setViewsTest").addEventListener("click", async () => {
+  const msg = $("setViewsMsg"), ch = $("setYtChannel").value.trim(), key = $("setYtKey").value.trim();
+  if(!ch || !key){ msg.textContent = "Fill in both the channel and the key first."; return; }
+  msg.textContent = "Checking with YouTube…";
+  // #proto-start
+  if(!window.bgh){ await new Promise(r => setTimeout(r, 700)); msg.textContent = `✓ Found the channel "${ch.replace(/^.*\/(@?)/, "$1")}". The key works.`; return; }
+  // #proto-end
+  try{
+    const r = await window.bgh.youtube.test({key, channel:ch});
+    msg.textContent = r.ok ? `✓ Found the channel "${r.title}". The key works.` : r.message;
+  }catch(e){ msg.textContent = "Couldn't reach YouTube. Check the internet connection."; }
+});
+
 /* Automatic mute while live: the stream starts muted (you normally start on Waiting or Live Soon).
    If you somehow start straight on a "Mic on" scene, like a camera, it's left on. */
 function autoMuteAtStart(scene = ui.program){

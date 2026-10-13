@@ -80,6 +80,28 @@ GitHub builds the installer and publishes it as a release; the plug-in repositor
 the same way (its "plugin-latest" release). Without a new version number, a change is built but not offered
 as an update.
 
+## Viewer count (one-time setup)
+
+From version 1.2.8, a count of people watching on YouTube sits beside LIVE while streaming. It needs a free
+YouTube API key:
+
+1. Go to **console.cloud.google.com** and sign in (any Google account will do).
+2. Create a project (for example "BGH LIVE"), then open **APIs & Services → Library**, find
+   **YouTube Data API v3** and press **Enable**.
+3. Open **APIs & Services → Credentials → Create credentials → API key** and copy the key.
+4. In the controller: **Settings → Going live → Viewer count**. Paste the channel's address or @handle and the
+   key, press **Test**, then **Apply**.
+
+A one-hour service uses about 250 of the 10,000 units YouTube gives free each day. The key is saved encrypted and
+never goes in a backup. YouTube gives no count for unlisted or private streams, or when the channel hides it;
+the pill then shows a dash and tapping it says why.
+
+## Ready check
+
+The double-tick button beside Safe mode checks Camera 1 (picture, no-signal screen, unplugged, asleep, wrong
+device), the microphone, OBS's YouTube sign-in and disk space. A red dot appears on it when something needs
+attention; tap it for what's wrong and the buttons that fix it.
+
 ## Where things are kept on the laptop
 
 - Settings, speakers and automatic backups: `%APPDATA%\BGH LIVE Controller`

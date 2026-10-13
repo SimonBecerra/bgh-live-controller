@@ -22,6 +22,10 @@ contextBridge.exposeInMainWorld("bgh", {
     status: () => ipcRenderer.invoke("bible-status"),
     lookup: q => ipcRenderer.invoke("bible-lookup", q)
   },
+  youtube: {
+    viewers: q => ipcRenderer.invoke("youtube-viewers", q),
+    test: q => ipcRenderer.invoke("youtube-test", q)
+  },
   hymns: {
     list: () => ipcRenderer.invoke("hymns-list"),
     save: book => ipcRenderer.invoke("hymns-save", book),
