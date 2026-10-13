@@ -212,6 +212,19 @@ body.portrait .set-nav .nav-proto{margin-top:0;border-top:none}
 .rc ol{margin:4px 0 0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:3px}
 .rc .rc-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .rc .rc-acts .btn{min-height:42px;font-size:14px;flex:none;width:auto}
+/* Go Live: Baptisms (one card per person being baptized) */
+.bap-list{display:flex;flex-direction:column;gap:10px}
+.bap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:12px;border:1px solid var(--line-2);border-radius:12px;background:var(--panel-2)}
+.bap-h{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;font-size:14px}
+.bap-h .link-btn{font-size:13px}
+.bap .bap-name{grid-column:1 / -1}
+.bap input,.bap select{min-height:48px}
+.bap-sub{grid-column:1 / -1;font-size:12px;color:var(--muted);letter-spacing:.03em}
+.bap-add{align-self:flex-start}
+.rel-list{display:flex;flex-wrap:wrap;gap:6px}
+.rel-chip{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 6px 0 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:14px}
+.rel-chip button{width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--muted);display:grid;place-items:center}
+.rel-chip button svg{width:16px;height:16px}
 /* Go Live, step 2: the Ready check in short */
 .gl-ready{display:flex;flex-direction:column;gap:8px;margin:4px 0 2px}
 .gl-ready-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
@@ -531,6 +544,11 @@ textarea:disabled,select:disabled{opacity:.5}
 .spk-foot svg{width:20px;height:20px}
 .spk-list{display:flex;flex-direction:column;gap:8px}
 .spk-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.spk-row.has-elder{grid-template-columns:minmax(0,1fr) auto auto}
+/* Elder: a square key button left of Remove; lit when marked */
+.spk-elder{width:48px;min-width:48px;height:48px;min-height:48px;padding:0;align-self:start}
+.spk-elder svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spk-elder[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .spk-row .btn{min-height:46px;font-size:14px;flex:none;align-self:stretch;height:auto}
 .clr-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .clr-row input{flex:1 1 140px;max-width:200px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.04em}
@@ -1212,8 +1230,14 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
                 <select id="setLtSsMax" data-cfg><option value="1">1 speaker</option><option value="2">Up to 2 speakers</option><option value="3">Up to 3 speakers</option><option value="4">Up to 4 speakers</option></select>
                 <span class="path">Choosing a speaker is optional. Each speaker gets a lower third button before the teachers and is named in the livestream description.</span></div>
               <label class="check" for="setLtSubB" id="setLtSubBField"><input type="checkbox" id="setLtSubB" data-cfg>
-                <span>Show visiting speakers' subtitles<small>Under the name, for example the assembly they're from. Home speakers never show a subtitle.</small></span>
+                <span>Show visiting speakers' subtitles<small>Under the name, for example the assembly they're from.</small></span>
               </label>
+              <label class="check" for="setHomeSubOn"><input type="checkbox" id="setHomeSubOn" data-cfg>
+                <span>Show a subtitle for home speakers<small>The same subtitle under every home speaker's name, like BARRINGTON GOSPEL HALL. Speakers marked as elders in Settings → Speakers show ELDER, in front of it.</small></span>
+              </label>
+              <div class="field sub-check" id="setHomeSubBox" hidden><label class="label" for="setHomeSub">Home speakers' subtitle</label>
+                <input id="setHomeSub" data-cfg maxlength="60" placeholder="BARRINGTON GOSPEL HALL" autocomplete="off" spellcheck="false">
+                <span class="path" id="setHomeSubPrev"></span></div>
               <p class="path" id="setLtConfSubNote" hidden>A visiting speaker's subtitle always shows under their name in this theme.</p>
               <div class="field" id="setLtColorField" hidden><label class="label" for="setLtColor">Conference colour</label>
               <div class="clr-row">
@@ -1305,7 +1329,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <div class="spk-list" id="setVisit"></div>
             <div class="spk-row"><input id="setVisitNew" data-spk placeholder="Add a visiting speaker" aria-labelledby="setVisitHdr" autocomplete="off" enterkeyhint="done"><button type="button" class="btn" id="setVisitAdd">Add</button></div>
             <span class="spk-err" id="setVisitErr" hidden></span>
-            <span class="path">Visiting speakers can also be added during Go Live with the + button. A visiting speaker's subtitle shows under their name in the Conference lower third, and in the Barrington and Christmas ones when that's switched on (Settings → Scene collections). Home speakers don't have subtitles.</span>
+            <span class="path">Visiting speakers can also be added during Go Live with the + button. A visiting speaker's subtitle shows under their name in the Conference lower third, and in the Barrington and Christmas ones when that's switched on (Settings → Scene collections). Home speakers can have a shared subtitle there too; the key button marks an elder.</span>
           </div>
         </section>
 
@@ -1370,6 +1394,13 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             </label>
             <div class="field sub-check" id="setAutoEndBox"><label class="label" for="setAutoEndSec">End the stream after</label>
               <select id="setAutoEndSec"><option value="15">15 seconds on Ending</option><option value="30">30 seconds on Ending</option><option value="60">1 minute on Ending</option><option value="120">2 minutes on Ending</option></select></div>
+          </div>
+          <div class="set-section">
+            <h4>Baptisms</h4>
+            <span class="path">When the Baptism schedule image is chosen in Go Live, each person reading a testimony picks how they're related to the person being baptized. It shows in capitals under their name: FATHER OF LUCAS BECERRA.</span>
+            <div class="rel-list" id="setRelList"></div>
+            <div class="spk-row"><input id="setRelNew" data-spk placeholder="Add a relationship, like Mother of" aria-label="Add a relationship" autocomplete="off" enterkeyhint="done"><button type="button" class="btn" id="setRelAdd">Add</button></div>
+            <span class="spk-err" id="setRelErr" hidden></span>
           </div>
           <div class="set-section">
             <h4>Viewer count</h4>
@@ -1594,6 +1625,12 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <button class="spk-trigger" id="glSpkBtn" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="glSpkLbl glSpkVal"><span id="glSpkVal"></span><i data-lucide="chevron-down"></i></button>
             <span class="path" id="glSpkHint">Names appear in the order you pick them. To remove a visiting speaker, select them first.</span>
           </div>
+          <div class="field bap-field" id="glBapField" hidden>
+            <span class="label" id="glBapLbl">Baptisms</span>
+            <div class="bap-list" id="glBapList"></div>
+            <button type="button" class="btn bap-add" id="glBapAdd"><i data-lucide="plus"></i>Add another baptism</button>
+            <span class="path" id="glBapHint">Each person reading a testimony gets a lower third button, with how they know the person being baptized under their name. Nothing here is saved.</span>
+          </div>
           <div class="field spk-field" id="glHostField" hidden>
             <span class="label" id="glHostLbl">Host</span>
             <button class="spk-trigger" id="glHostBtn" aria-haspopup="dialog" aria-labelledby="glHostLbl glHostVal"><span id="glHostVal"></span><i data-lucide="chevron-down"></i></button>
@@ -1780,7 +1817,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
    obs.call(requestType, data) / obs.on(eventName, fn)) with few changes.
 ------------------------------------------------------------------- */
 const FOLDER = "C:\\Users\\Media\\Livestream\\Schedule\\";
-const SCHEDULE_FILES = ["Afternoon Ministry Service.png","Afternoon Gospel Service.png","Evening Gospel Service.png","Morning Lord's Supper.png","Special Meeting.png"];
+const SCHEDULE_FILES = ["1. Morning Lord's Supper.png","2. Afternoon Ministry Service.png","3. Afternoon Gospel Service.png","4. Evening Gospel Service.png","5. Special Meeting.png","6. Baptism.png"];
 // Sample scene collections, top-to-bottom as in OBS's Scenes dock. Only some have the three waiting scenes.
 const COLLECTIONS = {
   "Sunday Service": ["Title Slide","Waiting Slide 1 (Title)","Waiting Slide 2 (Schedule)","Live Soon","Camera 1","Slideshow 4:3","Ending","Slideshow 16:9","Camera 2","Black"],
@@ -1816,7 +1853,7 @@ class MockOBS {
         "Speaker Names":{kind:"text_gdiplus_v3", text:"Roberto Lugo and Daniel Chung", font:{face:"Montserrat",size:64}},
         "Sermon Title":{kind:"text_gdiplus_v3", text:""},
         "Scripture Reference":{kind:"text_gdiplus_v3", text:"Romans 5:8"},
-        "Schedule":{kind:"image_source", file:FOLDER+"Afternoon Ministry Service.png"},
+        "Schedule":{kind:"image_source", file:FOLDER+"2. Afternoon Ministry Service.png"},
         "Church Logo":{kind:"image_source", file:"C:\\Users\\Media\\Livestream\\Logos\\Hall Logo.png"},
         "PYLE USB Mixer":{kind:"wasapi_input_capture", muted:false},
         "Video":{kind:"dshow_input", video_device_id:"Cam Link 4K:\\\\?\\usb#vid_0fd9&pid_00a1&mi_00#6&1d5aba85&0&0000#{65e8773d-8f56-11d0-a3b9-00a0c9223196}\\global"},
@@ -1963,7 +2000,8 @@ class MockOBS {
             done({ok:true, code:"OK", message:"", broadcasts:[
               {index:0, title:`Evening Gospel Service | ${ld(s0)}`, detail:`${when(new Date(s0),19,0)} · Public`},
               {index:1, title:`Afternoon Ministry Service | ${ld(s1)}`, detail:`${when(new Date(s1),12,15)} · Public`},
-              {index:2, title:`Special Meeting | ${ld(s2)}`, detail:`${when(new Date(s2),18,30)} · Unlisted`}
+              {index:2, title:`Special Meeting | ${ld(s2)}`, detail:`${when(new Date(s2),18,30)} · Unlisted`},
+              {index:3, title:`The Baptisms of Lucas Becerra and Carolina Lugo | ${ld(s2)}`, detail:`${when(new Date(s2),15,0)} · Public`}
             ]});
           });
         }
@@ -2217,7 +2255,10 @@ const ui = { program:null, preview:null, studio:false, transition:"", muted:fals
 let fade = null;
 
 const base = p => p.split(/[\\/]/).pop();
-const noExt = f => f.replace(/\.[^.]+$/,"");
+// A schedule image's name as people see it: no extension, and no number in front for ordering
+// ("1. Afternoon Gospel Service.png" → "Afternoon Gospel Service"). The number needs a . ) - – or : after it,
+// so a name that starts with a year ("2026 Conference") keeps it.
+const noExt = f => f.replace(/\.[^.]+$/,"").replace(/^\s*\d+\s*[.)\-–:]\s*/, "");
 const serviceName = () => noExt(base(ui.schedule || ""));
 const fmt = ms => { const s = Math.floor(ms/1000); return [s/3600, s/60%60, s%60].map(v => String(Math.floor(v)).padStart(2,"0")).join(":"); };
 
@@ -2565,7 +2606,30 @@ const allSpeakers = () => [...ui.speakers.home, ...ui.speakers.visiting];
 const speakerName = id => (allSpeakers().find(s => s.id === id) || {}).name;
 const selNames = ids => ids.map(speakerName).filter(Boolean);
 
-const autoTitle = () => `${gl.svc || svcLabel()} | ${gl.date ? longDate(gl.date) : "Date"}`;
+/* Baptisms. A schedule image called Baptism (any number in front) makes Go Live ask, for up to three people, who is
+   being baptized, who reads their testimony and how they're related. Nothing is saved: it starts empty every time,
+   and the testimony readers' lower thirds are forgotten when the livestream ends or the controller closes. */
+const BAP_MAX = 3;
+const BAP_RELS_DEFAULT = ["Father of", "Elder of", "Uncle of", "Grandfather of", "Friend of"];
+ui.bapRels = (() => { try{ const v = JSON.parse(localStorage.getItem("bapRels")); return Array.isArray(v) && v.length ? v : [...BAP_RELS_DEFAULT]; }catch(e){ return [...BAP_RELS_DEFAULT]; } })();
+ui.bapReaders = [];   // [{name, sub}] for this livestream only
+const isBaptismSvc = n => /^baptisms?$/i.test(String(n || "").trim());
+const isBaptismTitle = t => /^\s*the baptisms? of\b/i.test(String(t || ""));
+// "Lucas Becerra", "Lucas Becerra and Carolina Lugo", "A, B, and C" (Oxford comma)
+const andList = a => a.length < 3 ? a.join(" and ") : `${a.slice(0, -1).join(", ")}, and ${a[a.length - 1]}`;
+const bapNames = () => (gl.bap || []).map(b => formatName(b.name)).filter(Boolean);
+const bapHeading = () => { const n = bapNames(); return n.length ? `The ${n.length > 1 ? "Baptisms" : "Baptism"} of ${andList(n)}` : ""; };
+// Baptism details are asked for a new Baptism broadcast, or an existing one whose title starts "The Baptism(s) of"
+function bapActive(){
+  if(gl.mode === "existing"){ const b = (gl.bcList || []).find(x => x.index === gl.bc); return !!b && isBaptismTitle(b.title); }
+  return isBaptismSvc(gl.svc);
+}
+// The names in an existing broadcast's title, to start the boxes with
+function bapFromTitle(t){
+  const m = String(t || "").match(/^\s*the baptisms? of\s+(.+?)(?:\s*\|.*)?$/i);
+  return m ? m[1].split(/\s*,\s*(?:and\s+)?|\s+and\s+/i).map(x => x.trim()).filter(Boolean).slice(0, BAP_MAX) : [];
+}
+const autoTitle = () => `${isBaptismSvc(gl.svc) && bapNames().length ? bapHeading() : gl.svc || svcLabel()} | ${gl.date ? longDate(gl.date) : "Date"}`;
 // No speakers in this collection (None): the description leaves out the "Service Led by" part
 // Sunday School: the speaker (if one is chosen) is named even when the collection has no speakers text source
 const autoDesc = () => ssOn() ? (gl.sel.length ? `Service Led by: \n${formatNames(selNames(gl.sel))}\n\n${DESC_TAIL}` : DESC_TAIL)
@@ -2712,7 +2776,7 @@ $("glHere").addEventListener("click", async () => {
   if(!names.includes(gl.svc)) gl.svc = names.includes(cur) ? cur : "";
   gl.date = todayISO();
   // Every new setup starts empty ("Select speakers") with automatic title and description
-  gl.sel = []; gl.customTitle = null; gl.customDesc = null;
+  gl.sel = []; gl.customTitle = null; gl.customDesc = null; gl.bap = [{name:"", reader:"", rel:ui.bapRels[0] || ""}]; gl.bapFor = null;
   // No service types in this collection: the title is written by hand, starting from the date
   if(!svcChoosable()) gl.customTitle = longDate(gl.date);
   gl.mode = "new"; gl.bc = null; gl.bcList = null; gl.bcErr = null;
@@ -2765,7 +2829,9 @@ function glRender(){
   $("glTitleHelp").classList.toggle("err", !!(tErr || atErr));
   $("glDescHelp").hidden = !cd && !adErr; $("glDescHelp").textContent = adErr || dErr || "Tap Custom again to go back to the automatic description";
   $("glDescHelp").classList.toggle("err", !!(dErr || adErr));
-  const titleOk = ct ? !tErr : (svcChoosable() && gl.svc && gl.date && !atErr);
+  const bap = bapActive();
+  renderBap(bap);
+  const titleOk = ct ? !tErr : (svcChoosable() && gl.svc && gl.date && !atErr && (!isBaptismSvc(gl.svc) || bapNames().length > 0));
   const descOk = cd ? !dErr : ((ui.spkMode === "off" || ssOn() || gl.sel.length) && !adErr);
   // Lower thirds on for this collection: the speakers are needed, whichever kind of broadcast.
   // Sunday School: optional, since the teachers have their own buttons.
@@ -2777,13 +2843,13 @@ function glRender(){
   // Existing broadcast: only the broadcast list; speakers, service type and date are hidden
   $("glPreview").hidden = ex; $("glExisting").hidden = !ex;
   // Existing broadcast: only the speakers stay (when lower thirds are on); schedule and date come from YouTube
-  $("glForm").hidden = ex && !ltOn();
+  $("glForm").hidden = ex && !ltOn() && !bap;
   $("glSvcField").hidden = ex || ui.schMode === "off"; $("glDateField").hidden = ex;
   $("glGrid").classList.toggle("single", ex && !ltOn());
   $("glStepTag").hidden = ex;
   $("glNext").textContent = ex ? "Go Live" : "Next: Visibility";
   $("glNext").classList.toggle("primary", !ex); $("glNext").classList.toggle("danger", ex);
-  $("glNext").disabled = ex ? !(gl.bc != null && gl.bcList && spkOk) : !(titleOk && descOk && spkOk);
+  $("glNext").disabled = ex ? !(gl.bc != null && gl.bcList && spkOk && (!bap || bapNames().length > 0)) : !(titleOk && descOk && spkOk);
   $("glSpkHint").classList.toggle("warn-txt", ltOn() && !ssOn() && !gl.sel.length);
   if(ltOn() && !ssOn() && !gl.sel.length) $("glSpkHint").textContent = "Choose the speakers: lower thirds are on for this scene collection.";
   renderBc();
@@ -2835,13 +2901,76 @@ $("glModeNew").addEventListener("click", () => setMode("new"));
 $("glModeEx").addEventListener("click", () => setMode("existing"));
 $("glBcRefresh").addEventListener("click", loadBroadcasts);
 function useGlHymnBook(){ if(gl.hymnBook && gl.hymnBook !== ui.ot.book && bookById(gl.hymnBook)){ ui.ot.book = gl.hymnBook; saveOt(); } }
+// What goes in the speakers text in OBS: "The Baptism of Lucas Becerra" for a baptism, otherwise the speakers
+const glSpeakersText = () => bapActive() && bapNames().length ? bapHeading() : formatNames(selNames(gl.sel));
+// Testimony readers become lower third buttons: name, and "FATHER OF LUCAS BECERRA" under it (always shown)
+function applyBapReaders(){
+  ui.bapReaders = bapActive() ? (gl.bap || []).filter(b => b.reader.trim() && b.name.trim())
+    .map(b => ({name:formatName(b.reader), sub:`${(b.rel || "").trim()} ${formatName(b.name)}`.trim().toUpperCase()})) : [];
+  renderOt();
+}
+// Capital first letters as you type ("lucas becerra" → "Lucas Becerra"); formatName tidies the rest
+function capWords(inp){
+  const v = inp.value, at = inp.selectionStart;
+  const c = v.replace(/(^|[\s-])([a-z\u00e0-\u00ff])/g, (m, a, b) => a + b.toUpperCase());
+  if(c !== v){ inp.value = c; try{ inp.setSelectionRange(at, at); }catch(e){} }
+}
+function renderBap(show){
+  $("glBapField").hidden = !show;
+  if(!show) return;
+  // An existing broadcast: start with the names from its title (the title itself isn't changed)
+  if(gl.mode === "existing" && gl.bapFor !== gl.bc){
+    gl.bapFor = gl.bc;
+    const b = gl.bcList.find(x => x.index === gl.bc);
+    const names = bapFromTitle(b && b.title);
+    gl.bap = (names.length ? names : [""]).map(n => ({name:n, reader:"", rel:ui.bapRels[0] || ""}));
+  }
+  $("glBapLbl").textContent = gl.bap.length > 1 ? "Baptisms" : "Baptism";
+  const list = $("glBapList");
+  // Rebuild only when the number of cards changes, so typing keeps its place
+  if(list.children.length !== gl.bap.length || list.dataset.rels !== ui.bapRels.join("|")){
+    list.innerHTML = ""; list.dataset.rels = ui.bapRels.join("|");
+    gl.bap.forEach((b, i) => {
+      const card = document.createElement("div"); card.className = "bap";
+      card.innerHTML = `<div class="bap-h"><span></span>${gl.bap.length > 1 ? '<button type="button" class="link-btn">Remove</button>' : ""}</div>
+        <input class="bap-name" autocomplete="off" spellcheck="false" placeholder="Person being baptized" aria-label="Person being baptized">
+        <input class="bap-reader" autocomplete="off" spellcheck="false" placeholder="Reading the testimony" aria-label="Person reading the testimony">
+        <select class="bap-rel" aria-label="How they're related"></select>
+        <span class="bap-sub"></span>`;
+      card.querySelector(".bap-h span").textContent = gl.bap.length > 1 ? `Baptism ${i + 1}` : "Baptism";
+      const nm = card.querySelector(".bap-name"), rd = card.querySelector(".bap-reader"), rel = card.querySelector(".bap-rel");
+      nm.value = b.name; rd.value = b.reader;
+      const rels = ui.bapRels.includes(b.rel) || !b.rel ? ui.bapRels : [b.rel, ...ui.bapRels];
+      rel.innerHTML = rels.map(r => `<option>${esc(r)}</option>`).join(""); rel.value = b.rel || rels[0] || "";
+      const sub = card.querySelector(".bap-sub");
+      const paint = () => { sub.textContent = b.reader.trim() ? `Lower third: ${formatName(b.reader)} · ${`${b.rel} ${formatName(b.name) || "…"}`.toUpperCase()}` : "No testimony lower third without a reader."; };
+      nm.addEventListener("input", () => { capWords(nm); b.name = nm.value; paint(); glRender(); });
+      rd.addEventListener("input", () => { capWords(rd); b.reader = rd.value; paint(); });
+      [nm, rd].forEach(x => x.addEventListener("blur", () => { x.value = formatName(x.value); b[x === nm ? "name" : "reader"] = x.value; paint(); glRender(); }));
+      rel.addEventListener("change", () => { b.rel = rel.value; paint(); });
+      const rm = card.querySelector(".bap-h .link-btn");
+      if(rm) rm.addEventListener("click", () => { gl.bap.splice(i, 1); list.innerHTML = ""; glRender(); });
+      paint();
+      list.appendChild(card);
+    });
+  }
+  $("glBapAdd").hidden = gl.bap.length >= BAP_MAX;
+  $("glBapHint").textContent = gl.mode === "existing"
+    ? "The broadcast's title and description stay as they are. The names go in the speakers text in OBS, and each testimony reader gets a lower third button. Nothing here is saved."
+    : "The title and the speakers text in OBS use these names. Each person reading a testimony gets a lower third button, with how they're related under their name. Nothing here is saved.";
+}
+$("glBapAdd").addEventListener("click", () => {
+  if(gl.bap.length >= BAP_MAX) return;
+  gl.bap.push({name:"", reader:"", rel:ui.bapRels[0] || ""}); $("glBapList").innerHTML = ""; glRender();
+  const cards = $("glBapList").querySelectorAll(".bap-name"); if(cards.length) cards[cards.length - 1].focus();
+});
 async function applySpeakersOnly(){
-  const names = formatNames(selNames(gl.sel));
+  const names = glSpeakersText();
   if(names && names !== ui.speaker && canWriteSpk()){ try{ await setDefaultSources({text:names}); }catch(e){} }
 }
 // Speakers text and schedule image: same for new or existing broadcasts
 async function applyOnScreen(){
-  const names = formatNames(selNames(gl.sel));
+  const names = glSpeakersText();
   const svcFile = ui.files.find(p => noExt(base(p)) === gl.svc);
   const change = {};
   if(names && names !== ui.speaker && canWriteSpk()) change.text = names;
@@ -2858,7 +2987,9 @@ async function goExisting(){
   useGlHymnBook();
   // Speakers chosen for the lower thirds: on screen now, even though they don't change the broadcast
   if(ltOn()) applyHost(gl.host);
-  if(gl.sel.length){ setLtPicked(selNames(gl.sel)); await applySpeakersOnly(); }
+  applyBapReaders();
+  if(gl.sel.length) setLtPicked(selNames(gl.sel));
+  if(gl.sel.length || bapActive()) await applySpeakersOnly();
   ui.streamPending = Date.now(); ui.streamMsg = "Starting in OBS…"; renderOutputs();
   toast("Starting the selected broadcast in OBS…");
   try{
@@ -2912,6 +3043,7 @@ $("glGo").addEventListener("click", async () => {
   // Goes to the default collection: right away if it's loaded, otherwise when it's next loaded.
   // Each part only applies when the default collection actually has that source.
   await applyOnScreen();
+  applyBapReaders();
   if(ltOn()) applyHost(gl.host);
   if(gl.sel.length) setLtPicked(selNames(gl.sel));
   toast("Setting up the YouTube broadcast in OBS…");
@@ -3803,18 +3935,33 @@ function ltHost(){
   if(!hostAllowed() || !ui.hostId) return null;
   const h = cfg().ltHost, sp = allSpeakers().find(x => x.id === ui.hostId);
   if(!sp) return null;
-  const sub = h.sub ? (String(h.subText || "").trim() || String(sp.subtitle || "").trim()).toUpperCase() : "";
+  const sub = h.sub ? (String(h.subText || "").trim() || String(sp.subtitle || "").trim() || homeSub(ui.speakers.home.includes(sp) ? sp : null)).toUpperCase() : "";
   return {name:sp.name, subtitle:sub};
 }
 // What's on screen is this name with this subtitle (the host and a speaker can share a name)
 const ltIsUp = (name, sub) => ui.lt.showing === name && (ui.lt.subtitle || "") === (sub || "");
-const ltSpeakerSub = name => ltShowSub() ? ltSubtitle(name) : "";
+/* A speaker's subtitle on screen. Visiting speakers: their own subtitle, when this collection's theme shows them.
+   Home speakers: this collection's home speakers' subtitle when it's switched on (Settings → Scene collections),
+   with ELDER, in front for elders (Settings → Speakers): "ELDER, BARRINGTON GOSPEL HALL". */
+function homeSub(sp){
+  const h = (cfg() || {}).homeSub;
+  if(!sp || !h || !h.on) return "";
+  const text = String(h.text || "").trim();
+  return (sp.elder ? (text ? "ELDER, " + text : "ELDER") : text).toUpperCase();
+}
+const ltSpeakerSub = name => {
+  const home = ui.speakers.home.find(sp => nameKey(sp.name) === nameKey(name));
+  if(home) return homeSub(home);
+  return ltShowSub() ? ltSubtitle(name) : "";
+};
 async function ltToggle(i){ const it = ltItems()[i]; if(it) return ltShow(it.name, it.sub); }
 /* The lower third buttons: the speakers chosen in Go Live, or with the Sunday School theme, every teacher.
    name and sub are what goes on screen; short (and note) are what the button says. */
 function ltItems(){
   const names = ltNames();
-  const speakers = names.map(n => ({name:n, sub:ltSpeakerSub(n), short:ltShort(n, names)}));
+  const speakers = [...names.map(n => ({name:n, sub:ltSpeakerSub(n), short:ltShort(n, names)})),
+    // Baptism testimony readers: their relationship always shows
+    ...ui.bapReaders.map(r => ({name:r.name, sub:r.sub, short:ltShort(r.name, [...names, ...ui.bapReaders.map(x => x.name)]), note:"Testimony"}))];
   if(ltTheme() !== "sundayschool") return speakers;
   // Sunday School: the speaker(s) chosen in Go Live, then every teacher
   return [...speakers.slice(0, spkMax()), ...byFirstName(ui.speakers.teachers || []).filter(t => t.first || t.last)
@@ -5101,7 +5248,7 @@ function pageSnaps(){
   const out = {};
   Object.keys(SET_PAGES).forEach(p => out[p] = []);
   setFields().forEach(el => { const pg = el.closest(".set-page"); if(pg) out[pg.dataset.page].push(el.type === "checkbox" ? el.checked : el.value); });
-  out.speakers.push({home:workSpk.home, visiting:workSpk.visiting}); out.collections.push(workCfg, workSpk.teachers);
+  out.speakers.push({home:workSpk.home, visiting:workSpk.visiting}); out.collections.push(workCfg, workSpk.teachers); out.golive.push(workRels);
   Object.keys(out).forEach(p => out[p] = JSON.stringify(out[p]));
   return out;
 }
@@ -5185,6 +5332,7 @@ async function openSettingsPanel(page = ui.setPage){
   $("setLayout").value = ui.layout; $("setTheme").value = ui.theme; $("setTextSize").value = String(ui.textSize); renderTextSizeNote(); renderAutoBackups();
   $("setHomeLbl").value = homeLabel(); $("setHomeHdr").textContent = homeLabel();
   workSpk = JSON.parse(JSON.stringify({home:ui.speakers.home, visiting:ui.speakers.visiting, teachers:ui.speakers.teachers || []}));
+  workRels = [...ui.bapRels]; renderRels();
   $("setHomeNew").value = ""; $("setHomeErr").hidden = true; $("setVisitNew").value = ""; $("setVisitErr").hidden = true;
   renderSetSpk();
   await fillOtSettings();
@@ -5339,6 +5487,7 @@ function syncCfgFields(){
     ltOn: $("setLtOnColl").checked,
     ltTheme: $("setLtTheme").value,
     ltSubB: $("setLtSubB").checked,
+    homeSub: {on:$("setHomeSubOn").checked, text:$("setHomeSub").value.trim().toUpperCase()},
     recRemind: $("setRecRemind").checked,
     ssMax: parseInt($("setLtSsMax").value, 10) || 1,
     ltHost: {on:$("setLtHostOn").checked, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
@@ -5376,6 +5525,7 @@ async function fillCfgFields(coll){
   $("setLtOnColl").checked = c ? (c.ltOn !== undefined ? !!c.ltOn : !!ui.ot.ltOn) : false;
   $("setLtTheme").value = c && LT_THEMES.includes(c.ltTheme) ? c.ltTheme : "barrington";
   $("setLtSubB").checked = !!(c && c.ltSubB);
+  $("setHomeSubOn").checked = !!(c && c.homeSub && c.homeSub.on); $("setHomeSub").value = (c && c.homeSub && c.homeSub.text) || "";
   $("setRecRemind").checked = c && typeof c.recRemind === "boolean" ? c.recRemind : !!(c && c.ltTheme === "conference");
   recRemindTouched = !!(c && typeof c.recRemind === "boolean");
   $("setLtSsMax").value = String(c && c.ssMax >= 1 && c.ssMax <= 10 ? c.ssMax : 1);
@@ -5446,6 +5596,9 @@ function renderLtColor(){
   $("setLtConfSubNote").hidden = !conf;
   $("setLtSubBField").hidden = conf;
   $("setLtSsMaxField").hidden = !ss;
+  $("setHomeSubBox").hidden = !$("setHomeSubOn").checked;
+  const hsText = $("setHomeSub").value.trim().toUpperCase();
+  $("setHomeSubPrev").textContent = hsText ? `Home speakers: ${hsText} · Elders: ELDER, ${hsText}` : "Leave it empty to show only ELDER under elders' names.";
   $("setTeachBox").hidden = !ss;
   $("setLtThemeHint").textContent = {
     barrington:"The hymn and Bible box is the same dark blue-green.",
@@ -5491,6 +5644,8 @@ $("setLtTheme").addEventListener("change", () => { if(!recRemindTouched) $("setR
 $("setLtOnColl").addEventListener("change", renderLtColor);
 $("setLtHostOn").addEventListener("change", renderLtColor);
 $("setLtHostSubOn").addEventListener("change", renderLtColor);
+$("setHomeSubOn").addEventListener("change", renderLtColor);
+$("setHomeSub").addEventListener("input", () => { const el = $("setHomeSub"), at = el.selectionStart; el.value = el.value.toUpperCase(); el.setSelectionRange(at, at); renderLtColor(); });
 $("setLtHostSub").addEventListener("input", () => {
   const el = $("setLtHostSub"), at = el.selectionStart; el.value = el.value.toUpperCase(); el.setSelectionRange(at, at);
 });
@@ -5643,7 +5798,7 @@ function backupData(){
     settings:{
       obs:{host:ui.obsAddr.host, port:ui.obsAddr.port},   // the password is left out on purpose
       speakers:ui.speakers, collCfg:ui.collCfg, audio:ui.src.audio, defaultVis:ui.defaultVis,
-      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, closeObs:ui.closeObs, openObs:ui.openObs, startAtLogin:ui.startAtLogin, startTitle:ui.startTitle, autoEnd:ui.autoEnd, autoEndSec:ui.autoEndSec, viewers:vwStored(),
+      silenceSec:ui.silenceSec, silenceDb:ui.silenceDb, keepAwake:ui.keepAwake, openWithObs:ui.openWithObs, closeWithObs:ui.closeWithObs, closeObs:ui.closeObs, openObs:ui.openObs, startAtLogin:ui.startAtLogin, startTitle:ui.startTitle, autoEnd:ui.autoEnd, autoEndSec:ui.autoEndSec, viewers:vwStored(), bapRels:ui.bapRels,
       screen:ui.screen, layout:ui.layout, theme:ui.theme, textSize:ui.textSize, useTable:ui.useTable,
       onscreen:ui.ot   // hymn books are exported on their own (Export text); API keys are never included
     }};
@@ -5718,6 +5873,7 @@ function restoreBackup(st){
   if(typeof st.startTitle === "boolean"){ ui.startTitle = st.startTitle; save("startTitle", ui.startTitle ? "1" : "0"); }
   if(typeof st.autoEnd === "boolean"){ ui.autoEnd = st.autoEnd; save("autoEnd", ui.autoEnd ? "1" : "0"); }
   if([15,30,60,120].includes(st.autoEndSec)){ ui.autoEndSec = st.autoEndSec; save("autoEndSec", String(ui.autoEndSec)); }
+  if(Array.isArray(st.bapRels) && st.bapRels.length){ ui.bapRels = st.bapRels.map(String).slice(0, 30); save("bapRels", JSON.stringify(ui.bapRels)); }
   if(st.viewers && typeof st.viewers === "object"){ const v = {on:st.viewers.on !== false, channel:String(st.viewers.channel || "")}; save("viewers", JSON.stringify(v)); try{ vw.cfg = v; }catch(e){} }
   if(typeof st.startAtLogin === "boolean"){ ui.startAtLogin = st.startAtLogin; save("startAtLogin", ui.startAtLogin ? "1" : "0"); if(window.bgh) window.bgh.setStartAtLogin(ui.startAtLogin); }
   if(typeof st.openObs === "boolean"){ ui.openObs = st.openObs; save("openObs", ui.openObs ? "1" : "0"); if(window.bgh) window.bgh.setOpenObs(ui.openObs); }
@@ -5763,9 +5919,36 @@ $("setMeasure").addEventListener("click", () => {
 // Speaker lists are edited as a working copy and only saved on Apply
 let workSpk = {home:[], visiting:[], teachers:[]};
 const setFields = () => Array.from($("setForm").querySelectorAll("input:not([data-spk]):not([data-cfg]),select:not([data-cfg])"));
-const snapSettings = () => { syncCfgFields(); return JSON.stringify({f:setFields().map(el => el.type === "checkbox" ? el.checked : el.value), s:workSpk, c:workCfg}); };
+const snapSettings = () => { syncCfgFields(); return JSON.stringify({f:setFields().map(el => el.type === "checkbox" ? el.checked : el.value), s:workSpk, c:workCfg, r:workRels}); };
+/* Settings → Going live → Baptisms: the relationships to choose from (edited as a copy, saved on Apply) */
+let workRels = [];
+function renderRels(){
+  const el = $("setRelList"); el.innerHTML = "";
+  if(!workRels.length) el.innerHTML = `<span class="path">None. Add at least one.</span>`;
+  workRels.forEach((r, i) => {
+    const c = document.createElement("span"); c.className = "rel-chip";
+    c.innerHTML = `<span></span><button type="button"><i data-lucide="x"></i></button>`;
+    c.querySelector("span").textContent = r;
+    const b = c.querySelector("button"); b.setAttribute("aria-label", `Remove ${r}`);
+    b.addEventListener("click", () => { workRels.splice(i, 1); renderRels(); });
+    el.appendChild(c);
+  });
+  if(window.lucide) lucide.createIcons();
+  updateSetDots();
+}
+$("setRelAdd").addEventListener("click", () => {
+  const err = m => { $("setRelErr").textContent = m; $("setRelErr").hidden = !m; };
+  let v = $("setRelNew").value.trim().replace(/\s+/g, " ");
+  if(!v) return err("Type a relationship first, like Mother of.");
+  v = v.charAt(0).toUpperCase() + v.slice(1);
+  if(workRels.some(r => r.toLowerCase() === v.toLowerCase())) return err(`${v} is already there.`);
+  workRels.push(v); $("setRelNew").value = ""; err(""); renderRels();
+});
+$("setRelNew").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); $("setRelAdd").click(); } });
 let setSnap = "";
 const settingsChanged = () => snapSettings() !== setSnap;
+// The "user-key" icon (Lucide 1.48, ISC licence), drawn here since the bundled Lucide is older
+const USER_KEY_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11v6"/><path d="M20 13h2"/><path d="M3 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 2.072.578"/><circle cx="10" cy="7" r="4"/><circle cx="20" cy="19" r="2"/></svg>';
 function renderSetSpk(){
   [["home","setHome"],["visiting","setVisit"]].forEach(([list, el]) => {
     $(el).innerHTML = "";
@@ -5790,7 +5973,16 @@ function renderSetSpk(){
       });
       const names = document.createElement("div"); names.className = "spk-names"; names.append(inp);
       if(list === "visiting") names.append(sub);
-      row.append(names, del); $(el).appendChild(row);
+      if(list === "home"){
+        // Elder: "ELDER, " goes in front of the home speakers' subtitle
+        const eb = document.createElement("button");
+        eb.type = "button"; eb.className = "btn spk-elder"; eb.innerHTML = USER_KEY_SVG;
+        const paint = () => { eb.setAttribute("aria-pressed", String(!!sp.elder)); eb.title = sp.elder ? `${sp.name || "This speaker"} is an elder. Tap to unmark.` : `Mark ${sp.name || "this speaker"} as an elder`; eb.setAttribute("aria-label", eb.title); };
+        eb.addEventListener("click", () => { sp.elder = !sp.elder; paint(); updateSetDots(); });
+        paint(); row.classList.add("has-elder");
+        row.append(names, eb, del);
+      } else row.append(names, del);
+      $(el).appendChild(row);
     });
   });
   renderSetTeachers();
@@ -5891,6 +6083,7 @@ $("askDiscard").addEventListener("click", () => {
   const snap = JSON.parse(setSnap);
   setFields().forEach((el,i) => { if(el.type === "checkbox") el.checked = snap.f[i]; else el.value = snap.f[i]; });
   workSpk = snap.s; renderSetSpk();
+  workRels = snap.r || [...ui.bapRels]; renderRels();
   workCfg = snap.c; renderCfgFields();
   closeSettings();
 });
@@ -5909,7 +6102,7 @@ $("setForm").addEventListener("submit", e => {
   ui.defaultVis = $("setVis").value;
   // Speakers: tidy spaces, drop blanks and duplicates (ignoring case), keep ids so selections survive renames
   const seen = new Set();
-  const clean = list => list.map(x => ({id:x.id, name:x.name.trim().replace(/\s+/g," "), ...(x.subtitle && x.subtitle.trim() ? {subtitle:x.subtitle.trim().replace(/\s+/g," ")} : {})}))
+  const clean = list => list.map(x => ({id:x.id, name:x.name.trim().replace(/\s+/g," "), ...(x.subtitle && x.subtitle.trim() ? {subtitle:x.subtitle.trim().replace(/\s+/g," ")} : {}), ...(x.elder ? {elder:true} : {})}))
     .filter(x => x.name && !seen.has(nameKey(x.name)) && seen.add(nameKey(x.name)));
   const tseen = new Set(), tidy = v => String(v || "").trim().replace(/\s+/g, " ");
   const teachers = (workSpk.teachers || []).map(t => ({id:t.id, prefix:TEACH_PREFIXES.includes(t.prefix) ? t.prefix : "", first:formatName(tidy(t.first)), last:formatName(tidy(t.last)), subtitle:dashFix(tidy(t.subtitle))}))
@@ -5952,6 +6145,7 @@ $("setForm").addEventListener("submit", e => {
   try{ localStorage.setItem("startTitle", ui.startTitle ? "1" : "0"); localStorage.setItem("autoEnd", ui.autoEnd ? "1" : "0"); localStorage.setItem("autoEndSec", String(ui.autoEndSec)); }catch(err){}
   if(!ui.autoEnd) cancelAutoEnd();
   vwSaveSettings();
+  ui.bapRels = workRels.length ? [...workRels] : [...BAP_RELS_DEFAULT]; try{ localStorage.setItem("bapRels", JSON.stringify(ui.bapRels)); }catch(err){}
   // Desktop app: Electron's screen module places the window; "display-added" moves it when a monitor is plugged in
   const prevScreen = JSON.stringify(ui.screen);
   ui.screen = {target:selToTarget($("setScreen").value), follow:$("setScreenFollow").checked, windowed:$("setScreenWindowed").checked};
@@ -6074,7 +6268,8 @@ function svcFolder(){ const c = cfg(); if(!c || !c.image || !c.folder) return ""
 async function listServiceFiles(){
   ui.folderErr = null; const f = svcFolder();
   if(!f){ ui.files = []; return; }
-  try{ ui.files = (await obs.call("ListFolder",{folder:f})).files; }
+  // In number order ("2." before "10."), so numbering the files sets the order of the choices
+  try{ ui.files = (await obs.call("ListFolder",{folder:f})).files.slice().sort((a, b) => base(a).localeCompare(base(b), undefined, {numeric:true, sensitivity:"base"})); }
   catch(e){ ui.files = []; ui.folderErr = f; }
 }
 const scheduleInFolder = () => !ui.schedule || !ui.files.length || ui.files.includes(ui.schedule);
@@ -6246,7 +6441,7 @@ obs.on("StreamStateChanged", d => {
   ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive();
   if(startedHere) comeBackAfterGoingLive();
   if(d.outputActive) startOnTitle().then(scene => autoMuteAtStart(scene));
-  else{ cancelAutoEnd(); if(ui.hostId){ ui.hostId = ""; renderOt(); } }   // the host is for this livestream only
+  else{ cancelAutoEnd(); if(ui.hostId || ui.bapReaders.length){ ui.hostId = ""; ui.bapReaders = []; renderOt(); } }   // the host and testimony readers are for this livestream only
 });
 /* "Start the livestream on the title slide": the collection's Waiting title slide (or a scene called
    Title Slide) goes to Program as soon as the stream starts, however it was started. */
