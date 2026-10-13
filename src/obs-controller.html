@@ -212,6 +212,18 @@ body.portrait .set-nav .nav-proto{margin-top:0;border-top:none}
 .rc ol{margin:4px 0 0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:3px}
 .rc .rc-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .rc .rc-acts .btn{min-height:42px;font-size:14px;flex:none;width:auto}
+/* Go Live, step 2: the Ready check in short */
+.gl-ready{display:flex;flex-direction:column;gap:8px;margin:4px 0 2px}
+.gl-ready-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.gl-ready-sum{font-size:13px;font-weight:700;color:var(--pvw)}
+.gl-ready-sum.warn{color:var(--warn)}.gl-ready-sum.bad{color:var(--pgm)}
+.gl-ready-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
+.gl-rc{display:grid;grid-template-columns:20px minmax(0,1fr);align-content:start;gap:2px 8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);font-size:13px}
+.gl-rc > svg{width:18px;height:18px;margin-top:1px}
+.gl-rc.ok > svg{color:var(--pvw)}.gl-rc.bad{border-color:var(--pgm);background:var(--pgm-soft)}.gl-rc.bad > svg{color:var(--pgm)}
+.gl-rc.warn{border-color:var(--warn)}.gl-rc.warn > svg{color:var(--warn)}
+.gl-rc b{font-size:13px}.gl-rc span{grid-column:2;color:var(--muted);line-height:1.35}
+#dlgBody{white-space:pre-line}
 .rc-meter{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px;max-width:320px}
 .rc-meter i{display:block;height:100%;width:0;background:var(--pvw);transition:width .15s linear}
 /* Update ready: a new version of the controller is downloaded */
@@ -1606,6 +1618,10 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <div class="gl-step" id="glVis" hidden>
       <div class="sheet-head"><h2>Who can watch?</h2><span class="step-tag">Step 2 of 2</span></div>
       <div class="vis-grid" id="glVisGrid"></div>
+      <div class="gl-ready" id="glReady">
+        <div class="gl-ready-h"><span class="label">Ready check</span><span class="gl-ready-sum" id="glReadySum">Checking…</span></div>
+        <div class="gl-ready-list" id="glReadyList"></div>
+      </div>
       <div class="vis-summary"><span class="label">Going live as</span><div class="pv-title" id="glSumTitle"></div>
         <span class="vis-note">Only the title, description and privacy are changed. Everything else in OBS's broadcast settings stays as it is, with "Remember these settings" turned on.</span>
       </div>
@@ -2809,6 +2825,7 @@ async function applyOnScreen(){
 }
 async function goExisting(){
   const b = gl.bcList.find(x => x.index === gl.bc);
+  if(!(await glReadyConfirm())) return;
   closeGoLive();
   useGlHymnBook();
   // Speakers chosen for the lower thirds: on screen now, even though they don't change the broadcast
@@ -2848,7 +2865,7 @@ $("glNext").addEventListener("click", () => {
   });
   if(window.lucide) lucide.createIcons();
   $("glSumTitle").textContent = glTitle();
-  glVisRender(); glShow("glVis");
+  glVisRender(); glShow("glVis"); glReadyWatch(true);
 });
 function glVisRender(){
   $("glVisGrid").querySelectorAll(".vis").forEach(b => b.setAttribute("aria-pressed", b.dataset.vis === gl.vis));
@@ -2856,6 +2873,8 @@ function glVisRender(){
 }
 $("glBack").addEventListener("click", () => glShow("glDetails"));
 $("glGo").addEventListener("click", async () => {
+  if(!(await glReadyConfirm())) return;
+  glReadyWatch(false);
   closeGoLive();
   useGlHymnBook();
   const details = {title:glTitle(), desc:glDesc()};
@@ -4833,10 +4852,12 @@ async function readyRun(full = true){
   renderReady();
 }
 function renderReady(){
-  const bad = rd.checks.filter(c => c.state === "bad").length;
-  $("readyDot").hidden = !bad;
+  const bad = rd.checks.filter(c => c.state === "bad").length, warn = rd.checks.filter(c => c.state === "warn").length;
+  // The dot stays while anything is red or yellow, even after going live anyway
+  $("readyDot").hidden = !bad && !warn;
+  renderGlReady();
   $("readyBtn").classList.toggle("ok", !!rd.checks.length && !bad && !rd.checks.some(c => c.state === "warn"));
-  $("readyBtn").setAttribute("aria-label", bad ? `Ready check: ${bad} thing${bad === 1 ? "" : "s"} need${bad === 1 ? "s" : ""} attention` : "Ready check: all good");
+  $("readyBtn").setAttribute("aria-label", bad + warn ? `Ready check: ${bad + warn} thing${bad + warn === 1 ? "" : "s"} need${bad + warn === 1 ? "s" : ""} attention` : "Ready check: all good");
   if($("readyOverlay").hidden) return;
   $("readySum").textContent = !rd.checks.length ? "Checking…" : bad ? `${bad} thing${bad === 1 ? "" : "s"} to fix` : "Ready to go";
   $("readySum").classList.toggle("bad", !!bad);
@@ -4865,6 +4886,41 @@ obs.on("InputVolumeMeters", () => {
   const bar = !$("readyOverlay").hidden && document.querySelector(".rc-meter i");
   if(bar) bar.style.width = Math.max(0, Math.min(100, (ui.lastPeak + 60) / 60 * 100)) + "%";
 });
+/* Go Live, step 2: the same checks in short, kept up to date while that step is open */
+function renderGlReady(){
+  if(!$("glVis") || $("glVis").hidden || $("glOverlay").hidden) return;
+  const list = $("glReadyList"); list.innerHTML = "";
+  const bad = rd.checks.filter(c => c.state === "bad").length, warn = rd.checks.filter(c => c.state === "warn").length;
+  $("glReadySum").textContent = !rd.checks.length ? "Checking…" : !bad && !warn ? "Ready to go"
+    : [bad && `${bad} to fix`, warn && `${warn} to look at`].filter(Boolean).join(", ");
+  $("glReadySum").className = "gl-ready-sum" + (bad ? " bad" : warn ? " warn" : "");
+  rd.checks.forEach(c => {
+    const row = document.createElement("div"); row.className = `gl-rc ${c.state}`;
+    row.innerHTML = `<i data-lucide="${c.state === "ok" ? "circle-check" : c.state === "bad" ? "circle-x" : "circle-alert"}"></i><b></b><span></span>`;
+    row.querySelector("b").textContent = c.title; row.querySelector("span").textContent = c.text;
+    list.appendChild(row);
+  });
+  if(window.lucide) lucide.createIcons();
+}
+let glReadyTimer = null;
+function glReadyWatch(on){
+  clearInterval(glReadyTimer); glReadyTimer = null;
+  if(on){ renderGlReady(); readyRun(); glReadyTimer = setInterval(() => { if($("glOverlay").hidden || $("glVis").hidden) glReadyWatch(false); else readyRun(); }, 3000); }
+}
+/* Before going live: anything red or yellow asks first. Resolves true to go ahead. */
+async function glReadyConfirm(){
+  await readyRun();
+  const issues = rd.checks.filter(c => c.state !== "ok");
+  if(!issues.length) return true;
+  $("glOverlay").hidden = true;
+  const ok = await confirmDlg("Are you sure you want to go live?",
+    `The Ready check found ${issues.length === 1 ? "something" : issues.length + " things"} to look at:\n\n` +
+      issues.map(c => `${c.state === "bad" ? "✕" : "!"}  ${c.title}: ${c.text}`).join("\n") +
+      "\n\nThe Ready check button at the top keeps its red dot until these are sorted.",
+    "Go live anyway", "danger", "Cancel");
+  if(!ok) $("glOverlay").hidden = false;   // back to Go Live, nothing created
+  return ok;
+}
 function openReady(){ $("readyOverlay").hidden = false; renderReady(); readyRun(); clearInterval(rd.timer); rd.timer = setInterval(() => readyRun(), 3000); $("readyClose").focus(); }
 function closeReady(){ $("readyOverlay").hidden = true; clearInterval(rd.timer); rd.timer = null; }
 $("readyBtn").addEventListener("click", openReady);
