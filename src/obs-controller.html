@@ -5892,20 +5892,37 @@ const cvP = $("cvPgm").getContext("2d"), cvV = $("cvPvw").getContext("2d");
 let last = 0;
 /* Desktop app: the real Program and Preview, as small screenshots from OBS about four times a second
    (obs-websocket GetSourceScreenshot). The drawn stand-ins below are only for the prototype. */
-const shotState = {busy:false};
+const shotState = {busy:false, fail:{}};
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("OBS didn't answer in time.")), ms))]);
 async function drawShot(ctx, scene){
-  const r = await obs.call("GetSourceScreenshot", {sourceName:scene, imageFormat:"jpg", imageWidth:854, imageCompressionQuality:75});
-  const img = new Image(); img.src = r.imageData; await img.decode();
+  const r = await withTimeout(obs.call("GetSourceScreenshot", {sourceName:scene, imageFormat:"jpg", imageWidth:854, imageCompressionQuality:75}), 3000);
+  const img = new Image(); img.src = r.imageData; await withTimeout(img.decode(), 3000);
   ctx.drawImage(img, 0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+// When OBS can't give a picture of the scene, say so on the monitor instead of leaving another scene's picture there
+function drawNoShot(ctx, scene, why){
+  const c = ctx, W = c.canvas.width, H = c.canvas.height;
+  c.fillStyle = "#0b1418"; c.fillRect(0, 0, W, H);
+  txt(c, scene, W/2, H*.42, Math.round(H*.09), {w:700});
+  txt(c, "OBS didn't send a picture of this scene", W/2, H*.56, Math.round(H*.045), {w:500, f:BODY, col:"#a8bcc4"});
+  if(why) txt(c, why.length > 80 ? why.slice(0, 78) + "…" : why, W/2, H*.65, Math.round(H*.035), {w:400, f:BODY, col:"#6f8f9a"});
+}
+async function shotOne(ctx, scene, key){
+  try{ await drawShot(ctx, scene); shotState.fail[key] = null; }
+  catch(e){
+    const f = shotState.fail[key] && shotState.fail[key].scene === scene ? shotState.fail[key] : {scene, n:0};
+    f.n++; f.why = (e && (e.message || e.comment)) || String(e); shotState.fail[key] = f;
+    // Twice in a row (half a second) for the same scene: show why, so a stale picture is never mistaken for it
+    if(f.n >= 2){ drawNoShot(ctx, scene, f.why); if(f.n === 2) console.warn(`No picture of "${scene}" from OBS: ${f.why}`); }
+  }
 }
 async function pollShots(){
   if(shotState.busy || ui.connected === false || document.hidden) return;
   shotState.busy = true;
   try{
-    if(ui.program) await drawShot(cvP, ui.program);
-    if(ui.studio && ui.preview) await drawShot(cvV, ui.preview);
-  }catch(e){ /* a scene renamed or removed mid-request: the next round catches up */ }
-  shotState.busy = false;
+    if(ui.program) await shotOne(cvP, ui.program, "pgm");
+    if(ui.studio && ui.preview) await shotOne(cvV, ui.preview, "pvw");
+  }finally{ shotState.busy = false; }
 }
 if(window.bgh) setInterval(pollShots, 250);
 function frame(ts){
