@@ -669,12 +669,21 @@ body.compact .ot-done{min-height:44px}
 /* Settings → Speakers → Sunday School teachers */
 .teach-add,.teach-row{display:grid;grid-template-columns:120px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
 .teach-add .teach-sub,.teach-row .teach-sub{grid-column:1 / 3}
-.teach-row{padding:10px 0;border-bottom:1px solid var(--line)}
-.teach-row .teach-name{grid-column:1 / -1;font-weight:700;font-size:14px}
+.teach-row{padding:8px 0;border-bottom:1px solid var(--line);grid-template-columns:minmax(0,1fr) auto auto}
+.teach-row .teach-name{font-weight:700;font-size:14px;min-width:0}
+.teach-row .btn{min-height:40px;padding:0 14px}
+.teach-fields{grid-column:1 / -1;display:grid;grid-template-columns:120px minmax(0,1fr) minmax(0,1fr);gap:8px}
+.teach-fields[hidden]{display:none}
+.teach-fields .teach-sub{grid-column:1 / -1}
 .teach-row .teach-name small{display:block;font-weight:500;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
 .teach-prev{font-size:13px;color:var(--muted)}
+/* Settings → Scene collections → Lower thirds: the chosen theme's options, and the host, each in a box */
+.opt-box{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;margin-top:4px}
+.opt-box[hidden],.teach-box[hidden]{display:none}
+.opt-box h5{margin:0;font-size:14px;font-weight:700}
+.teach-box{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px}
 .teach-prev:empty{display:none}
-@media (max-width:600px){.teach-add,.teach-row{grid-template-columns:1fr 1fr}.teach-add .teach-sub,.teach-row .teach-sub{grid-column:1 / -1}}
+@media (max-width:600px){.teach-add,.teach-fields{grid-template-columns:1fr 1fr}.teach-add .teach-sub,.teach-fields .teach-sub{grid-column:1 / -1}}
 .lt-row.host-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-auto-rows:minmax(50px,auto)}
 .lt-row.host-two .lt-host{grid-row:1 / span 2;height:auto}
 .lt-chip{flex:1 1 140px;min-height:50px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-size:15px;font-weight:600;text-align:left;min-width:0}
@@ -1164,8 +1173,8 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <input id="setFolder" data-cfg placeholder="C:\Users\Media\Livestream\Schedule" autocomplete="off" spellcheck="false" hidden>
               <span class="path" id="setFolderHint">Each image in the folder becomes a choice in Go Live and on the change button.</span></div>
           </div>
-          <div class="set-section">
-            <h4>Lower third</h4>
+          <div class="set-section" id="setLtSec">
+            <h4>Lower thirds</h4>
             <label class="check" for="setLtOnColl"><input type="checkbox" id="setLtOnColl" data-cfg>
               <span>Lower thirds for this collection<small>The On screen section appears, with Hymn, Bible and a button for each speaker, and Go Live asks for the speakers. When this is off, the whole On screen section is hidden and no lower third can appear in the livestream or a recording, even from OBS.</small></span>
             </label>
@@ -1177,26 +1186,16 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
                 <option value="sundayschool">Sunday School: blue, with bouncing circles</option>
               </select>
               <span class="path" id="setLtThemeHint"></span></div>
-            <div class="field" id="setLtSsMaxField" hidden><label class="label" for="setLtSsMax">Speakers in Go Live</label>
-              <select id="setLtSsMax" data-cfg><option value="1">1 speaker</option><option value="2">Up to 2 speakers</option><option value="3">Up to 3 speakers</option><option value="4">Up to 4 speakers</option></select>
-              <span class="path">Besides the teachers, Go Live and Change Speakers let you choose this many speakers (optional). Each gets a lower third button before the teachers and is named in the livestream description.</span></div>
-            <label class="check" for="setLtSubB" id="setLtSubBField"><input type="checkbox" id="setLtSubB" data-cfg>
-              <span>Show visiting speakers' subtitles<small>Under the name in the Barrington, Christmas or Sunday School lower third, for example the assembly they're from. Home speakers never show a subtitle.</small></span>
-            </label>
-            <label class="check" for="setLtHostOn" id="setLtHostField"><input type="checkbox" id="setLtHostOn" data-cfg>
-              <span>Host<small>An extra lower third button for the host or emcee, before the speakers. It's there for every service in this collection, whoever is speaking.</small></span>
-            </label>
-            <div class="sub-check" id="setLtHostBox" hidden>
-              <div class="field"><label class="label" for="setLtHost">Host</label>
-                <select id="setLtHost" data-cfg></select>
-                <span class="path">From your home and visiting speakers in Settings → Speakers.</span></div>
-              <label class="check" for="setLtHostSubOn"><input type="checkbox" id="setLtHostSubOn" data-cfg>
-                <span>Show a subtitle under the host's name<small>In both themes. Starts as the speaker's subtitle from Settings → Speakers; you can type another, like HOST.</small></span>
+            <div class="opt-box" id="setLtOpts">
+              <h5 id="setLtOptsH">Theme options</h5>
+              <div class="field" id="setLtSsMaxField" hidden><label class="label" for="setLtSsMax">Speakers in Go Live</label>
+                <select id="setLtSsMax" data-cfg><option value="1">1 speaker</option><option value="2">Up to 2 speakers</option><option value="3">Up to 3 speakers</option><option value="4">Up to 4 speakers</option></select>
+                <span class="path">Choosing a speaker is optional. Each speaker gets a lower third button before the teachers and is named in the livestream description.</span></div>
+              <label class="check" for="setLtSubB" id="setLtSubBField"><input type="checkbox" id="setLtSubB" data-cfg>
+                <span>Show visiting speakers' subtitles<small>Under the name, for example the assembly they're from. Home speakers never show a subtitle.</small></span>
               </label>
-              <div class="field" id="setLtHostSubField" hidden><label class="label" for="setLtHostSub">Host subtitle</label>
-                <input id="setLtHostSub" data-cfg maxlength="60" placeholder="HOST" autocomplete="off" spellcheck="false"></div>
-            </div>
-            <div class="field" id="setLtColorField" hidden><label class="label" for="setLtColor">Conference colour</label>
+              <p class="path" id="setLtConfSubNote" hidden>A visiting speaker's subtitle always shows under their name in this theme.</p>
+              <div class="field" id="setLtColorField" hidden><label class="label" for="setLtColor">Conference colour</label>
               <div class="clr-row">
                 <span class="clr-swatch" id="setLtSwatch" aria-hidden="true"></span>
                 <input id="setLtColor" data-cfg maxlength="7" placeholder="#132932" autocomplete="off" spellcheck="false" aria-describedby="setLtColorMsg">
@@ -1205,6 +1204,34 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <div class="clr-prev" id="setLtPrev" aria-hidden="true"><span>Conference</span><b id="setLtDark"></b></div>
               <div class="clr-recent" id="setLtRecent"></div>
               <span class="path" id="setLtColorMsg">A hex code, like #132932. It's shown at the same see-through level as the Barrington lower third.</span></div>
+              <div class="teach-box" id="setTeachBox" hidden>
+                <h5 id="setTeachHdr">Sunday School teachers</h5>
+                <span class="path">Every teacher gets a lower third button, shown as "Mrs. Setty’s Class" with the subtitle under it. Teachers aren't offered in Go Live. The list is shared by every scene collection that uses the Sunday School theme.</span>
+              <div class="spk-list" id="setTeach"></div>
+              <div class="teach-add" role="group" aria-labelledby="setTeachHdr">
+                <select id="setTeachPrefix" data-spk aria-label="Prefix"><option value="">No prefix</option><option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Miss</option></select>
+                <input id="setTeachFirst" data-spk placeholder="First name" aria-label="First name" autocomplete="off" spellcheck="false">
+                <input id="setTeachLast" data-spk placeholder="Last name" aria-label="Last name" autocomplete="off" spellcheck="false">
+                <input id="setTeachSub" data-spk class="teach-sub" placeholder="Subtitle (optional), like Ages 10–12 Class" aria-label="Subtitle" autocomplete="off" enterkeyhint="done">
+                <button type="button" class="btn" id="setTeachAdd">Add</button>
+              </div>
+              <span class="teach-prev" id="setTeachPrev" aria-live="polite"></span>
+              <span class="spk-err" id="setTeachErr" hidden></span>
+              </div>
+            </div>
+            <div class="opt-box" id="setLtHostSec">
+              <h5>Host</h5>
+              <label class="check" for="setLtHostOn" id="setLtHostField"><input type="checkbox" id="setLtHostOn" data-cfg>
+                <span>Allow a host<small>Go Live and Change Speakers get a Host choice, for a host or emcee with their own lower third button before the speakers. Nobody is chosen to start with, every time, and the choice is forgotten when the livestream ends or the controller closes. When this is off, there's no Host choice at all.</small></span>
+              </label>
+              <div class="sub-check" id="setLtHostBox" hidden>
+                <label class="check" for="setLtHostSubOn"><input type="checkbox" id="setLtHostSubOn" data-cfg>
+                  <span>Show a subtitle under the host's name<small>Like HOST. Leave the box empty to use a visiting host's own subtitle from Settings → Speakers.</small></span>
+                </label>
+                <div class="field" id="setLtHostSubField" hidden><label class="label" for="setLtHostSub">Host subtitle</label>
+                  <input id="setLtHostSub" data-cfg maxlength="60" placeholder="HOST" autocomplete="off" spellcheck="false"></div>
+              </div>
+            </div>
           </div>
           <div class="set-section">
             <h4>Audio</h4>
@@ -1239,7 +1266,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
                 <input id="setHomeLbl" placeholder="Barrington Speakers" autocomplete="off"></div>
               <div class="field"><label class="label" for="setMax">Most speakers at once</label><input id="setMax" type="number" min="1" max="10" inputmode="numeric"></div>
             </div>
-            <span class="path">The group name is the heading in the speaker picker.</span>
+            <span class="path">The group name is the heading in the speaker picker. Most speakers at once is for Go Live and Change Speakers; a scene collection with the Sunday School lower third has its own number (Scene collections → Lower thirds). Sunday School teachers are there too.</span>
           </div>
           <div class="set-section">
             <h4 id="setHomeHdr">Barrington Speakers</h4>
@@ -1254,20 +1281,6 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <span class="spk-err" id="setVisitErr" hidden></span>
             <span class="path">Visiting speakers can also be added during Go Live with the + button. A visiting speaker's subtitle shows under their name in the Conference lower third, and in the Barrington and Christmas ones when that's switched on (Settings → Scene collections). Home speakers don't have subtitles.</span>
           </div>
-          <div class="set-section">
-            <h4 id="setTeachHdr">Sunday School teachers</h4>
-            <div class="spk-list" id="setTeach"></div>
-            <div class="teach-add" role="group" aria-labelledby="setTeachHdr">
-              <select id="setTeachPrefix" data-spk aria-label="Prefix"><option value="">No prefix</option><option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Miss</option></select>
-              <input id="setTeachFirst" data-spk placeholder="First name" aria-label="First name" autocomplete="off" spellcheck="false">
-              <input id="setTeachLast" data-spk placeholder="Last name" aria-label="Last name" autocomplete="off" spellcheck="false">
-              <input id="setTeachSub" data-spk class="teach-sub" placeholder="Subtitle (optional), like Ages 10–12 Class" aria-label="Subtitle" autocomplete="off" enterkeyhint="done">
-              <button type="button" class="btn" id="setTeachAdd">Add</button>
-            </div>
-            <span class="teach-prev" id="setTeachPrev" aria-live="polite"></span>
-            <span class="spk-err" id="setTeachErr" hidden></span>
-            <span class="path">When a scene collection's lower third theme is Sunday School, each teacher gets a lower third button, shown as "Mrs. Setty’s Class" with the subtitle under it. Teachers aren't offered in Go Live.</span>
-          </div>
         </section>
 
         <section class="set-page" id="page-ontext" data-page="ontext" role="tabpanel" aria-labelledby="tab-ontext" tabindex="-1" hidden>
@@ -1276,7 +1289,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
           <div class="set-status" id="setOtLtStatus"></div>
           <div class="set-section">
             <h4>Lower thirds</h4>
-            <p class="path">Lower thirds are turned on or off for each scene collection, with its theme and colour, in <b>Scene collections</b>. Each one hides itself after the time set in the Lower Third source in OBS (8 seconds to start with).</p>
+            <p class="path">Lower thirds are set up for each scene collection in <b>Scene collections</b>: on or off, the theme and its options (the Conference colour, the Sunday School teachers), and whether there's a host. Each one hides itself after the time set in the Lower Third source in OBS (8 seconds to start with).</p>
             <div class="btn-row"><button type="button" class="btn" id="setLtGo" data-keep>Open Scene collections</button></div>
           </div>
           <div class="set-section">
@@ -2671,8 +2684,8 @@ $("glHere").addEventListener("click", async () => {
   $("glSpkHint").textContent = ssOn() ? `Optional. ${spkMax() === 1 ? "The speaker gets" : "Each speaker gets"} a lower third button next to the Sunday School teachers and is named in the description.${ui.spkMode === "on" ? " Applying also updates the speakers text in OBS." : ""}`
     : ui.spkMode === "off" && ltOn() ? "For the lower thirds. Names appear in the order you pick them." : speakerHint();
   if(!svcChoosable()) $("glTitleIn").value = gl.customTitle;
-  // Host for the lower thirds (this collection's setting, changeable here)
-  gl.host = hostNow();
+  // Host for the lower thirds: nobody to start with, every time
+  gl.host = {on:false, id:""};
   hostPicker("gl", gl.host, h => { gl.host = h; });
   // Hymn book for this service (only asked when there's more than one)
   gl.hymnBook = ui.ot.book;
@@ -2878,15 +2891,19 @@ async function openQc(){
   hostPicker("qc", qc.host, h => { qc.host = h; renderQc(); });
   const now = hostNow();
   $("qcHostNow").textContent = `Host now: ${now.on ? speakerName(now.id) || "nobody" : "nobody"}`;
+  $("qcHostNow").hidden = !hostAllowed();
   $("qcOverlay").hidden = false; renderQc();
 }
-/* Host, from Go Live or Change Speakers: the same as Settings → Scene collections → Lower third → Host.
-   It's only ever a lower third button, never part of the title, description or speakers text. */
-function hostNow(){ const h = (cfg() || {}).ltHost || {}; return {on:!!h.on && !!h.id, id:h.id || ""}; }
+/* Host, chosen in Go Live or Change Speakers when Settings → Scene collections → Lower thirds → Host allows one.
+   It's only ever a lower third button, never part of the title, description or speakers text.
+   Never saved: nobody to start with, every Go Live, and forgotten when the livestream ends or the controller closes. */
+ui.hostId = "";
+const hostAllowed = () => ltOn() && !!((cfg() || {}).ltHost || {}).on;
+function hostNow(){ return hostAllowed() && ui.hostId ? {on:true, id:ui.hostId} : {on:false, id:""}; }
 // The Host field: like Speakers, a button showing the choice that opens the speakers picker to choose one (or none)
 function hostPicker(prefix, h, onChange){
   const field = $(prefix + "HostField"), btn = $(prefix + "HostBtn");
-  field.hidden = !ltOn();
+  field.hidden = !hostAllowed();
   let cur = {...h};
   const show = () => {
     const name = cur.on ? speakerName(cur.id) : "";
@@ -2900,21 +2917,14 @@ function hostPicker(prefix, h, onChange){
 }
 const hostSame = (a, b) => (!!a.on && !!a.id) === (!!b.on && !!b.id) && (!(a.on && a.id) || a.id === b.id);
 function applyHost(h){
-  const c = cfg();
-  if(!c || !h) return;
-  const was = c.ltHost || {}, on = !!h.on && !!h.id;
-  const next = {...was, on, id:on ? h.id : (was.id || "")};
-  // A different host: a visiting host's own subtitle replaces the old one (as in Settings)
-  if(on && h.id !== was.id){
-    const sp = ui.speakers.visiting.find(x => x.id === h.id);
-    if(sp && sp.subtitle) next.subText = sp.subtitle.trim().toUpperCase();
-  }
-  c.ltHost = next; saveCollCfg(); renderOt();
+  if(!h) return;
+  ui.hostId = hostAllowed() && h.on && h.id ? h.id : "";
+  renderOt();
 }
 function qcChange(){
   const change = {}, names = formatNames(selNames(qc.sel));
   if(ltOn() && qc.sel.length && JSON.stringify(selNames(qc.sel)) !== JSON.stringify(ui.ltPicked)) change.lt = selNames(qc.sel);
-  if(ltOn() && qc.host && !hostSame(qc.host, hostNow())) change.host = qc.host;
+  if(hostAllowed() && qc.host && !hostSame(qc.host, hostNow())) change.host = qc.host;
   const file = ui.files.find(p => noExt(base(p)) === qc.svc);
   if(names && names !== ui.speaker && canWriteSpk()) change.text = names;
   if(file && file !== ui.schedule && canWriteSch()) change.file = file;
@@ -3743,9 +3753,11 @@ async function ltSetTheme(){
 const ltThemeOff = d => (d.theme && d.theme !== ltTheme()) || (ltTheme() === "conference" && d.color && hexColor(d.color) !== ltColor());
 // The host's button (Settings → Scene collections → Lower third → Host), or null when there isn't one
 function ltHost(){
-  const h = (cfg() || {}).ltHost;
-  const sp = h && h.on ? allSpeakers().find(x => x.id === h.id) : null;
-  return sp ? {name:sp.name, subtitle:h.sub ? String(h.subText || "").trim().toUpperCase() : ""} : null;
+  if(!hostAllowed() || !ui.hostId) return null;
+  const h = cfg().ltHost, sp = allSpeakers().find(x => x.id === ui.hostId);
+  if(!sp) return null;
+  const sub = h.sub ? (String(h.subText || "").trim() || String(sp.subtitle || "").trim()).toUpperCase() : "";
+  return {name:sp.name, subtitle:sub};
 }
 // What's on screen is this name with this subtitle (the host and a speaker can share a name)
 const ltIsUp = (name, sub) => ui.lt.showing === name && (ui.lt.subtitle || "") === (sub || "");
@@ -5005,7 +5017,7 @@ function pageSnaps(){
   const out = {};
   Object.keys(SET_PAGES).forEach(p => out[p] = []);
   setFields().forEach(el => { const pg = el.closest(".set-page"); if(pg) out[pg.dataset.page].push(el.type === "checkbox" ? el.checked : el.value); });
-  out.speakers.push(workSpk); out.collections.push(workCfg);
+  out.speakers.push({home:workSpk.home, visiting:workSpk.visiting}); out.collections.push(workCfg, workSpk.teachers);
   Object.keys(out).forEach(p => out[p] = JSON.stringify(out[p]));
   return out;
 }
@@ -5244,7 +5256,7 @@ function syncCfgFields(){
     ltTheme: $("setLtTheme").value,
     ltSubB: $("setLtSubB").checked,
     ssMax: parseInt($("setLtSsMax").value, 10) || 1,
-    ltHost: {on:$("setLtHostOn").checked, id:$("setLtHost").value, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
+    ltHost: {on:$("setLtHostOn").checked, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
     ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
     autoMic: {on: $("setAutoMic").checked,
       scenes: Object.fromEntries([...document.querySelectorAll("#setAutoMicList select")].map(el => [el.dataset.scene, el.value]))}};
@@ -5338,17 +5350,23 @@ const rgba = hex => `rgba(${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,
 ui.ltRecent = (() => { try{ const l = JSON.parse(localStorage.getItem("ltRecentColors")); return Array.isArray(l) ? l.filter(hexColor).slice(0, 2) : []; }catch(e){ return []; } })();
 function renderLtColor(){
   const on = $("setLtOnColl").checked, th = $("setLtTheme").value, conf = th === "conference";
+  const ss = th === "sundayschool";
   $("setLtThemeField").hidden = !on;
-  $("setLtColorField").hidden = !on || !conf;
-  $("setLtSubBField").hidden = !on || conf;
-  $("setLtSsMaxField").hidden = !on || th !== "sundayschool";
+  // The chosen theme's own options, in one box named after it
+  $("setLtOpts").hidden = !on;
+  $("setLtOptsH").textContent = `${({barrington:"Barrington", conference:"Conference", christmas:"Christmas", sundayschool:"Sunday School"})[th] || "Theme"} theme`;
+  $("setLtColorField").hidden = !conf;
+  $("setLtConfSubNote").hidden = !conf;
+  $("setLtSubBField").hidden = conf;
+  $("setLtSsMaxField").hidden = !ss;
+  $("setTeachBox").hidden = !ss;
   $("setLtThemeHint").textContent = {
     barrington:"The hymn and Bible box is the same dark blue-green.",
-    conference:"The name and a visiting speaker's subtitle (Settings → Speakers) look the same as Barrington. Behind them, \"Conference\" in script, in a darker shade of the colour below, is part of the box: it's uncovered as the box opens and drifts slowly left. The hymn and Bible box takes the colour below.",
+    conference:"The name and a visiting speaker's subtitle look the same as Barrington. Behind them, \"Conference\" in script, in a darker shade of the colour below, is part of the box: it's uncovered as the box opens and drifts slowly left. The hymn and Bible box takes the colour below.",
     christmas:"Red, see-through like Barrington. A sprig and star fade in on its left edge before the name. The hymn and Bible box is red too.",
-    sundayschool:"Solid blue with darker circles bouncing inside. The lower third buttons are the speaker chosen in Go Live (optional) and your Sunday School teachers (Settings → Speakers), with their class subtitles. The hymn and Bible box is blue too."
+    sundayschool:"Solid blue with darker circles bouncing inside. The lower third buttons are the speaker chosen in Go Live (optional) and the Sunday School teachers below, with their class subtitles. The hymn and Bible box is blue too."
   }[th] || "";
-  $("setLtHostField").hidden = !on;
+  $("setLtHostSec").hidden = !on;
   $("setLtHostBox").hidden = !on || !$("setLtHostOn").checked;
   $("setLtHostSubField").hidden = !$("setLtHostSubOn").checked;
   const v = $("setLtColor").value, hex = hexColor(v);
@@ -5382,34 +5400,16 @@ function rememberLtColor(hex){
 $("setLtTheme").addEventListener("change", renderLtColor);
 $("setLtOnColl").addEventListener("change", renderLtColor);
 $("setLtHostOn").addEventListener("change", renderLtColor);
-$("setLtHostSubOn").addEventListener("change", () => { hostSubDefault(); renderLtColor(); });
-$("setLtHost").addEventListener("change", () => hostSubDefault(true));
+$("setLtHostSubOn").addEventListener("change", renderLtColor);
 $("setLtHostSub").addEventListener("input", () => {
   const el = $("setLtHostSub"), at = el.selectionStart; el.value = el.value.toUpperCase(); el.setSelectionRange(at, at);
 });
-/* Host: the speakers to choose from (home, then visiting), and the subtitle it starts with */
+/* Host (Settings): whether there's a Host choice, and its subtitle. Who the host is, is chosen each time. */
 function fillLtHost(h){
   h = h || {};
-  const sel = $("setLtHost"); sel.innerHTML = "";
-  const group = (label, list) => {
-    if(!list.length) return;
-    const g = document.createElement("optgroup"); g.label = label;
-    byLastName(list).forEach(sp => { const o = document.createElement("option"); o.value = sp.id; o.textContent = sp.name; g.appendChild(o); });
-    sel.appendChild(g);
-  };
-  const none = document.createElement("option"); none.value = ""; none.textContent = "Choose the host"; sel.appendChild(none);
-  group(homeLabel(), ui.speakers.home); group("Visiting speakers", ui.speakers.visiting);
-  sel.value = allSpeakers().some(sp => sp.id === h.id) ? h.id : "";
   $("setLtHostOn").checked = !!h.on;
   $("setLtHostSubOn").checked = !!h.sub;
   $("setLtHostSub").value = h.subText || "";
-}
-// A visiting host's own subtitle fills the box when it's empty (or when a different host is chosen)
-function hostSubDefault(changedHost){
-  const sp = ui.speakers.visiting.find(x => x.id === $("setLtHost").value);
-  const own = sp && sp.subtitle ? sp.subtitle.trim().toUpperCase() : "";
-  const box = $("setLtHostSub");
-  if(!box.value.trim() || (changedHost && own)) box.value = own;
 }
 $("setLtGo").addEventListener("click", () => { showSetPage("collections"); const el = $("setLtOnColl").closest(".set-section"); el.scrollIntoView?.({block:"center"}); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); });
 // Each valid colour counts the moment it's in the box, so a later mistype falls back to it on Apply
@@ -5733,6 +5733,9 @@ function renderSetTeachers(){
   byFirstName(workSpk.teachers).forEach(t => {
     const row = document.createElement("div"); row.className = "teach-row";
     const name = document.createElement("div"); name.className = "teach-name";
+    // One line per teacher; Edit opens the fields
+    const edit = document.createElement("button");
+    edit.type = "button"; edit.className = "btn teach-edit"; edit.textContent = "Edit"; edit.setAttribute("aria-expanded", "false");
     const paint = () => { name.textContent = (t.first || t.last) ? teacherTitle(t) : "(no name)"; const sm = document.createElement("small"); sm.textContent = t.subtitle || ""; name.appendChild(sm); updateSetDots(); };
     const f = teacherFields(t, paint);
     const del = document.createElement("button");
@@ -5742,7 +5745,11 @@ function renderSetTeachers(){
       workSpk.teachers = workSpk.teachers.filter(x => x !== t); renderSetSpk();
     });
     paint();
-    row.append(name, f.pre, f.first, f.last, f.sub, del); el.appendChild(row);
+    const fields = document.createElement("div"); fields.className = "teach-fields"; fields.hidden = true;
+    fields.append(f.pre, f.first, f.last, f.sub);
+    edit.addEventListener("click", () => { fields.hidden = !fields.hidden; edit.textContent = fields.hidden ? "Edit" : "Done"; edit.setAttribute("aria-expanded", String(!fields.hidden)); if(!fields.hidden) f.first.focus(); });
+    edit.setAttribute("aria-label", `Edit ${name.firstChild ? name.firstChild.textContent : "teacher"}`);
+    row.append(name, edit, del, fields); el.appendChild(row);
   });
 }
 // The new-teacher row: shows how it will look as you type
@@ -6149,7 +6156,7 @@ obs.on("StreamStateChanged", d => {
   ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive();
   if(startedHere) comeBackAfterGoingLive();
   if(d.outputActive) startOnTitle().then(scene => autoMuteAtStart(scene));
-  else cancelAutoEnd();
+  else{ cancelAutoEnd(); if(ui.hostId){ ui.hostId = ""; renderOt(); } }   // the host is for this livestream only
 });
 /* "Start the livestream on the title slide": the collection's Waiting title slide (or a scene called
    Title Slide) goes to Program as soon as the stream starts, however it was started. */
