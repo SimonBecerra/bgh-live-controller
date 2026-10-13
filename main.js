@@ -162,6 +162,10 @@ async function saveHymnBook(book){
   await fsp.rename(file + ".tmp", file);   // written whole, so a crash can't leave half a book
   return true;
 }
+/* Viewer count: asks YouTube how many are watching (key kept encrypted as "ytKey") */
+const youtube = require("./youtube")({fetch:(u, o) => net.fetch(u, o), getSecret:async k => getSecret(k)});
+ipcMain.handle("youtube-viewers", (e, q) => youtube.viewers(q || {}));
+ipcMain.handle("youtube-test", (e, q) => youtube.test(q || {}));
 ipcMain.handle("bible-status", () => bible.status());
 ipcMain.handle("bible-lookup", (e, q) => bible.lookup(q || {}));
 ipcMain.handle("hymns-list", () => listHymnBooks());
