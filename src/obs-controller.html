@@ -4655,11 +4655,26 @@ async function pollHealth(){
 }
 setInterval(pollHealth, 2000);
 
-/* OBS's CPU use and frame rate, above the Program screen. obs-websocket GetStats: cpuUsage is OBS's share of
-   the whole processor (%), activeFps is what OBS is actually rendering. Averaged over the last 3 readings. */
+/* CPU use and frame rate, above the Program screen: OBS and the controller, each as a share of the whole processor.
+   obs-websocket GetStats: cpuUsage is OBS's share (%), activeFps is what OBS is actually rendering. The desktop app
+   reports the controller's own share and the whole computer's. Averaged over the last 3 readings. */
+let appCpuSamples = [];
+async function pollAppCpu(){
+  let r = null;
+  try{ r = window.bgh && window.bgh.appCpu ? await window.bgh.appCpu() : null; }catch(e){}
+  // #proto-start
+  if(!window.bgh) r = {percent:1.5 + Math.random() * 2.5, memMB:180 + Math.random() * 20, system:(ui.cpuInfo ? ui.cpuInfo.cpu : 12) + 14 + Math.random() * 8};
+  // #proto-end
+  if(!r) return null;
+  appCpuSamples = [...appCpuSamples, r].slice(-3);
+  const avg = k => { const v = appCpuSamples.filter(x => typeof x[k] === "number"); return v.length ? v.reduce((t, x) => t + x[k], 0) / v.length : null; };
+  return {app:avg("percent"), appMem:avg("memMB"), system:avg("system")};
+}
 let cpuSamples = [], targetFps = null;
 async function pollCpu(){
-  if(ui.connected === false){ cpuSamples = []; $("cpuChip").className = "cpu-chip mono"; $("cpuTxt").textContent = "CPU —"; return; }
+  const me = await pollAppCpu();
+  const meTxt = me && me.app != null ? ` · Controller ${Math.round(me.app)}%` : "";
+  if(ui.connected === false){ cpuSamples = []; $("cpuChip").className = "cpu-chip mono"; $("cpuTxt").textContent = "OBS —" + meTxt; ui.cpuInfo = null; ui.appCpu = me; return; }
   let st; try{ st = await obs.call("GetStats"); }catch(e){ return; }
   if(targetFps === null){ try{ const v = await obs.call("GetVideoSettings"); targetFps = v.fpsNumerator / v.fpsDenominator; }catch(e){ targetFps = 30; } }
   cpuSamples = [...cpuSamples, st].slice(-3);
@@ -4668,8 +4683,9 @@ async function pollCpu(){
   const slow = fps < targetFps * 0.95;
   const level = cpu >= 90 || fps < targetFps * 0.85 ? "bad" : cpu >= 75 || slow ? "warn" : "";
   $("cpuChip").className = "cpu-chip mono " + level;
-  $("cpuTxt").textContent = `CPU ${Math.round(cpu)}%` + (slow ? ` · ${fps.toFixed(0)}/${Math.round(targetFps)} fps` : "");
-  ui.cpuInfo = {cpu, fps, mem, render, level};
+  $("cpuTxt").textContent = `OBS ${Math.round(cpu)}%` + meTxt + (slow ? ` · ${fps.toFixed(0)}/${Math.round(targetFps)} fps` : "");
+  $("cpuChip").setAttribute("aria-label", `CPU: OBS ${Math.round(cpu)}%${me && me.app != null ? `, controller ${Math.round(me.app)}%` : ""}. Tap for details.`);
+  ui.cpuInfo = {cpu, fps, mem, render, level}; ui.appCpu = me;
 }
 setInterval(pollCpu, 2000); pollCpu();
 obs.on("ConnectionClosed", () => { targetFps = null; });
@@ -4677,7 +4693,10 @@ $("cpuChip").addEventListener("click", () => {
   const c = ui.cpuInfo; if(!c) return toast("Not connected to OBS");
   const note = c.level === "bad" ? " The computer is struggling: close other programs, or lower OBS's output settings."
              : c.level === "warn" ? " Running high. Close other programs if it stays there." : "";
-  toast(`OBS: ${Math.round(c.cpu)}% CPU · ${c.fps.toFixed(1)} of ${Math.round(targetFps || 30)} fps · ${Math.round(c.mem)} MB memory · ${c.render.toFixed(1)} ms per frame.${note}`);
+  const a = ui.appCpu;
+  toast(`OBS: ${Math.round(c.cpu)}% CPU · ${c.fps.toFixed(1)} of ${Math.round(targetFps || 30)} fps · ${Math.round(c.mem)} MB memory · ${c.render.toFixed(1)} ms per frame.` +
+    (a && a.app != null ? ` Controller: ${Math.round(a.app)}% CPU · ${Math.round(a.appMem)} MB memory.` : "") +
+    (a && a.system != null ? ` Whole computer: ${Math.round(a.system)}% CPU.` : "") + note);
 });
 
 /* Open with OBS / close with OBS (the desktop app and the companion plug-in do the actual launching and closing) */
