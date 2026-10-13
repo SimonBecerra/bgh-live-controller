@@ -2771,7 +2771,12 @@ async function openGoLive(){
   glShow("glChoose"); $("glOverlay").hidden = false;
 }
 function closeGoLive(){ $("glOverlay").hidden = true; document.activeElement?.blur(); }
-document.querySelectorAll("[data-gl-close]").forEach(b => b.addEventListener("click", closeGoLive));
+// Baptism names are never kept: cleared on Cancel, and as soon as going live has used them
+function forgetBap(){
+  gl.bap = [{name:"", reader:"", rel:ui.bapRels[0] || ""}]; gl.bapFor = null;
+  const l = $("glBapList"); l.innerHTML = ""; l._arr = null;
+}
+document.querySelectorAll("[data-gl-close]").forEach(b => b.addEventListener("click", () => { closeGoLive(); forgetBap(); }));
 $("glObs").addEventListener("click", () => { closeGoLive(); openObsStream(); });
 $("glHere").addEventListener("click", async () => {
   // Re-read the Schedule folder every time, so added or removed images show up as service types
@@ -3004,6 +3009,7 @@ async function goExisting(){
   applyBapReaders();
   if(gl.sel.length) setLtPicked(selNames(gl.sel));
   if(gl.sel.length || bapActive()) await applySpeakersOnly();
+  forgetBap();
   ui.streamPending = Date.now(); ui.streamMsg = "Starting in OBS…"; renderOutputs();
   toast("Starting the selected broadcast in OBS…");
   try{
@@ -3058,12 +3064,13 @@ $("glGo").addEventListener("click", async () => {
   // Each part only applies when the default collection actually has that source.
   await applyOnScreen();
   applyBapReaders();
+  forgetBap();   // the title, description and readers are made; the names aren't kept
   if(ltOn()) applyHost(gl.host);
   if(gl.sel.length) setLtPicked(selNames(gl.sel));
   toast("Setting up the YouTube broadcast in OBS…");
   try{
     await vendorJob("StartYouTubeBroadcast",
-      {mode:"new", title:glTitle(), description:glDesc(), privacyStatus:gl.vis.toLowerCase(), rememberSettings:true}, "BroadcastResult", 120000);
+      {mode:"new", title:details.title, description:details.desc, privacyStatus:gl.vis.toLowerCase(), rememberSettings:true}, "BroadcastResult", 120000);
     ui.streamMsg = null; renderOutputs();
     toast(`Live on YouTube · ${gl.vis}`);
     gl.sel = [];  // selection stays with this setup only until the stream starts
@@ -3167,7 +3174,8 @@ $("qcBapAdd").addEventListener("click", () => {
   const c = $("qcBapList").querySelectorAll(".bap-name"); if(c.length) c[c.length - 1].focus();
 });
 $("defWarn").addEventListener("click", () => settingsGoTo("collections", "setCfgColl"));
-$("qcCancel").addEventListener("click", () => $("qcOverlay").hidden = true);
+function forgetQcBap(){ qc.bap = [{name:"", reader:"", rel:ui.bapRels[0] || ""}]; const l = $("qcBapList"); l.innerHTML = ""; l._arr = null; }
+$("qcCancel").addEventListener("click", () => { $("qcOverlay").hidden = true; forgetQcBap(); });
 $("qcSpkBtn").addEventListener("click", () => openSpk(qc.sel, sel => { qc.sel = sel; renderQc(); }));
 $("qcApply").addEventListener("click", async () => {
   const change = qcChange();
@@ -3180,6 +3188,7 @@ $("qcApply").addEventListener("click", async () => {
       (ui.stream.active ? " You're live, so viewers will see the change right away. The YouTube title and description can't be changed from the controller while live. To update them, edit the broadcast in YouTube Studio." : ""),
     "OK", "primary", "Cancel");
   if(!ok){ $("qcOverlay").hidden = false; return; }
+  forgetQcBap();   // used now; the names aren't kept
   if(change.lt) setLtPicked(change.lt);
   if(change.bap){ ui.bapReaders = change.bap; renderOt(); if(Object.keys(change).length === 1) return toast("Testimony lower thirds updated"); }
   if(change.host){ applyHost(change.host); if(Object.keys(change).length === 1) return toast(change.host.on ? "Host lower third updated" : "Host lower third switched off"); }
