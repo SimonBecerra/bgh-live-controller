@@ -615,6 +615,10 @@ body.compact .ot-done{min-height:44px}
 .btn.live{background:var(--panel-2);border-color:var(--pgm);color:var(--fg);box-shadow:inset 0 0 0 1px var(--pgm)}
 .lt-wrap{display:flex;flex-direction:column;gap:8px}
 .lt-row{display:flex;flex-wrap:wrap;gap:8px}
+.lt-row.host-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-auto-rows:minmax(50px,auto)}
+.lt-row.host-two .lt-host{grid-row:1 / span 2;height:auto}
+.host-pick{display:grid;gap:8px}
+.host-pick select{max-width:420px}
 .lt-chip{flex:1 1 140px;min-height:50px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-size:15px;font-weight:600;text-align:left;min-width:0}
 .lt-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .lt-chip svg{width:20px;height:20px;flex:none;color:var(--muted)}
@@ -1445,6 +1449,12 @@ body.compact .lt-chip{min-height:42px}
             <button class="spk-trigger" id="glSpkBtn" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="glSpkLbl glSpkVal"><span id="glSpkVal"></span><i data-lucide="chevron-down"></i></button>
             <span class="path" id="glSpkHint">Names appear in the order you pick them. To remove a visiting speaker, select them first.</span>
           </div>
+          <div class="field host-pick" id="glHostField" hidden>
+            <label class="check" for="glHostOn"><input type="checkbox" id="glHostOn">
+              <span>Host<small>An extra lower third button for the host or emcee. The host isn't put in the title or description.</small></span>
+            </label>
+            <select id="glHost" aria-label="Host" hidden></select>
+          </div>
           <div class="field" id="glHbField" hidden><span class="label">Hymn book</span>
             <div class="book-chips" id="glHb"></div>
             <span class="path">Used for hymns during this service. You can also switch on the Hymn screen.</span>
@@ -1511,6 +1521,12 @@ body.compact .lt-chip{min-height:42px}
       <div class="field" id="qcSpkField"><span class="label" id="qcSpkLbl">Speakers</span>
         <button class="spk-trigger" id="qcSpkBtn" aria-haspopup="dialog" aria-labelledby="qcSpkLbl qcSpkVal"><span id="qcSpkVal"></span><i data-lucide="chevron-down"></i></button>
         <span class="path" id="qcSpkNow"></span>
+      </div>
+      <div class="field host-pick" id="qcHostField" hidden>
+        <label class="check" for="qcHostOn"><input type="checkbox" id="qcHostOn">
+          <span>Host<small>An extra lower third button for the host or emcee.</small></span>
+        </label>
+        <select id="qcHost" aria-label="Host" hidden></select>
       </div>
       <div class="field" id="qcSvcField"><span class="label" id="qcSvcLbl">Schedule</span>
         <div class="svc-grid" id="qcSvc"></div>
@@ -2485,6 +2501,9 @@ $("glHere").addEventListener("click", async () => {
   $("glSvcHint").textContent = `The ${svcLabel()} image in OBS switches to this when you go live.`;
   $("glSpkHint").textContent = ui.spkMode === "off" && ltOn() ? "For the lower thirds. Names appear in the order you pick them." : speakerHint();
   if(!svcChoosable()) $("glTitleIn").value = gl.customTitle;
+  // Host for the lower thirds (this collection's setting, changeable here)
+  gl.host = hostNow();
+  hostPicker("gl", gl.host, h => { gl.host = h; });
   // Hymn book for this service (only asked when there's more than one)
   gl.hymnBook = ui.ot.book;
   $("glHbField").hidden = ui.hymnBooks.length < 2 || !ltOn();   // no on-screen text for this collection: no hymn book to ask about
@@ -2609,6 +2628,7 @@ async function goExisting(){
   closeGoLive();
   useGlHymnBook();
   // Speakers chosen for the lower thirds: on screen now, even though they don't change the broadcast
+  if(ltOn()) applyHost(gl.host);
   if(gl.sel.length){ setLtPicked(selNames(gl.sel)); await applySpeakersOnly(); }
   ui.streamPending = Date.now(); ui.streamMsg = "Starting in OBS…"; renderOutputs();
   toast("Starting the selected broadcast in OBS…");
@@ -2661,6 +2681,7 @@ $("glGo").addEventListener("click", async () => {
   // Goes to the default collection: right away if it's loaded, otherwise when it's next loaded.
   // Each part only applies when the default collection actually has that source.
   await applyOnScreen();
+  if(ltOn()) applyHost(gl.host);
   if(gl.sel.length) setLtPicked(selNames(gl.sel));
   toast("Setting up the YouTube broadcast in OBS…");
   try{
@@ -2677,16 +2698,51 @@ $("glGo").addEventListener("click", async () => {
    service types as Go Live. Writes to the default scene collection, or
    saves until it's loaded. Only what you change is sent.
 ------------------------------------------------------------------- */
-const qc = {sel:[], svc:""};
+const qc = {sel:[], svc:"", host:null};
 async function openQc(){
   await listServiceFiles();
   const cur = ui.schedule ? noExt(base(ui.schedule)) : "";
   qc.sel = []; qc.svc = ui.files.some(p => noExt(base(p)) === cur) ? cur : "";
+  qc.host = hostNow();
+  hostPicker("qc", qc.host, h => { qc.host = h; renderQc(); });
   $("qcOverlay").hidden = false; renderQc();
+}
+/* Host, from Go Live or Change Speakers: the same as Settings → Scene collections → Lower third → Host.
+   It's only ever a lower third button, never part of the title, description or speakers text. */
+function hostNow(){ const h = (cfg() || {}).ltHost || {}; return {on:!!h.on && !!h.id, id:h.id || ""}; }
+function hostPicker(prefix, h, onChange){
+  const field = $(prefix + "HostField"), on = $(prefix + "HostOn"), sel = $(prefix + "Host");
+  field.hidden = !ltOn();
+  sel.innerHTML = "";
+  const opt = (v, t, parent) => { const o = document.createElement("option"); o.value = v; o.textContent = t; parent.appendChild(o); };
+  opt("", "Choose the host", sel);
+  [[homeLabel(), ui.speakers.home], ["Visiting speakers", ui.speakers.visiting]].forEach(([label, list]) => {
+    if(!list.length) return;
+    const g = document.createElement("optgroup"); g.label = label;
+    byLastName(list).forEach(sp => opt(sp.id, sp.name, g));
+    sel.appendChild(g);
+  });
+  on.checked = h.on; sel.value = h.id; sel.hidden = !h.on;
+  const changed = () => { sel.hidden = !on.checked; onChange({on:on.checked, id:sel.value}); };
+  on.onchange = changed; sel.onchange = changed;
+}
+const hostSame = (a, b) => (!!a.on && !!a.id) === (!!b.on && !!b.id) && (!(a.on && a.id) || a.id === b.id);
+function applyHost(h){
+  const c = cfg();
+  if(!c || !h) return;
+  const was = c.ltHost || {}, on = !!h.on && !!h.id;
+  const next = {...was, on, id:on ? h.id : (was.id || "")};
+  // A different host: a visiting host's own subtitle replaces the old one (as in Settings)
+  if(on && h.id !== was.id){
+    const sp = ui.speakers.visiting.find(x => x.id === h.id);
+    if(sp && sp.subtitle) next.subText = sp.subtitle.trim().toUpperCase();
+  }
+  c.ltHost = next; saveCollCfg(); renderOt();
 }
 function qcChange(){
   const change = {}, names = formatNames(selNames(qc.sel));
   if(ltOn() && qc.sel.length && JSON.stringify(selNames(qc.sel)) !== JSON.stringify(ui.ltPicked)) change.lt = selNames(qc.sel);
+  if(ltOn() && qc.host && !hostSame(qc.host, hostNow())) change.host = qc.host;
   const file = ui.files.find(p => noExt(base(p)) === qc.svc);
   if(names && names !== ui.speaker && canWriteSpk()) change.text = names;
   if(file && file !== ui.schedule && canWriteSch()) change.file = file;
@@ -2726,13 +2782,14 @@ $("qcApply").addEventListener("click", async () => {
   const change = qcChange();
   $("qcOverlay").hidden = true;
   // Reminder: this only changes what's shown in the video, not the YouTube title or description
-  const what = [(change.text != null || change.lt) && "speakers", change.file != null && svcLabel()].filter(Boolean).join(" and ");
+  const what = [(change.text != null || change.lt) && "speakers", change.host && "host", change.file != null && svcLabel()].filter(Boolean).join(" and ");
   const ok = await confirmDlg("Only the on-screen display changes",
     `The ${what} shown in the livestream video will change. The YouTube title and description stay the same.` +
       (ui.stream.active ? " You're live, so viewers will see the change right away. The YouTube title and description can't be changed from the controller while live. To update them, edit the broadcast in YouTube Studio." : ""),
     "OK", "primary", "Cancel");
   if(!ok){ $("qcOverlay").hidden = false; return; }
   if(change.lt) setLtPicked(change.lt);
+  if(change.host){ applyHost(change.host); if(Object.keys(change).length === 1) return toast(change.host.on ? "Host lower third updated" : "Host lower third switched off"); }
   try{
     const r = await setDefaultSources(change);
     toast(r.done.length ? `Updated ${r.done.join(" and ")} in OBS` : "Lower third names updated");
@@ -3396,6 +3453,7 @@ function renderOt(){
   const row = $("ltRow"); row.innerHTML = "";
   if(ltOn() && !it){
     const names = ltNames(), host = ltHost();
+    row.classList.toggle("host-two", !!host && names.length === 2);
     if(host){
       const b = document.createElement("button");
       b.className = "lt-chip lt-host"; b.type = "button";
