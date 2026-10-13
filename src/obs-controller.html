@@ -784,6 +784,10 @@ body.compact .lt-chip{min-height:42px}
 .hb-logo-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .hb-logo-row .btn{min-height:46px;font-size:14px;flex:none}
 .hb-logo-row .hb-logo{width:64px;height:64px}
+/* Logo preview at its 10 × 5.12 shape, on the stream's box colour so a transparent logo can be judged */
+.hb-wide{width:150px;height:77px;border-radius:8px;object-fit:contain;flex:none;background:#132932;padding:6px;box-sizing:border-box}
+span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
+.no-logo{font-family:Georgia,"Times New Roman",serif}
 .hb-warns{border-left:3px solid var(--warn);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:6px}
 .hb-warns ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.4;color:var(--fg);max-height:180px;overflow-y:auto}
 .tr-list{display:flex;flex-direction:column;gap:6px}
@@ -1602,7 +1606,10 @@ body.compact .lt-chip{min-height:42px}
     <div class="field"><label class="label" for="hbShort">Short name (optional)</label><input id="hbShort" autocomplete="off" maxlength="12" placeholder="For example HOW"></div>
     <div class="field"><span class="label">Logo</span>
       <div class="hb-logo-row"><span id="hbLogo"></span><button type="button" class="btn" id="hbLogoBtn"><i data-lucide="image"></i> Choose image…</button><button type="button" class="btn" id="hbLogoClear">Remove logo</button></div>
-      <span class="path">Shown with the hymn number on the stream. A square PNG with a transparent or plain background looks best.</span></div>
+      <span class="path">Shown with the hymn number on the stream. A wide image, 10 × 5.12 (for example 1000 × 512 pixels), with a transparent background. Without one, the book's name is shown.</span></div>
+    <div class="field"><span class="label">Icon</span>
+      <div class="hb-logo-row"><span id="hbIcon"></span><button type="button" class="btn" id="hbIconBtn"><i data-lucide="image"></i> Choose image…</button><button type="button" class="btn" id="hbIconClear">Remove icon</button></div>
+      <span class="path">Square (1 × 1). Shown on the hymn book buttons in the controller. Without one, the first letter of the short name is shown.</span></div>
     <div class="hb-warns" id="hbWarns" hidden></div>
     <div class="apply-row"><button type="button" class="btn" id="hbCancel">Cancel</button><button type="button" class="btn primary" id="hbSave">Save hymn book</button></div>
   </div>
@@ -3663,14 +3670,16 @@ async function loadHymnBooks(){
   try{ list = await hymnStore.list(); }catch(e){}
   // #proto-start  the prototype starts with the sample book from the template
   // and a second sample book, so switching hymn books can be tried
-  if(!list){ const s = parseHymnBook(HYMN_TEMPLATE).book; list = [{id:"sample", ...s, logo:sampleLogo()}]; }
-  if(!list.some(b => b.id === "sample2")) list = list.concat({id:"sample2", ...parseHymnBook(SAMPLE_BOOK_2).book, logo:sampleLogo("GS", "#1f3a5f", "#ffffff")});
+  if(!list){ const s = parseHymnBook(HYMN_TEMPLATE).book; list = [{id:"sample", ...s, icon:sampleLogo(), logo:sampleWideLogo("SAMPLE", "HYMNS")}]; }
+  if(!list.some(b => b.id === "sample2")) list = list.concat({id:"sample2", ...parseHymnBook(SAMPLE_BOOK_2).book, icon:sampleLogo("GS", "#1f3a5f", "#ffffff"), logo:sampleWideLogo("GOSPEL", "SONGS")});
   // #proto-end
   ui.hymnBooks = (list || []).sort((a, b) => a.name.localeCompare(b.name));
   if(!bookById(ui.ot.book)){ ui.ot.book = ui.hymnBooks[0] ? ui.hymnBooks[0].id : ""; saveOt(); }
   if(!$("setOverlay").hidden) renderHbList();
 }
 // #proto-start
+// A wide (10 × 5.12) sample logo: white serif words on a transparent background
+function sampleWideLogo(a, b){ return "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 512"><g fill="#fff" font-family="Georgia" font-weight="700" text-anchor="middle"><text x="500" y="230" font-size="190">${a}</text><text x="500" y="420" font-size="150">${b}</text></g></svg>`); }
 function sampleLogo(t = "SH", bg = "#c9a45c", fg = "#12213d"){ return "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="16" fill="${bg}"/><text x="60" y="80" font-family="Georgia" font-size="56" font-weight="700" text-anchor="middle" fill="${fg}">${t}</text></svg>`); }
 // A second sample book (public-domain hymns)
 const SAMPLE_BOOK_2 = `Hymn book: Gospel Songs
@@ -3772,7 +3781,12 @@ In His arms He'll take and shield thee;
 Thou wilt find a solace there.
 `;
 // #proto-end
-const bookLogo = (b, cls = "") => b && b.logo ? `<img class="${cls}" alt="" src="${esc(b.logo)}">` : `<span class="${cls} no-logo" aria-hidden="true">${esc((b && (b.short || b.name) || "?").slice(0, 3))}</span>`;
+// The book's icon (square) for the controller's buttons; without one, the first letter of the short name
+const bookLetter = b => ((b && (b.short || b.name) || "?").trim()[0] || "?").toUpperCase();
+const bookIcon = (b, cls = "") => b && b.icon ? `<img class="${cls}" alt="" src="${esc(b.icon)}">` : `<span class="${cls} no-logo" aria-hidden="true">${esc(bookLetter(b))}</span>`;
+// The book's logo (wide, 10 × 5.12) as it goes on the stream; only previewed in Settings
+const bookLogoWide = b => b && b.logo ? `<img class="hb-wide" alt="" src="${esc(b.logo)}">` : `<span class="hb-wide no-logo" aria-hidden="true">No logo</span>`;
+const bookLogo = bookIcon;
 function bookChips(el, selected, onPick){
   el.innerHTML = "";
   ui.hymnBooks.forEach(b => {
@@ -4102,7 +4116,7 @@ $("hbFile").addEventListener("change", async e => {
   if(!book.hymns.length) return infoDlg("No hymns found in that file", warnings.map(w => w.msg).join(" ") || "Each hymn starts with a line like \"Hymn 1: Title\".");
   const old = hbUpdating;
   hbOpen({id:old ? old.id : "hb" + Date.now().toString(36), name:book.name || (old && old.name) || f.name.replace(/\.[^.]+$/, ""),
-    short:book.short || (old && old.short) || "", logo:old ? old.logo : "", hymns:book.hymns, file:f.name}, warnings, old);
+    short:book.short || (old && old.short) || "", logo:old ? old.logo : "", icon:old ? (old.icon || "") : "", hymns:book.hymns, file:f.name}, warnings, old);
 });
 function hbOpen(draft, warnings, replacing){
   hbDraft = draft;
@@ -4122,19 +4136,32 @@ function hbOpen(draft, warnings, replacing){
   w.hidden = !warnings.length;
   $("hbOverlay").hidden = false; $("hbName").focus();
 }
-function hbRenderLogo(){ $("hbLogo").innerHTML = bookLogo(hbDraft, "hb-logo"); $("hbLogoClear").hidden = !hbDraft.logo; }
-$("hbLogoBtn").addEventListener("click", () => { $("hbImg").value = ""; $("hbImg").click(); });
+function hbRenderLogo(){
+  $("hbLogo").innerHTML = bookLogoWide(hbDraft); $("hbLogoClear").hidden = !hbDraft.logo;
+  $("hbIcon").innerHTML = bookIcon(hbDraft, "hb-logo"); $("hbIconClear").hidden = !hbDraft.icon;
+}
+let hbImgFor = "logo";
+$("hbLogoBtn").addEventListener("click", () => { hbImgFor = "logo"; $("hbImg").value = ""; $("hbImg").click(); });
+$("hbIconBtn").addEventListener("click", () => { hbImgFor = "icon"; $("hbImg").value = ""; $("hbImg").click(); });
 $("hbLogoClear").addEventListener("click", () => { hbDraft.logo = ""; hbRenderLogo(); });
-// The logo is shrunk to fit 320 × 320 and kept with the book, so it travels to OBS with each hymn
+$("hbIconClear").addEventListener("click", () => { hbDraft.icon = ""; hbRenderLogo(); });
+$("hbShort").addEventListener("input", () => { if(hbDraft){ hbDraft.short = $("hbShort").value.trim(); hbRenderLogo(); } });
+/* Images are shrunk and kept with the book. The logo travels to OBS with each hymn, so it's kept to
+   800 × 410 at most (sharp on a 1080p stream); the icon to 160 × 160. */
 $("hbImg").addEventListener("change", async e => {
   const f = e.target.files && e.target.files[0]; if(!f) return;
   try{
     const url = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
     const img = new Image(); img.src = url; await img.decode();
-    const k = Math.min(1, 320 / Math.max(img.naturalWidth, img.naturalHeight));
+    const [mw, mh] = hbImgFor === "icon" ? [160, 160] : [800, 410];
+    const k = Math.min(1, mw / img.naturalWidth, mh / img.naturalHeight);
     const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
     c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-    hbDraft.logo = c.toDataURL("image/png"); hbRenderLogo();
+    hbDraft[hbImgFor] = c.toDataURL("image/png"); hbRenderLogo();
+    if(hbImgFor === "logo" && Math.abs(img.naturalWidth / img.naturalHeight - 10 / 5.12) > 0.35)
+      toast("This logo isn't about 10 × 5.12, so it'll have space around it on the stream.");
+    if(hbImgFor === "icon" && Math.abs(img.naturalWidth / img.naturalHeight - 1) > 0.2)
+      toast("This icon isn't square, so it'll have space around it on the buttons.");
   }catch(err){ toast("That image can't be used. Choose a PNG or JPG file."); }
 });
 $("hbCancel").addEventListener("click", () => { $("hbOverlay").hidden = true; });
