@@ -368,6 +368,14 @@ select{min-height:52px;appearance:none;background-image:linear-gradient(45deg,tr
 .sq .st{font-size:12px;color:var(--muted);min-height:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .sq.live{background:var(--pgm);border-color:var(--pgm);color:#fff}
 .sq.live svg,.sq.live .st{color:#fff}
+/* Live but not recording, where recording is expected: yellow, gently pulsing */
+.sq.remind{border-color:var(--warn);color:var(--warn);animation:recRemind 1.6s ease-in-out infinite}
+.sq.remind svg,.sq.remind .st{color:var(--warn)}
+.sq.remind .nm{color:var(--fg)}
+@keyframes recRemind{0%,100%{background:var(--panel-2);box-shadow:0 0 0 0 transparent}50%{background:color-mix(in srgb,var(--warn) 22%,var(--panel-2));box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 45%,transparent)}}
+@media (prefers-reduced-motion:reduce){.sq.remind{animation:none;background:color-mix(in srgb,var(--warn) 18%,var(--panel-2))}}
+.stat.remind{border-color:var(--warn);color:var(--warn)}
+.stat.remind .tally{background:var(--warn)}
 .sq.pending{border-color:var(--warn);box-shadow:inset 0 0 0 1px var(--warn)}
 .sq.pending .st{color:var(--warn)}
 .proto-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;flex-wrap:wrap;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 12px 10px 16px;border-radius:12px;border:1px dashed var(--warn);background:var(--panel);font-size:14px}
@@ -1258,6 +1266,12 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <div class="automic-list" id="setAutoMicList"></div>
               <span class="path">Going from a "Mic off" scene to a "Mic on" scene unmutes; going the other way mutes. "No change" scenes never change it.</span>
             </div>
+          <div class="set-section">
+            <h4>Recording</h4>
+            <label class="check" for="setRecRemind"><input type="checkbox" id="setRecRemind" data-cfg>
+              <span>Remind me to record while live<small>While you're livestreaming and not recording, the Record button turns yellow and pulses, and NOT RECORDING at the top turns yellow. Starts switched on for collections with the Conference lower third, where the sermons are recorded.</small></span>
+            </label>
+          </div>
           <div class="set-section">
             <h4>Waiting button</h4>
             <div class="wait-grid">
@@ -2255,6 +2269,18 @@ $("cutBtn").addEventListener("click", async () => {
 });
 
 // Recording / streaming
+/* "Remind me to record while live" (Settings → Scene collections → Recording; on to start with for the Conference
+   lower third): live and not recording turns the Record button and NOT RECORDING yellow */
+function recRemindOn(){
+  const c = cfg();
+  return !!c && (typeof c.recRemind === "boolean" ? c.recRemind : c.ltTheme === "conference");
+}
+function renderRecRemind(){
+  const on = ui.stream.active && !ui.rec.active && recRemindOn();
+  $("sqRec").classList.toggle("remind", on);
+  $("statRec").classList.toggle("remind", on);
+  $("sqRec").title = on ? "You're live but not recording. Tap to record." : "";
+}
 function renderOutputs(){
   $("statRec").classList.toggle("on", ui.rec.active);
   $("statLive").classList.toggle("on", ui.stream.active);
@@ -2265,6 +2291,7 @@ function renderOutputs(){
   $("sqLive").querySelector(".nm").textContent = ui.stream.active ? "Stop Live" : "Go Live";
   $("sqRec").classList.toggle("live", ui.rec.active);
   $("sqRec").querySelector(".nm").textContent = ui.rec.active ? "Stop Rec" : "Record";
+  renderRecRemind();
   tick();
 }
 function tick(){
@@ -2273,7 +2300,8 @@ function tick(){
   $("recTime").textContent = r; $("strTime").textContent = l;
   // OBS sends no event when its dialog is cancelled, so the waiting hint clears itself after two minutes
   if(ui.streamPending && (ui.stream.active || (!ui.streamMsg && now - ui.streamPending > 120000))){ ui.streamPending = null; $("sqLive").classList.remove("pending"); }
-  $("sqRecSt").textContent = r || "Not recording";
+  renderRecRemind();   // also follows a change of collection or Settings
+  $("sqRecSt").textContent = r || ($("sqRec").classList.contains("remind") ? "Live · not recording" : "Not recording");
   $("sqLiveSt").textContent = l || (ui.streamPending ? (ui.streamMsg || "Confirm in OBS") : "Offline");
 }
 setInterval(tick, 500);
@@ -3761,7 +3789,7 @@ function ltDarker(hex){
 function themeBox(){
   const t = ltTheme();
   return t === "conference" ? {boxColor:ltColor(), boxOpacity:0.76}
-    : t === "christmas" ? {boxColor:"#B32929", boxOpacity:0.76}
+    : t === "christmas" ? {boxColor:"#B32929", boxOpacity:0.76, boxStyle:"christmas"}   // the gradient and snow too
     : t === "sundayschool" ? {boxColor:"#449DD1", boxOpacity:1}
     : {boxColor:LT_COLOR, boxOpacity:0.76};
 }
@@ -5311,6 +5339,7 @@ function syncCfgFields(){
     ltOn: $("setLtOnColl").checked,
     ltTheme: $("setLtTheme").value,
     ltSubB: $("setLtSubB").checked,
+    recRemind: $("setRecRemind").checked,
     ssMax: parseInt($("setLtSsMax").value, 10) || 1,
     ltHost: {on:$("setLtHostOn").checked, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
     ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
@@ -5347,6 +5376,8 @@ async function fillCfgFields(coll){
   $("setLtOnColl").checked = c ? (c.ltOn !== undefined ? !!c.ltOn : !!ui.ot.ltOn) : false;
   $("setLtTheme").value = c && LT_THEMES.includes(c.ltTheme) ? c.ltTheme : "barrington";
   $("setLtSubB").checked = !!(c && c.ltSubB);
+  $("setRecRemind").checked = c && typeof c.recRemind === "boolean" ? c.recRemind : !!(c && c.ltTheme === "conference");
+  recRemindTouched = !!(c && typeof c.recRemind === "boolean");
   $("setLtSsMax").value = String(c && c.ssMax >= 1 && c.ssMax <= 10 ? c.ssMax : 1);
   fillLtHost(c && c.ltHost);
   $("setLtColor").value = (c && c.ltColor) || LT_COLOR;
@@ -5454,6 +5485,9 @@ function rememberLtColor(hex){
   try{ localStorage.setItem("ltRecentColors", JSON.stringify(ui.ltRecent)); }catch(e){}
 }
 $("setLtTheme").addEventListener("change", renderLtColor);
+let recRemindTouched = false;
+$("setRecRemind").addEventListener("change", () => { recRemindTouched = true; });
+$("setLtTheme").addEventListener("change", () => { if(!recRemindTouched) $("setRecRemind").checked = $("setLtTheme").value === "conference"; });
 $("setLtOnColl").addEventListener("change", renderLtColor);
 $("setLtHostOn").addEventListener("change", renderLtColor);
 $("setLtHostSubOn").addEventListener("change", renderLtColor);
