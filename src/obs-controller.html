@@ -333,6 +333,13 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .sc.is-pvw{border-color:var(--pvw);background:var(--pvw-soft);box-shadow:inset 0 0 0 1px var(--pvw)}
 .sc.is-pgm{border-color:var(--pgm);background:var(--pgm-soft);box-shadow:inset 0 0 0 1px var(--pgm)}
 .sc.is-pgm.is-pvw{box-shadow:inset 0 0 0 1px var(--pgm),inset 0 -4px 0 var(--pvw)}
+/* Tapped, waiting for OBS to confirm: a pulsing outline straight away (red for Program, green for Preview);
+   solid once OBS says it has switched */
+.sc.pending-pgm:not(.is-pgm){border-color:var(--pgm);animation:scPend 0.9s ease-in-out infinite}
+.sc.pending-pvw:not(.is-pvw){border-color:var(--pvw);animation:scPendPvw 0.9s ease-in-out infinite}
+@keyframes scPend{0%,100%{box-shadow:inset 0 0 0 1px var(--pgm)}50%{box-shadow:inset 0 0 0 1px var(--pgm),0 0 0 3px var(--pgm-soft);background:var(--pgm-soft)}}
+@keyframes scPendPvw{0%,100%{box-shadow:inset 0 0 0 1px var(--pvw)}50%{box-shadow:inset 0 0 0 1px var(--pvw),0 0 0 3px var(--pvw-soft);background:var(--pvw-soft)}}
+@media (prefers-reduced-motion:reduce){.sc.pending-pgm:not(.is-pgm){animation:none;background:var(--pgm-soft)}.sc.pending-pvw:not(.is-pvw){animation:none;background:var(--pvw-soft)}}
 
 /* Audio */
 .audio-row{display:flex;align-items:center;gap:12px}
@@ -2268,12 +2275,25 @@ const noExt = f => f.replace(/\.[^.]+$/,"").replace(/^\s*\d+\s*[.)\-–:]\s*/, "
 const serviceName = () => noExt(base(ui.schedule || ""));
 const fmt = ms => { const s = Math.floor(ms/1000); return [s/3600, s/60%60, s%60].map(v => String(Math.floor(v)).padStart(2,"0")).join(":"); };
 
-// Scene bank
+// Scene bank. A tap shows straight away as "switching" (a pulsing outline on that button); the button turns
+// solid only when OBS reports the switch, so it still always matches what OBS is really showing.
+let scPending = null;   // {b, kind:"pgm"|"pvw", timer}
+function clearScPending(){ if(!scPending) return; clearTimeout(scPending.timer); scPending = null; renderScenes(); }
 async function selectScene(b){
+  const kind = ui.studio ? "pvw" : "pgm";
+  clearScPending();
+  if(!(kind === "pgm" ? b.group.includes(ui.program) : b.group.includes(ui.preview))){
+    scPending = {b, kind, timer:setTimeout(() => {
+      if(!scPending || scPending.b !== b) return;
+      clearScPending();
+      toast(`OBS didn't switch ${kind === "pgm" ? "Program" : "Preview"} to ${b.label || b.scene}. Check OBS isn't showing a message, then try again.`);
+    }, 4000)};
+    renderScenes();
+  }
   try{
     if(ui.studio) await obs.call("SetCurrentPreviewScene",{sceneName:b.scene});
     else await obs.call("SetCurrentProgramScene",{sceneName:b.scene});
-  }catch(e){ toast(e.message); }
+  }catch(e){ clearScPending(); toast(e.message); }
 }
 function renderScenes(){
   BUTTONS.forEach((b,i) => {
@@ -2281,6 +2301,8 @@ function renderScenes(){
     const pgm = b.group.includes(ui.program), pvw = ui.studio && b.group.includes(ui.preview);
     el.classList.toggle("is-pgm", pgm);
     el.classList.toggle("is-pvw", pvw);
+    el.classList.toggle("pending-pgm", !!scPending && scPending.b === b && scPending.kind === "pgm");
+    el.classList.toggle("pending-pvw", !!scPending && scPending.b === b && scPending.kind === "pvw");
     el.querySelector(".tags").innerHTML = (pvw?'<span class="t pvw">PVW</span>':"") + (pgm?'<span class="t pgm">PGM</span>':"");
     el.querySelector(".sub").textContent = b.waiting ? (pgm ? ui.program : "Title Slide · auto-rotates") : "";
   });
@@ -6430,7 +6452,9 @@ obs.on("SceneTransitionStarted", d => { ui.lastTransition = d.transitionName; })
 obs.on("CurrentProgramSceneChanged", d => {
   fade = (ui.program && ui.lastTransition && ui.lastTransition !== "Cut") ? {from:ui.program, t0:performance.now(), dur:500} : null;
   const prev = ui.program;
-  ui.program = d.sceneName; renderScenes();
+  ui.program = d.sceneName;
+  if(scPending && scPending.kind === "pgm"){ clearTimeout(scPending.timer); scPending = null; }   // OBS has switched (to that, or something else)
+  renderScenes();
   autoMute(prev, d.sceneName);
   if(ui.autoEndSkip && ui.autoEndSkip !== d.sceneName) ui.autoEndSkip = null;   // "Keep streaming" lasts until Ending is left
   if(!ui.autoEndSkip) checkAutoEnd(d.sceneName);
@@ -6452,7 +6476,7 @@ function autoMute(prev, next){
     .then(() => toast(mute ? `Mic muted automatically for ${next}` : `Mic unmuted automatically for ${next}`))
     .catch(() => toast(`Couldn't ${mute ? "mute" : "unmute"} the mic automatically. Use the Mute button.`));
 }
-obs.on("CurrentPreviewSceneChanged", d => { ui.preview = d.sceneName; renderScenes(); });
+obs.on("CurrentPreviewSceneChanged", d => { ui.preview = d.sceneName; if(scPending && scPending.kind === "pvw"){ clearTimeout(scPending.timer); scPending = null; } renderScenes(); });
 obs.on("StudioModeStateChanged", d => { ui.studio = d.studioModeEnabled; if(!ui.studio) ui.preview = null; renderStudio(); if(ui.studio) previewOtherCamera(); });
 /* Studio Mode turned on (here or in OBS) while Camera 1 is in Program: Camera 2 goes to Preview, and the
    other way round, so CUT switches cameras straight away. Any other Program scene leaves Preview as OBS sets it. */
