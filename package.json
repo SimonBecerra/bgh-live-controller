@@ -1,7 +1,7 @@
 {
   "name": "bgh-live-controller",
   "productName": "BGH LIVE Controller",
-  "version": "1.2.9",
+  "version": "1.2.10",
   "description": "Touchscreen controller for OBS Studio at Barrington Gospel Hall",
   "author": "Barrington Gospel Hall",
   "main": "main.js",
@@ -17,6 +17,7 @@
   "devDependencies": {
     "@fontsource/inter": "5.3.0",
     "@fontsource/spectral": "5.3.0",
+    "@fontsource/yellowtail": "5.3.0",
     "electron": "44.4.5",
     "electron-builder": "26.15.3",
     "jsdom": "26.1.0",
