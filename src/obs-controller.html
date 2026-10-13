@@ -1177,8 +1177,11 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
                 <option value="sundayschool">Sunday School: blue, with bouncing circles</option>
               </select>
               <span class="path" id="setLtThemeHint"></span></div>
+            <div class="field" id="setLtSsMaxField" hidden><label class="label" for="setLtSsMax">Speakers in Go Live</label>
+              <select id="setLtSsMax" data-cfg><option value="1">1 speaker</option><option value="2">Up to 2 speakers</option><option value="3">Up to 3 speakers</option><option value="4">Up to 4 speakers</option></select>
+              <span class="path">Besides the teachers, Go Live and Change Speakers let you choose this many speakers (optional). Each gets a lower third button before the teachers and is named in the livestream description.</span></div>
             <label class="check" for="setLtSubB" id="setLtSubBField"><input type="checkbox" id="setLtSubB" data-cfg>
-              <span>Show visiting speakers' subtitles<small>Under the name in the Barrington or Christmas lower third, for example the assembly they're from. Home speakers never show a subtitle.</small></span>
+              <span>Show visiting speakers' subtitles<small>Under the name in the Barrington, Christmas or Sunday School lower third, for example the assembly they're from. Home speakers never show a subtitle.</small></span>
             </label>
             <label class="check" for="setLtHostOn" id="setLtHostField"><input type="checkbox" id="setLtHostOn" data-cfg>
               <span>Host<small>An extra lower third button for the host or emcee, before the speakers. It's there for every service in this collection, whoever is speaking.</small></span>
@@ -2507,7 +2510,9 @@ const selNames = ids => ids.map(speakerName).filter(Boolean);
 
 const autoTitle = () => `${gl.svc || svcLabel()} | ${gl.date ? longDate(gl.date) : "Date"}`;
 // No speakers in this collection (None): the description leaves out the "Service Led by" part
-const autoDesc = () => ui.spkMode === "off" ? DESC_TAIL : `Service Led by: \n${formatNames(selNames(gl.sel)) || "Speakers"}\n\n${DESC_TAIL}`;
+// Sunday School: the speaker (if one is chosen) is named even when the collection has no speakers text source
+const autoDesc = () => ssOn() ? (gl.sel.length ? `Service Led by: \n${formatNames(selNames(gl.sel))}\n\n${DESC_TAIL}` : DESC_TAIL)
+  : ui.spkMode === "off" ? DESC_TAIL : `Service Led by: \n${formatNames(selNames(gl.sel)) || "Speakers"}\n\n${DESC_TAIL}`;
 // A custom title or description (null = automatic) replaces the generated one everywhere it's used
 const glTitle = () => gl.customTitle != null ? gl.customTitle.trim() : autoTitle();
 const glDesc = () => gl.customDesc != null ? gl.customDesc : autoDesc();
@@ -2515,11 +2520,20 @@ const glDesc = () => gl.customDesc != null ? gl.customDesc : autoDesc();
 // Picker state: draft = unconfirmed selection while the dropdown is open
 let spkDraft = [], spkDelId = null, spkOnApply = null, spkSingle = false;
 const spkAddEl = $("spkAddBtn");
+/* How many speakers can be picked: Settings → Speakers → "Most speakers at once", except with the Sunday School
+   lower third, where it's that collection's own number (1 to start with) because the teachers have buttons too */
+const ssOn = () => ltOn() && ltTheme() === "sundayschool";
+function spkMax(){
+  if(!ssOn()) return ui.speakers.max;
+  const n = parseInt((cfg() || {}).ssMax, 10);
+  return n >= 1 && n <= 10 ? n : 1;
+}
 // opts.single: choose one person or nobody (the host); otherwise up to the maximum number of speakers
 function openSpk(initial, onApply, opts = {}){
   spkSingle = !!opts.single;
-  $("spkTitle").textContent = spkSingle ? "Select host" : "Select speakers";
+  $("spkTitle").textContent = spkSingle ? "Select host" : spkMax() === 1 ? "Select a speaker" : "Select speakers";
   spkDraft = (initial || []).filter(speakerName); spkOnApply = onApply;
+  if(!spkSingle) spkDraft = spkDraft.slice(0, spkMax());
   spkDelId = null; $("spkAddRow").hidden = true; $("spkConfirm").hidden = true;
   renderSpk();
   $("spkPop").hidden = false; $("spkBackdrop").hidden = false;
@@ -2532,7 +2546,7 @@ function renderSpkTrigger(){
   $("glSpkBtn").classList.toggle("empty", !names.length);
 }
 function chip(s, removable){
-  const idx = spkDraft.indexOf(s.id), on = idx > -1, full = !spkSingle && spkDraft.length >= ui.speakers.max;
+  const idx = spkDraft.indexOf(s.id), on = idx > -1, full = !spkSingle && spkDraft.length >= spkMax();
   const wrap = document.createElement("div"); wrap.className = "spk-chipwrap";
   const b = document.createElement("button");
   b.className = "spk-chip"; b.setAttribute("aria-pressed", on); b.disabled = !on && full;
@@ -2554,7 +2568,7 @@ function chip(s, removable){
   return wrap;
 }
 function renderSpk(){
-  const max = ui.speakers.max;
+  const max = spkMax();
   $("spkCount").textContent = spkSingle ? (spkDraft.length ? "Tap again for no host" : "No host") :
     spkDraft.length >= max ? `${spkDraft.length} of ${max} selected · maximum reached` : `${spkDraft.length} of ${max} selected`;
   $("spkCount").classList.toggle("full", !spkSingle && spkDraft.length >= max);
@@ -2595,8 +2609,8 @@ $("spkAddApply").addEventListener("click", () => {
   ui.speakers.visiting.push(s); saveSpeakers();
   $("spkAddRow").hidden = true;
   if(spkSingle) spkDraft = [s.id];
-  else if(spkDraft.length < ui.speakers.max) spkDraft.push(s.id);
-  else toast(`Added ${name}. The maximum of ${ui.speakers.max} is reached, so they weren't selected.`);
+  else if(spkDraft.length < spkMax()) spkDraft.push(s.id);
+  else toast(`Added ${name}. The maximum of ${spkMax()} is reached, so they weren't selected.`);
   renderSpk();
 });
 $("spkDelNo").addEventListener("click", () => { spkDelId = null; $("spkConfirm").hidden = true; });
@@ -2654,7 +2668,8 @@ $("glHere").addEventListener("click", async () => {
   $("glSvcHint").hidden = !canWriteSch();
   $("glSvcLbl").textContent = svcLabel();
   $("glSvcHint").textContent = `The ${svcLabel()} image in OBS switches to this when you go live.`;
-  $("glSpkHint").textContent = ui.spkMode === "off" && ltOn() ? "For the lower thirds. Names appear in the order you pick them." : speakerHint();
+  $("glSpkHint").textContent = ssOn() ? `Optional. ${spkMax() === 1 ? "The speaker gets" : "Each speaker gets"} a lower third button next to the Sunday School teachers and is named in the description.${ui.spkMode === "on" ? " Applying also updates the speakers text in OBS." : ""}`
+    : ui.spkMode === "off" && ltOn() ? "For the lower thirds. Names appear in the order you pick them." : speakerHint();
   if(!svcChoosable()) $("glTitleIn").value = gl.customTitle;
   // Host for the lower thirds (this collection's setting, changeable here)
   gl.host = hostNow();
@@ -2694,9 +2709,10 @@ function glRender(){
   $("glDescHelp").hidden = !cd && !adErr; $("glDescHelp").textContent = adErr || dErr || "Tap Custom again to go back to the automatic description";
   $("glDescHelp").classList.toggle("err", !!(dErr || adErr));
   const titleOk = ct ? !tErr : (svcChoosable() && gl.svc && gl.date && !atErr);
-  const descOk = cd ? !dErr : ((ui.spkMode === "off" || gl.sel.length) && !adErr);
-  // Lower thirds on for this collection: the speakers are needed, whichever kind of broadcast
-  const spkOk = !ltOn() || gl.sel.length > 0;
+  const descOk = cd ? !dErr : ((ui.spkMode === "off" || ssOn() || gl.sel.length) && !adErr);
+  // Lower thirds on for this collection: the speakers are needed, whichever kind of broadcast.
+  // Sunday School: optional, since the teachers have their own buttons.
+  const spkOk = !ltOn() || ssOn() || gl.sel.length > 0;
   $("glCustTitle").hidden = !svcChoosable();
   if(!svcChoosable() && !tErr) $("glTitleHelp").textContent = `${(gl.customTitle || "").length} / 100 · This scene collection has no schedule set up, so write the title here.`;
   const ex = gl.mode === "existing";
@@ -2711,8 +2727,8 @@ function glRender(){
   $("glNext").textContent = ex ? "Go Live" : "Next: Visibility";
   $("glNext").classList.toggle("primary", !ex); $("glNext").classList.toggle("danger", ex);
   $("glNext").disabled = ex ? !(gl.bc != null && gl.bcList && spkOk) : !(titleOk && descOk && spkOk);
-  $("glSpkHint").classList.toggle("warn-txt", ltOn() && !gl.sel.length);
-  if(ltOn() && !gl.sel.length) $("glSpkHint").textContent = "Choose the speakers: lower thirds are on for this scene collection.";
+  $("glSpkHint").classList.toggle("warn-txt", ltOn() && !ssOn() && !gl.sel.length);
+  if(ltOn() && !ssOn() && !gl.sel.length) $("glSpkHint").textContent = "Choose the speakers: lower thirds are on for this scene collection.";
   renderBc();
 }
 $("glDate").addEventListener("input", e => { gl.date = e.target.value; glRender(); });
@@ -3648,7 +3664,7 @@ function renderOt(){
         b.style.setProperty("--lt-dur", ui.lt.duration + "s");
         b.style.setProperty("--lt-in", Math.max(0, (performance.now() - ui.lt.since) / 1000) + "s");
       }
-      b.innerHTML = `<i data-lucide="${on ? "user-x" : "user"}"></i><span class="lt-txt"><span></span>${it2.note ? "<small></small>" : ""}</span>`;
+      b.innerHTML = `<i data-lucide="${on ? "user-x" : it2.teacher ? "graduation-cap" : "user"}"></i><span class="lt-txt"><span></span>${it2.note ? "<small></small>" : ""}</span>`;
       b.querySelector(".lt-txt span").textContent = it2.short;
       if(it2.note) b.querySelector(".lt-txt small").textContent = it2.note;
       b.setAttribute("aria-label", b.title = (on ? `Hide ${name}'s lower third` : `Show ${name}'s lower third`));
@@ -3690,7 +3706,7 @@ function ltShort(name, all){
 const ltSubtitle = name => ((ui.speakers.visiting.find(sp => nameKey(sp.name) === nameKey(name)) || {}).subtitle || "").trim().toUpperCase();
 // Whether this collection's lower third shows subtitles: always for Conference, and for Barrington when switched on
 const LT_THEMES = ["barrington", "conference", "christmas", "sundayschool"];
-const ltShowSub = () => ltTheme() === "conference" || (ltTheme() !== "sundayschool" && !!(cfg() || {}).ltSubB);
+const ltShowSub = () => ltTheme() === "conference" || !!(cfg() || {}).ltSubB;
 const ltTheme = () => (LT_THEMES.includes((cfg() || {}).ltTheme) ? cfg().ltTheme : "barrington");
 /* The Conference script's colour: one fixed step darker than the box colour (#132932 → #0B1418), as the plug-in
    works it out. In HSL: same hue, lightness × 35/69, saturation × (13/35) ÷ (31/69). */
@@ -3738,11 +3754,12 @@ async function ltToggle(i){ const it = ltItems()[i]; if(it) return ltShow(it.nam
 /* The lower third buttons: the speakers chosen in Go Live, or with the Sunday School theme, every teacher.
    name and sub are what goes on screen; short (and note) are what the button says. */
 function ltItems(){
-  if(ltTheme() === "sundayschool")
-    return byFirstName(ui.speakers.teachers || []).filter(t => t.first || t.last)
-      .map(t => ({name:teacherTitle(t), sub:(t.subtitle || "").trim(), short:teacherShort(t), note:(t.subtitle || "").replace(/\s*class$/i, "").trim()}));
   const names = ltNames();
-  return names.map(n => ({name:n, sub:ltSpeakerSub(n), short:ltShort(n, names)}));
+  const speakers = names.map(n => ({name:n, sub:ltSpeakerSub(n), short:ltShort(n, names)}));
+  if(ltTheme() !== "sundayschool") return speakers;
+  // Sunday School: the speaker(s) chosen in Go Live, then every teacher
+  return [...speakers.slice(0, spkMax()), ...byFirstName(ui.speakers.teachers || []).filter(t => t.first || t.last)
+    .map(t => ({name:teacherTitle(t), sub:(t.subtitle || "").trim(), short:teacherShort(t), note:(t.subtitle || "").replace(/\s*class$/i, "").trim(), teacher:true}))];
 }
 async function ltToggleHost(){ const h = ltHost(); if(h) return ltShow(h.name, h.subtitle); }
 async function ltShow(name, subtitle){
@@ -5226,6 +5243,7 @@ function syncCfgFields(){
     ltOn: $("setLtOnColl").checked,
     ltTheme: $("setLtTheme").value,
     ltSubB: $("setLtSubB").checked,
+    ssMax: parseInt($("setLtSsMax").value, 10) || 1,
     ltHost: {on:$("setLtHostOn").checked, id:$("setLtHost").value, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
     ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
     autoMic: {on: $("setAutoMic").checked,
@@ -5261,6 +5279,7 @@ async function fillCfgFields(coll){
   $("setLtOnColl").checked = c ? (c.ltOn !== undefined ? !!c.ltOn : !!ui.ot.ltOn) : false;
   $("setLtTheme").value = c && LT_THEMES.includes(c.ltTheme) ? c.ltTheme : "barrington";
   $("setLtSubB").checked = !!(c && c.ltSubB);
+  $("setLtSsMax").value = String(c && c.ssMax >= 1 && c.ssMax <= 10 ? c.ssMax : 1);
   fillLtHost(c && c.ltHost);
   $("setLtColor").value = (c && c.ltColor) || LT_COLOR;
   renderLtColor();
@@ -5321,12 +5340,13 @@ function renderLtColor(){
   const on = $("setLtOnColl").checked, th = $("setLtTheme").value, conf = th === "conference";
   $("setLtThemeField").hidden = !on;
   $("setLtColorField").hidden = !on || !conf;
-  $("setLtSubBField").hidden = !on || conf || th === "sundayschool";
+  $("setLtSubBField").hidden = !on || conf;
+  $("setLtSsMaxField").hidden = !on || th !== "sundayschool";
   $("setLtThemeHint").textContent = {
     barrington:"The hymn and Bible box is the same dark blue-green.",
     conference:"The name and a visiting speaker's subtitle (Settings → Speakers) look the same as Barrington. Behind them, \"Conference\" in script, in a darker shade of the colour below, is part of the box: it's uncovered as the box opens and drifts slowly left. The hymn and Bible box takes the colour below.",
     christmas:"Red, see-through like Barrington. A sprig and star fade in on its left edge before the name. The hymn and Bible box is red too.",
-    sundayschool:"Solid blue with darker circles bouncing inside. The lower third buttons become your Sunday School teachers (Settings → Speakers), with their class subtitles. The hymn and Bible box is blue too."
+    sundayschool:"Solid blue with darker circles bouncing inside. The lower third buttons are the speaker chosen in Go Live (optional) and your Sunday School teachers (Settings → Speakers), with their class subtitles. The hymn and Bible box is blue too."
   }[th] || "";
   $("setLtHostField").hidden = !on;
   $("setLtHostBox").hidden = !on || !$("setLtHostOn").checked;
@@ -5800,7 +5820,7 @@ $("setForm").addEventListener("submit", e => {
   ui.speakers = {homeLabel: $("setHomeLbl").value.trim() || "Barrington Speakers", max: Math.min(10, Math.max(1, parseInt($("setMax").value,10) || 3)), home: clean(workSpk.home), visiting: clean(workSpk.visiting), teachers};
   if(ltTheme() === "sundayschool") renderOt();
   saveSpeakers();
-  gl.sel = gl.sel.filter(speakerName).slice(0, ui.speakers.max);
+  gl.sel = gl.sel.filter(speakerName).slice(0, spkMax());
   // Per-collection speakers and service type
   syncCfgFields();
   const before = JSON.stringify(ui.collCfg[ui.collection] || null);
