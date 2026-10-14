@@ -586,8 +586,8 @@ textarea:disabled,select:disabled{opacity:.5}
 .spk-foot svg{width:20px;height:20px}
 .spk-list{display:flex;flex-direction:column;gap:8px}
 .spk-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
-.spk-row.has-elder{grid-template-columns:minmax(0,1fr) auto auto}
-/* Elder: a square key button left of Remove; lit when marked */
+.spk-row.has-elder{grid-template-columns:minmax(0,1fr) auto auto auto}
+/* Sunday School Superintendent (school) and Elder (key): square buttons left of Remove; lit when marked */
 .spk-elder{width:48px;min-width:48px;height:48px;min-height:48px;padding:0;align-self:start}
 .spk-elder svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .spk-elder[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
@@ -1932,7 +1932,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
    obs.call(requestType, data) / obs.on(eventName, fn)) with few changes.
 ------------------------------------------------------------------- */
 const FOLDER = "C:\\Users\\Media\\Livestream\\Schedule\\";
-const SCHEDULE_FILES = ["1. Morning Lord's Supper.png","2. Afternoon Ministry Service.png","3. Afternoon Gospel Service.png","4. Evening Gospel Service.png","5. Special Meeting.png","6. Baptism.png"];
+const SCHEDULE_FILES = ["1. Morning Lord's Supper.png","2. Afternoon Ministry Service.png","3. Afternoon Gospel Service.png","4. Evening Gospel Service.png","5. Special Meeting.png","6. Baptism.png","7. Sunday School.png"];
 // Sample scene collections, top-to-bottom as in OBS's Scenes dock. Only some have the three waiting scenes.
 const COLLECTIONS = {
   "Sunday Service": ["Title Slide","Waiting Slide 1 (Title)","Waiting Slide 2 (Schedule)","Live Soon","Camera 1","Slideshow 4:3","Ending","Slideshow 16:9","Camera 2","Black"],
@@ -2792,6 +2792,19 @@ const BAP_RELS_DEFAULT = ["Father of", "Elder of", "Uncle of", "Grandfather of",
 ui.bapRels = (() => { try{ const v = JSON.parse(localStorage.getItem("bapRels")); return Array.isArray(v) && v.length ? v : [...BAP_RELS_DEFAULT]; }catch(e){ return [...BAP_RELS_DEFAULT]; } })();
 ui.bapReaders = [];   // [{name, sub}] for this livestream only
 const isBaptismSvc = n => /^baptisms?$/i.test(String(n || "").trim());
+/* Sunday School Program: a schedule image named "Sunday School". The speakers text in OBS says
+   "Sunday School Program", one speaker can be chosen as the special speaker (named in the description;
+   their lower third is as usual), a host can always be chosen (no subtitle, except SUNDAY SCHOOL
+   SUPERINTENDENT for the home speaker marked so in Settings), and the title is "Sunday School Program | December 2026". */
+const isSsSvc = n => /^sunday school$/i.test(String(n || "").trim());
+const isSsTitle = t => /^\s*sunday school program\b/i.test(String(t || ""));
+const SS_TEXT = "Sunday School Program";
+function ssProgActive(){
+  if(gl.mode === "existing"){ const b = (gl.bcList || []).find(x => x.index === gl.bc); return !!b && isSsTitle(b.title); }
+  return isSsSvc(gl.svc);
+}
+const monthYear = iso => { const [y, m] = iso.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleDateString("en-US", {month:"long", year:"numeric"}); };
+ui.ssProg = false;   // this livestream is a Sunday School Program (for the host's lower third); forgotten when it ends
 const isBaptismTitle = t => /^\s*the baptisms? of\b/i.test(String(t || ""));
 // "Lucas Becerra", "Lucas Becerra and Carolina Lugo", "A, B, and C" (Oxford comma)
 const andList = a => a.length < 3 ? a.join(" and ") : `${a.slice(0, -1).join(", ")}, and ${a[a.length - 1]}`;
@@ -2807,10 +2820,12 @@ function bapFromTitle(t){
   const m = String(t || "").match(/^\s*the baptisms? of\s+(.+?)(?:\s*\|.*)?$/i);
   return m ? m[1].split(/\s*,\s*(?:and\s+)?|\s+and\s+/i).map(x => x.trim()).filter(Boolean).slice(0, BAP_MAX) : [];
 }
-const autoTitle = () => `${isBaptismSvc(gl.svc) && bapNames().length ? bapHeading() : gl.svc || svcLabel()} | ${gl.date ? longDate(gl.date) : "Date"}`;
+const autoTitle = () => isSsSvc(gl.svc) ? `${SS_TEXT} | ${gl.date ? monthYear(gl.date) : "Month"}`
+  : `${isBaptismSvc(gl.svc) && bapNames().length ? bapHeading() : gl.svc || svcLabel()} | ${gl.date ? longDate(gl.date) : "Date"}`;
 // No speakers in this collection (None): the description leaves out the "Service Led by" part
 // Sunday School: the speaker (if one is chosen) is named even when the collection has no speakers text source
-const autoDesc = () => ssOn() ? (gl.sel.length ? `Service Led by: \n${formatNames(selNames(gl.sel))}\n\n${DESC_TAIL}` : DESC_TAIL)
+const autoDesc = () => isSsSvc(gl.svc) ? (gl.sel.length ? `Special Speaker: \n${formatNames(selNames(gl.sel))}\n\n${DESC_TAIL}` : DESC_TAIL)
+  : ssOn() ? (gl.sel.length ? `Service Led by: \n${formatNames(selNames(gl.sel))}\n\n${DESC_TAIL}` : DESC_TAIL)
   : ui.spkMode === "off" ? DESC_TAIL : `Service Led by: \n${formatNames(selNames(gl.sel)) || "Speakers"}\n\n${DESC_TAIL}`;
 // A custom title or description (null = automatic) replaces the generated one everywhere it's used
 const glTitle = () => gl.customTitle != null ? gl.customTitle.trim() : autoTitle();
@@ -2822,15 +2837,17 @@ const spkAddEl = $("spkAddBtn");
 /* How many speakers can be picked: Settings → Speakers → "Most speakers at once", except with the Sunday School
    lower third, where it's that collection's own number (1 to start with) because the teachers have buttons too */
 const ssOn = () => ltOn() && ltTheme() === "sundayschool";
+let spkMaxNow = 0;   // set while the picker is open for a Sunday School Program: one special speaker
 function spkMax(){
+  if(spkMaxNow) return spkMaxNow;
   if(!ssOn()) return ui.speakers.max;
   const n = parseInt((cfg() || {}).ssMax, 10);
   return n >= 1 && n <= 10 ? n : 1;
 }
 // opts.single: choose one person or nobody (the host); otherwise up to the maximum number of speakers
 function openSpk(initial, onApply, opts = {}){
-  spkSingle = !!opts.single;
-  $("spkTitle").textContent = spkSingle ? "Select host" : spkMax() === 1 ? "Select a speaker" : "Select speakers";
+  spkSingle = !!opts.single; spkMaxNow = opts.max || 0;
+  $("spkTitle").textContent = spkSingle ? "Select host" : opts.title || (spkMax() === 1 ? "Select a speaker" : "Select speakers");
   spkDraft = (initial || []).filter(speakerName); spkOnApply = onApply;
   if(!spkSingle) spkDraft = spkDraft.slice(0, spkMax());
   spkDelId = null; $("spkAddRow").hidden = true; $("spkConfirm").hidden = true;
@@ -2838,10 +2855,10 @@ function openSpk(initial, onApply, opts = {}){
   $("spkPop").hidden = false; $("spkBackdrop").hidden = false;
   $("glSpkBtn").setAttribute("aria-expanded","true");
 }
-function closeSpk(){ $("spkPop").hidden = true; $("spkBackdrop").hidden = true; $("glSpkBtn").setAttribute("aria-expanded","false"); }
+function closeSpk(){ spkMaxNow = 0; $("spkPop").hidden = true; $("spkBackdrop").hidden = true; $("glSpkBtn").setAttribute("aria-expanded","false"); }
 function renderSpkTrigger(){
   const names = selNames(gl.sel);
-  $("glSpkVal").textContent = names.length ? formatNames(names) : "Select speakers";
+  $("glSpkVal").textContent = names.length ? formatNames(names) : ssProgActive() ? "No special speaker" : "Select speakers";
   $("glSpkBtn").classList.toggle("empty", !names.length);
 }
 function chip(s, removable){
@@ -2880,7 +2897,7 @@ function renderSpk(){
   $("spkFoot").hidden = !spkDraft.length && !spkSingle;   // the host can be set to nobody
   if(window.lucide) lucide.createIcons();
 }
-$("glSpkBtn").addEventListener("click", () => openSpk(gl.sel, glApplySpeakers));
+$("glSpkBtn").addEventListener("click", () => ssProgActive() ? openSpk(gl.sel, glApplySpeakers, {max:1, title:"Select the special speaker"}) : openSpk(gl.sel, glApplySpeakers));
 $("spkBackdrop").addEventListener("click", closeSpk);
 $("spkCancel").addEventListener("click", closeSpk);
 $("spkApply").addEventListener("click", () => { const sel = [...spkDraft]; closeSpk(); if(spkOnApply) spkOnApply(sel); });
@@ -2889,7 +2906,7 @@ async function glApplySpeakers(sel){
   if(ltOn()) setLtPicked(selNames(sel));
   renderSpkTrigger(); glRender();
   // Confirmed: update the speakers text source in OBS for this scene collection
-  const names = formatNames(selNames(gl.sel));
+  const names = glSpeakersText();
   if(names && names !== ui.speaker && canWriteSpk()){
     try{ await setDefaultSources({text:names}); toast(`Updated ${srcText()} in OBS`); }
     catch(e){ toast(`Couldn't update ${srcText()} in OBS`); }
@@ -2987,7 +3004,7 @@ $("glHere").addEventListener("click", async () => {
   names.forEach(n => {
     const b = document.createElement("button");
     b.className = "svc"; b.textContent = n; b.setAttribute("aria-pressed", n === gl.svc);
-    b.addEventListener("click", () => { gl.svc = n; $("glSvc").querySelectorAll(".svc").forEach(x => x.setAttribute("aria-pressed", x === b)); glRender(); });
+    b.addEventListener("click", () => { gl.svc = n; if(isSsSvc(n) && gl.sel.length > 1){ gl.sel = gl.sel.slice(0, 1); renderSpkTrigger(); } $("glSvc").querySelectorAll(".svc").forEach(x => x.setAttribute("aria-pressed", x === b)); glRender(); });
     $("glSvc").appendChild(b);
   });
   glRender(); glShow("glDetails");
@@ -3015,10 +3032,16 @@ function glRender(){
   const bap = bapActive();
   renderBap(bap);
   const titleOk = ct ? !tErr : (svcChoosable() && gl.svc && gl.date && !atErr && (!isBaptismSvc(gl.svc) || bapNames().length > 0));
-  const descOk = cd ? !dErr : ((ui.spkMode === "off" || ssOn() || gl.sel.length) && !adErr);
+  const ssp = ssProgActive();
+  const descOk = cd ? !dErr : ((ui.spkMode === "off" || ssOn() || ssp || gl.sel.length) && !adErr);
   // Lower thirds on for this collection: the speakers are needed, whichever kind of broadcast.
-  // Sunday School: optional, since the teachers have their own buttons.
-  const spkOk = !ltOn() || ssOn() || gl.sel.length > 0;
+  // Sunday School (the theme, or a Sunday School Program): optional.
+  const spkOk = !ltOn() || ssOn() || ssp || gl.sel.length > 0;
+  // Sunday School Program: one special speaker, and a host can always be chosen (with lower thirds on)
+  $("glSpkLbl").textContent = ssp ? "Special Speaker" : "Speakers";
+  $("glHostField").hidden = !hostAllowed(ssp);
+  if(ssp && gl.sel.length > 1){ gl.sel = gl.sel.slice(0, 1); }
+  renderSpkTrigger();
   $("glCustTitle").hidden = !svcChoosable();
   if(!svcChoosable() && !tErr) $("glTitleHelp").textContent = `${(gl.customTitle || "").length} / 100 · This scene collection has no schedule set up, so write the title here.`;
   const ex = gl.mode === "existing";
@@ -3035,6 +3058,8 @@ function glRender(){
   $("glNext").disabled = ex ? !(gl.bc != null && gl.bcList && spkOk && (!bap || bapNames().length > 0)) : !(titleOk && descOk && spkOk);
   $("glSpkHint").classList.toggle("warn-txt", ltOn() && !ssOn() && !gl.sel.length);
   if(ltOn() && !ssOn() && !gl.sel.length) $("glSpkHint").textContent = "Choose the speakers: lower thirds are on for this scene collection.";
+  if(ssp) $("glSpkHint").textContent = `Optional. Named in the description as the special speaker. OBS shows "${SS_TEXT}".`;
+  else if(!(ltOn() && !ssOn() && !gl.sel.length)) $("glSpkHint").textContent = "Names appear in the order you pick them. To remove a visiting speaker, select them first.";
   renderBc();
 }
 $("glDate").addEventListener("input", e => { gl.date = e.target.value; glRender(); });
@@ -3085,7 +3110,8 @@ $("glModeEx").addEventListener("click", () => setMode("existing"));
 $("glBcRefresh").addEventListener("click", loadBroadcasts);
 function useGlHymnBook(){ if(gl.hymnBook && gl.hymnBook !== ui.ot.book && bookById(gl.hymnBook)){ ui.ot.book = gl.hymnBook; saveOt(); } }
 // What goes in the speakers text in OBS: "The Baptism of Lucas Becerra" for a baptism, otherwise the speakers
-const glSpeakersText = () => bapActive() && bapNames().length ? bapHeading() : formatNames(selNames(gl.sel));
+const glSpeakersText = () => ssProgActive() ? SS_TEXT : bapActive() && bapNames().length ? bapHeading() : formatNames(selNames(gl.sel));
+function applySsProg(){ ui.ssProg = ssProgActive(); renderOt(); }
 // Testimony readers become lower third buttons: name, and "FATHER OF LUCAS BECERRA" under it (always shown)
 function applyBapReaders(){
   ui.bapReaders = bapActive() ? bapReadersOf(gl.bap) : [];
@@ -3177,10 +3203,10 @@ async function goExisting(){
   closeGoLive();
   useGlHymnBook();
   // Speakers chosen for the lower thirds: on screen now, even though they don't change the broadcast
-  if(ltOn()) applyHost(gl.host);
-  applyBapReaders();
+  if(ltOn()) applyHost(gl.host, ssProgActive());
+  applyBapReaders(); applySsProg();
   if(gl.sel.length) setLtPicked(selNames(gl.sel));
-  if(gl.sel.length || bapActive()) await applySpeakersOnly();
+  if(gl.sel.length || bapActive() || ssProgActive()) await applySpeakersOnly();
   forgetBap();
   ui.streamPending = Date.now(); ui.streamMsg = "Starting in OBS…"; renderOutputs();
   toast("Starting the selected broadcast in OBS…");
@@ -3235,9 +3261,9 @@ $("glGo").addEventListener("click", async () => {
   // Goes to the default collection: right away if it's loaded, otherwise when it's next loaded.
   // Each part only applies when the default collection actually has that source.
   await applyOnScreen();
-  applyBapReaders();
+  applyBapReaders(); applySsProg();
   forgetBap();   // the title, description and readers are made; the names aren't kept
-  if(ltOn()) applyHost(gl.host);
+  if(ltOn()) applyHost(gl.host, ssProgActive());
   if(gl.sel.length) setLtPicked(selNames(gl.sel));
   toast("Setting up the YouTube broadcast in OBS…");
   try{
@@ -3271,7 +3297,8 @@ async function openQc(){
    It's only ever a lower third button, never part of the title, description or speakers text.
    Never saved: nobody to start with, every Go Live, and forgotten when the livestream ends or the controller closes. */
 ui.hostId = "";
-const hostAllowed = () => ltOn() && !!((cfg() || {}).ltHost || {}).on;
+// The host: when Settings turns it on for this collection, or for a Sunday School Program
+const hostAllowed = (ssp = ui.ssProg) => ltOn() && (ssp || !!((cfg() || {}).ltHost || {}).on);
 function hostNow(){ return hostAllowed() && ui.hostId ? {on:true, id:ui.hostId} : {on:false, id:""}; }
 // The Host field: like Speakers, a button showing the choice that opens the speakers picker to choose one (or none)
 function hostPicker(prefix, h, onChange){
@@ -3289,16 +3316,22 @@ function hostPicker(prefix, h, onChange){
   }, {single:true});
 }
 const hostSame = (a, b) => (!!a.on && !!a.id) === (!!b.on && !!b.id) && (!(a.on && a.id) || a.id === b.id);
-function applyHost(h){
+function applyHost(h, ssp){
   if(!h) return;
-  ui.hostId = hostAllowed() && h.on && h.id ? h.id : "";
+  ui.hostId = hostAllowed(!!ssp || ui.ssProg) && h.on && h.id ? h.id : "";
   renderOt();
 }
 function qcChange(){
-  const change = {}, names = formatNames(selNames(qc.sel));
+  const change = {}, names = formatNames(selNames(qc.sel)), ssq = isSsSvc(qc.svc);
   if(ltOn() && qc.sel.length && JSON.stringify(selNames(qc.sel)) !== JSON.stringify(ui.ltPicked)) change.lt = selNames(qc.sel);
-  if(hostAllowed() && qc.host && !hostSame(qc.host, hostNow())) change.host = qc.host;
+  if(hostAllowed(ssq || ui.ssProg) && qc.host && !hostSame(qc.host, hostNow())) change.host = qc.host;
+  // Sunday School Program: OBS says "Sunday School Program"; the speaker chosen is the special speaker
+  if(ssq){
+    if(SS_TEXT !== ui.speaker && canWriteSpk()) change.text = SS_TEXT;
+    if(!ui.ssProg) change.prog = true;
+  } else if(ui.ssProg && qc.svc && qc.svc !== noExt(base(ui.schedule || ""))) change.prog = false;   // leaving the program
   const file = ui.files.find(p => noExt(base(p)) === qc.svc);
+  if(ssq){ if(file && file !== ui.schedule && canWriteSch()) change.file = file; return change; }
   // Baptism: the speakers text says "The Baptism of …" instead of the speakers, and the readers get buttons
   const bapText = isBaptismSvc(qc.svc) ? bapHeadingOf(qc.bap) : "";
   if(bapText){
@@ -3315,8 +3348,12 @@ function renderQc(){
   $("qcSvcField").hidden = !vo;
   $("qcH").textContent = !so ? `Change ${svcLabel()}` : !vo ? "Change Speakers" : `Change Speaker and ${svcLabel()}`;
   $("qcSvcLbl").textContent = svcLabel();
+  const ssq = isSsSvc(qc.svc);
+  if(ssq && qc.sel.length > 1) qc.sel = qc.sel.slice(0, 1);
   const names = selNames(qc.sel);
-  $("qcSpkVal").textContent = names.length ? formatNames(names) : "Select speakers";
+  $("qcSpkLbl").textContent = ssq ? "Special Speaker" : "Speakers";
+  $("qcHostField").hidden = !hostAllowed(ssq || ui.ssProg);
+  $("qcSpkVal").textContent = names.length ? formatNames(names) : ssq ? "No special speaker" : "Select speakers";
   $("qcSpkBtn").classList.toggle("empty", !names.length);
   $("qcSpkBtn").disabled = !canWriteSpk() && !ltOn();
   $("qcSpkNow").textContent = ui.spkMode === "error" ? ui.spkMsg : ui.spkMode === "off" ? `Lower thirds now: ${formatNames(ui.ltPicked) || "nobody yet"}` : `Showing now: ${ui.speaker || "nothing"}`;
@@ -3348,13 +3385,13 @@ $("qcBapAdd").addEventListener("click", () => {
 $("defWarn").addEventListener("click", () => settingsGoTo("collections", "setCfgColl"));
 function forgetQcBap(){ qc.bap = [{name:"", reader:"", rel:ui.bapRels[0] || ""}]; const l = $("qcBapList"); l.innerHTML = ""; l._arr = null; }
 $("qcCancel").addEventListener("click", () => { $("qcOverlay").hidden = true; forgetQcBap(); });
-$("qcSpkBtn").addEventListener("click", () => openSpk(qc.sel, sel => { qc.sel = sel; renderQc(); }));
+$("qcSpkBtn").addEventListener("click", () => openSpk(qc.sel, sel => { qc.sel = sel; renderQc(); }, isSsSvc(qc.svc) ? {max:1, title:"Select the special speaker"} : {}));
 $("qcApply").addEventListener("click", async () => {
   const change = qcChange();
   $("qcOverlay").hidden = true;
   // Reminder: this only changes what's shown in the video, not the YouTube title or description
   const what = [(change.text != null || change.lt) && (isBaptismSvc(qc.svc) && bapNamesOf(qc.bap).length ? "baptism names" : "speakers"),
-    change.bap && "testimony lower thirds", change.host && "host", change.file != null && svcLabel()].filter(Boolean).join(" and ");
+    change.bap && "testimony lower thirds", change.prog != null && !change.file && "Sunday School Program", change.host && "host", change.file != null && svcLabel()].filter(Boolean).join(" and ");
   const ok = await confirmDlg("Only the on-screen display changes",
     `The ${what} shown in the livestream video will change. The YouTube title and description stay the same.` +
       (ui.stream.active ? " You're live, so viewers will see the change right away. The YouTube title and description can't be changed from the controller while live. To update them, edit the broadcast in YouTube Studio." : ""),
@@ -3363,7 +3400,8 @@ $("qcApply").addEventListener("click", async () => {
   forgetQcBap();   // used now; the names aren't kept
   if(change.lt) setLtPicked(change.lt);
   if(change.bap){ ui.bapReaders = change.bap; renderOt(); if(Object.keys(change).length === 1) return toast("Testimony lower thirds updated"); }
-  if(change.host){ applyHost(change.host); if(Object.keys(change).length === 1) return toast(change.host.on ? "Host lower third updated" : "Host lower third switched off"); }
+  if(change.prog != null){ ui.ssProg = change.prog; renderOt(); delete change.prog; if(!Object.keys(change).length) return toast(ui.ssProg ? "Sunday School Program on" : "Sunday School Program off"); }
+  if(change.host){ applyHost(change.host, isSsSvc(qc.svc) || ui.ssProg); if(Object.keys(change).length === 1) return toast(change.host.on ? "Host lower third updated" : "Host lower third switched off"); }
   try{
     const r = await setDefaultSources(change);
     toast(r.done.length ? `Updated ${r.done.join(" and ")} in OBS` : "Lower third names updated");
@@ -4146,8 +4184,11 @@ const ltThemeOff = d => (d.theme && d.theme !== ltTheme()) || (ltTheme() === "co
 // The host's button (Settings → Scene collections → Lower third → Host), or null when there isn't one
 function ltHost(){
   if(!hostAllowed() || !ui.hostId) return null;
-  const h = cfg().ltHost, sp = allSpeakers().find(x => x.id === ui.hostId);
+  const h = cfg().ltHost || {}, sp = allSpeakers().find(x => x.id === ui.hostId);
   if(!sp) return null;
+  // Sunday School Program: no subtitle, except for the Sunday School Superintendent (Settings → Speakers).
+  // Only for the program: in any other service, being superintendent changes nothing.
+  if(ui.ssProg) return {name:sp.name, subtitle:sp.supt && ui.speakers.home.includes(sp) ? "SUNDAY SCHOOL SUPERINTENDENT" : ""};
   const sub = h.sub ? (String(h.subText || "").trim() || String(sp.subtitle || "").trim() || homeSub(ui.speakers.home.includes(sp) ? sp : null)).toUpperCase() : "";
   return {name:sp.name, subtitle:sub};
 }
@@ -6306,6 +6347,7 @@ $("setRelNew").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preve
 let setSnap = "";
 const settingsChanged = () => snapSettings() !== setSnap;
 // The "user-key" icon (Lucide 1.48, ISC licence), drawn here since the bundled Lucide is older
+const SCHOOL_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 22v-4a2 2 0 1 0-4 0v4"/><path d="m18 10 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7.382a1 1 0 0 1 .553-.894L6 10"/><path d="M18 5v17"/><path d="m4 6 7.106-3.553a2 2 0 0 1 1.788 0L20 6"/><path d="M6 5v17"/><circle cx="12" cy="9" r="2"/></svg>';
 const USER_KEY_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11v6"/><path d="M20 13h2"/><path d="M3 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 2.072.578"/><circle cx="10" cy="7" r="4"/><circle cx="20" cy="19" r="2"/></svg>';
 function renderSetSpk(){
   [["home","setHome"],["visiting","setVisit"]].forEach(([list, el]) => {
@@ -6338,7 +6380,20 @@ function renderSetSpk(){
         const paint = () => { eb.setAttribute("aria-pressed", String(!!sp.elder)); eb.title = sp.elder ? `${sp.name || "This speaker"} is an elder. Tap to unmark.` : `Mark ${sp.name || "this speaker"} as an elder`; eb.setAttribute("aria-label", eb.title); };
         eb.addEventListener("click", () => { sp.elder = !sp.elder; paint(); updateSetDots(); });
         paint(); row.classList.add("has-elder");
-        row.append(names, eb, del);
+        // Sunday School Superintendent: as host of a Sunday School Program, SUNDAY SCHOOL SUPERINTENDENT goes
+        // under their name. One person at a time; anywhere else it changes nothing.
+        const sb = document.createElement("button");
+        sb.type = "button"; sb.className = "btn spk-elder spk-supt"; sb.innerHTML = SCHOOL_SVG;
+        const paintS = () => { sb.setAttribute("aria-pressed", String(!!sp.supt)); sb.title = sp.supt ? `${sp.name || "This speaker"} is the Sunday School Superintendent. Tap to unmark.` : `Mark ${sp.name || "this speaker"} as the Sunday School Superintendent`; sb.setAttribute("aria-label", sb.title); };
+        sb.addEventListener("click", () => {
+          const on = !sp.supt;
+          workSpk.home.forEach(x => { if(x !== sp && x.supt){ delete x.supt; } });
+          sp.supt = on; if(!on) delete sp.supt;
+          $(el).querySelectorAll(".spk-supt").forEach(b => b._paint && b._paint());
+          updateSetDots();
+        });
+        sb._paint = paintS; paintS();
+        row.append(names, sb, eb, del);   // Superintendent, then Elder
       } else row.append(names, del);
       $(el).appendChild(row);
     });
@@ -6460,7 +6515,7 @@ $("setForm").addEventListener("submit", e => {
   ui.defaultVis = $("setVis").value;
   // Speakers: tidy spaces, drop blanks and duplicates (ignoring case), keep ids so selections survive renames
   const seen = new Set();
-  const clean = list => list.map(x => ({id:x.id, name:x.name.trim().replace(/\s+/g," "), ...(x.subtitle && x.subtitle.trim() ? {subtitle:x.subtitle.trim().replace(/\s+/g," ")} : {}), ...(x.elder ? {elder:true} : {})}))
+  const clean = list => list.map(x => ({id:x.id, name:x.name.trim().replace(/\s+/g," "), ...(x.subtitle && x.subtitle.trim() ? {subtitle:x.subtitle.trim().replace(/\s+/g," ")} : {}), ...(x.elder ? {elder:true} : {}), ...(x.supt ? {supt:true} : {})}))
     .filter(x => x.name && !seen.has(nameKey(x.name)) && seen.add(nameKey(x.name)));
   const tseen = new Set(), tidy = v => String(v || "").trim().replace(/\s+/g, " ");
   const teachers = (workSpk.teachers || []).map(t => ({id:t.id, prefix:TEACH_PREFIXES.includes(t.prefix) ? t.prefix : "", first:formatName(tidy(t.first)), last:formatName(tidy(t.last)), subtitle:dashFix(tidy(t.subtitle))}))
@@ -6801,7 +6856,7 @@ obs.on("StreamStateChanged", d => {
   ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive();
   if(startedHere) comeBackAfterGoingLive();
   if(d.outputActive) startOnTitle().then(scene => autoMuteAtStart(scene));
-  else{ cancelAutoEnd(); if(ui.hostId || ui.bapReaders.length){ ui.hostId = ""; ui.bapReaders = []; renderOt(); } }   // the host and testimony readers are for this livestream only
+  else{ cancelAutoEnd(); if(ui.hostId || ui.bapReaders.length || ui.ssProg){ ui.hostId = ""; ui.bapReaders = []; ui.ssProg = false; renderOt(); } }   // the host, testimony readers and Sunday School Program are for this livestream only
 });
 /* "Start the livestream on the title slide": the collection's Waiting title slide (or a scene called
    Title Slide) goes to Program as soon as the stream starts, however it was started. */
