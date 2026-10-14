@@ -199,6 +199,15 @@ ipcMain.handle("open-with-obs", (e, enabled) => {
   fs.writeFileSync(path.join(userData(), "open-with-obs.json"), JSON.stringify({ enabled: !!enabled, exePath: process.execPath }));
   return true;
 });
+// "Start the livestream on the title slide", for the OBS plug-in: { enabled, scenes: { "<scene collection>": "<title slide scene>" } }
+ipcMain.handle("start-title", (e, data) => {
+  const d = data && typeof data === "object" ? data : {};
+  const scenes = {};
+  Object.entries(d.scenes || {}).forEach(([k, v]) => { if (typeof v === "string" && v) scenes[String(k)] = v; });
+  fs.mkdirSync(userData(), { recursive: true });
+  fs.writeFileSync(path.join(userData(), "start-title.json"), JSON.stringify({ enabled: !!d.enabled, scenes }));
+  return true;
+});
 ipcMain.handle("save-file", async (e, name, text, kind) => {
   const filters = kind === "text" ? [{ name: "Text file", extensions: ["txt"] }] : [{ name: "Settings backup", extensions: ["json"] }];
   const r = await dialog.showSaveDialog(win, { defaultPath: path.join(app.getPath("documents"), String(name)), filters });

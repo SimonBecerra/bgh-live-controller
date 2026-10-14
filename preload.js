@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("bgh", {
   },
   keepAwake: on => ipcRenderer.invoke("keep-awake", !!on),
   setOpenWithObs: enabled => ipcRenderer.invoke("open-with-obs", !!enabled),
+  setStartTitle: data => ipcRenderer.invoke("start-title", data),
   saveFile: (name, text, kind) => ipcRenderer.invoke("save-file", name, text, kind),
   bible: {
     status: () => ipcRenderer.invoke("bible-status"),

@@ -1483,7 +1483,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
           <div class="set-section">
             <h4>Starting and ending</h4>
             <label class="check" for="setStartTitle"><input type="checkbox" id="setStartTitle">
-              <span>Start the livestream on the title slide<small>When you go live, from the controller or from OBS, the title slide goes to Program: the one set as this scene collection's Waiting title slide.</small></span>
+              <span>Start the livestream on the title slide<small>Just before you go live, from the controller or from OBS, the title slide goes to Program, so the stream starts on it: the one set as this scene collection's Waiting title slide.</small></span>
             </label>
             <label class="check" for="setAutoEnd"><input type="checkbox" id="setAutoEnd">
               <span>End the livestream after Ending<small>While live, once Ending has been on Program for the time below, the stream stops by itself. A countdown shows first, with a Keep streaming button. Recording keeps going.</small></span>
@@ -3235,6 +3235,7 @@ async function goExisting(){
   if(gl.sel.length || bapActive() || ssProgActive()) await applySpeakersOnly();
   forgetBap();
   ui.streamPending = Date.now(); ui.streamMsg = "Starting in OBS…"; renderOutputs();
+  await titleBeforeLive();
   toast("Starting the selected broadcast in OBS…");
   try{
     // The plug-in finds the row by title; the index only breaks ties between identical titles
@@ -3291,6 +3292,7 @@ $("glGo").addEventListener("click", async () => {
   forgetBap();   // the title, description and readers are made; the names aren't kept
   if(ltOn()) applyHost(gl.host, ssProgActive());
   if(gl.sel.length) setLtPicked(selNames(gl.sel));
+  await titleBeforeLive();
   toast("Setting up the YouTube broadcast in OBS…");
   try{
     await vendorJob("StartYouTubeBroadcast",
@@ -6315,7 +6317,7 @@ function restoreBackup(st){
   if(typeof st.silenceDb === "number"){ ui.silenceDb = st.silenceDb; save("silenceDb", String(ui.silenceDb)); }
   if(typeof st.keepAwake === "boolean"){ ui.keepAwake = st.keepAwake; save("keepAwake", ui.keepAwake ? "1" : "0"); applyWakeLock(); }
   if(typeof st.openWithObs === "boolean"){ ui.openWithObs = st.openWithObs; save("openWithObs", ui.openWithObs ? "1" : "0"); if(window.bgh) window.bgh.setOpenWithObs(ui.openWithObs); }
-  if(typeof st.startTitle === "boolean"){ ui.startTitle = st.startTitle; save("startTitle", ui.startTitle ? "1" : "0"); }
+  if(typeof st.startTitle === "boolean"){ ui.startTitle = st.startTitle; save("startTitle", ui.startTitle ? "1" : "0"); syncStartTitle(); }
   if(typeof st.autoEnd === "boolean"){ ui.autoEnd = st.autoEnd; save("autoEnd", ui.autoEnd ? "1" : "0"); }
   if([15,30,60,120].includes(st.autoEndSec)){ ui.autoEndSec = st.autoEndSec; save("autoEndSec", String(ui.autoEndSec)); }
   if(Array.isArray(st.bapRels) && st.bapRels.length){ ui.bapRels = st.bapRels.map(String).slice(0, 30); save("bapRels", JSON.stringify(ui.bapRels)); }
@@ -6635,6 +6637,7 @@ $("setForm").addEventListener("submit", e => {
     if(window.bgh) window.bgh.setStartAtLogin(ui.startAtLogin);
   }
   ui.startTitle = $("setStartTitle").checked; ui.autoEnd = $("setAutoEnd").checked; ui.autoEndSec = parseInt($("setAutoEndSec").value, 10) || 30;
+  syncStartTitle();
   try{ localStorage.setItem("startTitle", ui.startTitle ? "1" : "0"); localStorage.setItem("autoEnd", ui.autoEnd ? "1" : "0"); localStorage.setItem("autoEndSec", String(ui.autoEndSec)); }catch(err){}
   if(!ui.autoEnd) cancelAutoEnd();
   vwSaveSettings();
@@ -6939,7 +6942,32 @@ obs.on("StreamStateChanged", d => {
   else{ cancelAutoEnd(); if(ui.hostId || ui.bapReaders.length || ui.ssProg){ ui.hostId = ""; ui.bapReaders = []; ui.ssProg = false; renderOt(); } }   // the host, testimony readers and Sunday School Program are for this livestream only
 });
 /* "Start the livestream on the title slide": the collection's Waiting title slide (or a scene called
-   Title Slide) goes to Program as soon as the stream starts, however it was started. */
+   Title Slide) is on Program before the stream starts, so viewers never see what was there before.
+   - Go Live from the controller: the controller switches first, waits for the transition, then starts.
+   - Start Streaming in OBS: the OBS plug-in switches (with a cut) in the moment before the stream starts,
+     using the scenes the controller lists in start-title.json.
+   - Either way, if the stream starts on something else (an older plug-in), it switches straight after. */
+async function titleBeforeLive(){
+  if(!ui.startTitle) return;
+  const t = titleScene();
+  if(!t || ui.program === t) return;
+  try{
+    let dur = 300;
+    try{ const tr = await obs.call("GetCurrentSceneTransition"); if(tr && typeof tr.transitionDuration === "number") dur = tr.transitionDuration; }catch(e){}
+    await obs.call("SetCurrentProgramScene", {sceneName:t});
+    for(let i = 0; i < 14 && ui.program !== t; i++) await sleep(150);
+    if(ui.program !== t) await syncProgram();
+    await sleep(Math.min(2000, dur + 200));   // let the transition finish before the stream starts
+  }catch(e){}
+}
+// The scenes the OBS plug-in switches to when the stream is started from OBS (title slide per scene collection)
+function syncStartTitle(){
+  if(!window.bgh || !window.bgh.setStartTitle) return;
+  const scenes = {};
+  Object.entries(ui.collCfg || {}).forEach(([coll, c]) => { if(c && c.wait && c.wait.title) scenes[coll] = c.wait.title; });
+  if(ui.collection){ const t = titleScene(); if(t) scenes[ui.collection] = t; }
+  window.bgh.setStartTitle({enabled:!!ui.startTitle, scenes});
+}
 function titleScene(){
   const names = BUTTONS.flatMap(b => b.group);
   const g = waitGroupFor(ui.collection, names);
@@ -7355,6 +7383,7 @@ async function syncAll(){
   await loadDefaultSources();
   await loadAudio();
   await otSync();
+  syncStartTitle();
 }
 /* ---------------- Phone remote ----------------
    Desktop app: main.js runs a small web server on the church network (phone.js). Phones see what this page
