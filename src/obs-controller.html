@@ -5294,6 +5294,9 @@ function checkMic(){
   if(!src) return {id:"mic", state:"bad", title:"Microphone", text:"No audio input is chosen for this scene collection.", acts:[["Choose it in Settings", () => { closeReady(); settingsGoTo("collections", "setAudio"); }]]};
   if(ui.audioMissing) return {id:"mic", state:"bad", title:"Microphone", text:`"${src}" isn't in OBS.`, acts:[["Choose it in Settings", () => { closeReady(); settingsGoTo("collections", "setAudio"); }]]};
   const muted = ui.muted ? " It's muted right now (fine before the service)." : "";
+  // Muted, with an older OBS plug-in that can't hear past the mute: say so instead of "no sound"
+  if(quiet >= 15 && ui.muted && rawLvl.unsupported) return {id:"mic", state:"warn", title:"Microphone",
+    text:`"${src}" is muted, so the controller can't tell whether sound is coming in. Unmute it for a moment to check, or update the OBS plug-in so it can tell while muted.`};
   if(quiet >= 15) return {id:"mic", state:"bad", title:"Microphone", meter:true,
     text:`No sound from "${src}" for ${quiet} seconds.${muted} Say something into a microphone: the bar below should move.`,
     steps:["Check that the mixer is on.", "Check the USB cable from the mixer to the laptop.", "Turn up the microphone's channel and the master fader on the mixer.", "Check that the microphone is switched on."]};
@@ -5359,8 +5362,24 @@ function renderReady(){
 // The mic bar in the popup follows the level meter
 obs.on("InputVolumeMeters", () => {
   const bar = !$("readyOverlay").hidden && document.querySelector(".rc-meter i");
-  if(bar) bar.style.width = Math.max(0, Math.min(100, (ui.lastPeak + 60) / 60 * 100)) + "%";
+  const db = ui.muted && rawLvl.db != null ? rawLvl.db : ui.lastPeak;   // muted: the level before the mute
+  if(bar) bar.style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + "%";
 });
+/* A muted mic: OBS's meters read zero while muted, so the OBS plug-in's GetInputLevel (the level before the mute)
+   tells whether sound is arriving. Asked twice a second, only while the mic is muted. An older plug-in without
+   it is asked again a minute later (it may have been updated). */
+const rawLvl = {db:null, unsupported:false, retryAt:0};
+setInterval(async () => {
+  if(!ui.muted || !srcAudio() || ui.audioMissing || ui.connected === false || !ui.everConnected){ rawLvl.db = null; return; }
+  if(rawLvl.unsupported && Date.now() < rawLvl.retryAt) return;
+  try{
+    const r = await obs.call("CallVendorRequest", {vendorName:"church-controller", requestType:"GetInputLevel", requestData:{inputName:srcAudio()}});
+    const d = (r && r.responseData) || {};
+    if(d.ok === false || typeof d.peakDb !== "number") throw new Error("no level");
+    rawLvl.unsupported = false; rawLvl.db = d.peakDb;
+    if(ui.muted && d.peakDb > ui.silenceDb) lastSoundAt = Date.now();
+  }catch(e){ rawLvl.db = null; rawLvl.unsupported = true; rawLvl.retryAt = Date.now() + 60000; }
+}, 500);
 /* Go Live, step 2: the same checks in short, kept up to date while that step is open */
 function renderGlReady(){
   if(!$("glVis") || $("glVis").hidden || $("glOverlay").hidden) return;
