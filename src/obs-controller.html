@@ -357,6 +357,7 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .chip b{color:var(--fg);font-weight:600}
 .scenes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 @media (max-width:560px){.scenes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sc[hidden]{display:none!important}
 .sc{position:relative;min-height:84px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--panel-2);padding:12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:2px;text-align:left;transition:background .1s}
 .sc:active{background:var(--line)}
 .sc .nm{font-family:var(--f-display);font-weight:600;font-size:21px;line-height:1.05}
@@ -1942,7 +1943,7 @@ const FOLDER = "C:\\Users\\Media\\Livestream\\Schedule\\";
 const SCHEDULE_FILES = ["1. Morning Lord's Supper.png","2. Afternoon Ministry Service.png","3. Afternoon Gospel Service.png","4. Evening Gospel Service.png","5. Special Meeting.png","6. Baptism.png","7. Sunday School.png"];
 // Sample scene collections, top-to-bottom as in OBS's Scenes dock. Only some have the three waiting scenes.
 const COLLECTIONS = {
-  "Sunday Service": ["Title Slide","Waiting Slide 1 (Title)","Waiting Slide 2 (Schedule)","Live Soon","Camera 1","Slideshow 4:3","Ending","Slideshow 16:9","Camera 2","Black"],
+  "Sunday Service": ["Title Slide","Waiting Slide 1 (Title)","Waiting Slide 2 (Schedule)","Live Soon","Camera 1","Slideshow 4:3","Ending","Slideshow 16:9","Camera 2","Baptism Cam","Black"],
   "Wednesday Bible Study": ["Live Soon","Camera 1","Slideshow 16:9","Ending","Black"],
   "Special Events": ["Title Slide","Waiting Slide 1 (Title)","Waiting Slide 2 (Schedule)","Camera 1","Camera 2","Slideshow 16:9","Ending","Black"],
   "Funerals & Weddings": ["Title Slide","Camera 1","Slideshow 16:9","Black"]
@@ -2403,7 +2404,7 @@ function buildButtons(names){
       if(n === names.find(x => g.includes(x))) BUTTONS.push({label:"Waiting", scene:g[0], group:g, icon:"hourglass", waiting:true});
       return;
     }
-    BUTTONS.push({label:n, scene:n, group:[n], icon:iconFor(n)});
+    BUTTONS.push({label:n, scene:n, group:[n], icon:iconFor(n), bapCam:isBapCam(n)});
   });
   $("scenes").innerHTML = "";
   sceneEls = BUTTONS.map(b => {
@@ -2468,7 +2469,26 @@ async function syncProgram(){
   }catch(e){ return null; }
 }
 setInterval(() => { if(ui.connected !== false && ui.everConnected && obs.connected !== false) syncProgram(); }, 5000);
+/* Baptism Cam: a scene called "Baptism Cam" only has a button while Baptism is the schedule: picked in Go Live
+   or Change Speaker and Schedule (from the moment it's tapped), or the schedule showing in OBS. It always shows
+   while it's on Program or Preview, when this collection has no schedule set up, and when the schedule folder
+   has no Baptism image (so it can never get lost). */
+const isBapCam = n => /^baptism cam(era)?$/i.test(String(n || "").trim());
+function bapCamShown(b){
+  if(b.group.includes(ui.program) || (ui.studio && b.group.includes(ui.preview))) return true;
+  if(ui.schMode === "off" || !srcImage()) return true;
+  if(ui.files.length && !ui.files.some(p => isBaptismSvc(noExt(base(p))))) return true;
+  if(!$("glOverlay").hidden && bapActive()) return true;
+  if(!$("qcOverlay").hidden && isBaptismSvc(qc.svc)) return true;
+  return isBaptismSvc(noExt(base(ui.schedule || "")));
+}
+const sceneShown = b => !b.bapCam || bapCamShown(b);
+function renderBapCam(){
+  BUTTONS.forEach((b, i) => { if(b.bapCam){ const h = !sceneShown(b); if(sceneEls[i] && sceneEls[i].hidden !== h) sceneEls[i].hidden = h; } });
+}
+setInterval(renderBapCam, 300);
 function renderScenes(){
+  renderBapCam();
   BUTTONS.forEach((b,i) => {
     const el = sceneEls[i];
     const pgm = b.group.includes(ui.program), pvw = ui.studio && b.group.includes(ui.preview);
@@ -3081,6 +3101,7 @@ function glRender(){
   $("glStepTag").hidden = ex;
   $("glNext").textContent = ex ? "Go Live" : "Next: Visibility";
   $("glNext").classList.toggle("primary", !ex); $("glNext").classList.toggle("danger", ex);
+  renderBapCam();
   $("glNext").disabled = ex ? !(gl.bc != null && gl.bcList && spkOk && (!bap || bapNames().length > 0)) : !(titleOk && descOk && spkOk);
   $("glSpkHint").classList.toggle("warn-txt", ltOn() && !ssOn() && !gl.sel.length);
   if(ltOn() && !ssOn() && !gl.sel.length) $("glSpkHint").textContent = "Choose the speakers: lower thirds are on for this scene collection.";
@@ -3396,6 +3417,7 @@ function renderQc(){
   // Baptism chosen: the same cards as in Go Live
   const bq = isBaptismSvc(qc.svc);
   $("qcBapField").hidden = !bq;
+  renderBapCam();
   if(bq) bapEditor($("qcBapList"), $("qcBapLbl"), $("qcBapAdd"), qc.bap, renderQc);
   const svcWarn = ui.schMode === "error" || !scheduleInFolder();
   $("qcSvcNow").textContent = svcWarn ? ui.schMsg : `Showing now: ${ui.schedule ? noExt(base(ui.schedule)) : "nothing"}`;
@@ -7302,7 +7324,7 @@ function drawScene(c, name, t, clear = true){
       txt(c,"LIVE SOON",W/2,H*.44,120,{sp:6}); txt(c,svc,W/2,H*.6,38,{w:500,f:BODY,col:"#f2c9cb"});
       for(let i=0;i<3;i++){ c.fillStyle = `rgba(255,255,255,${.25+.75*(Math.floor(t*2)%3===i)})`; c.beginPath(); c.arc(W/2-30+i*30,H*.72,7,0,Math.PI*2); c.fill(); } break;
     case "Camera 1": drawCamera(c,W,H,t,1); break;
-    case "Camera 2": drawCamera(c,W,H,t,2); break;
+    case "Camera 2": case "Baptism Cam": drawCamera(c,W,H,t,2); break;
     case "Slideshow 4:3": { c.fillStyle = "#000"; c.fillRect(0,0,W,H); const sw = H*4/3, x = (W-sw)/2;
       bg2(c,x,0,sw,H); txt(c,"Psalm 46:1",W/2,H*.3,40,{col:"#d9c38f",sp:2});
       txt(c,"God is our refuge and strength,",W/2,H*.48,50,{w:600}); txt(c,"a very present help in trouble.",W/2,H*.58,50,{w:600});
@@ -7423,7 +7445,7 @@ function phState(){
     rec:!!ui.rec.active, recT0:ui.rec.active ? ui.rec.t0 : 0,
     viewers:ui.stream.active && vw.cfg.on && vw.state === "count" ? vw.now : null,
     safe:!!ui.safe, program:ui.program || "",
-    scenes:BUTTONS.map(b => {
+    scenes:BUTTONS.filter(sceneShown).map(b => {
       const on = b.group.includes(ui.program);
       return {label:b.label, icon:b.icon, on, mic:micOf(b.scene), ending:isEnding(b.label) || isEnding(b.scene),
         sub:b.waiting ? (on && ui.program !== b.label ? ui.program : "Title Slide") : ""};
