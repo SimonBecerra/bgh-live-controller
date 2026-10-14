@@ -272,6 +272,24 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .bk-row .btn{flex:none;min-height:46px;font-size:14px}
 .link-note{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 /* On/off switches: the whole row is the touch target */
+/* Phone button: a popup with the QR code and code; it turns green with a tick once a phone pairs */
+.dialog.ph-dlg{width:min(420px,calc(100vw - 32px));display:flex;flex-direction:column;gap:14px;text-align:center;transition:background .25s,border-color .25s}
+.ph-dlg .apply-row{justify-content:stretch}
+.ph-dlg .apply-row .btn{flex:1}
+.ph-pop{display:flex;flex-direction:column;align-items:center;gap:12px}
+.ph-pop h2{margin:0;font-size:22px}
+.ph-pop .ph-qr{width:240px;height:240px;padding:10px}
+.ph-pop .ph-code{font-size:44px}
+.ph-small{margin:0;font-size:13px;line-height:1.45;color:var(--muted);max-width:340px}
+.ph-small b{color:var(--fg);font-weight:600;word-break:break-all}
+.dialog.ph-dlg.ph-ok{background:#1f9d57;border-color:#1f9d57;color:#fff}
+.ph-done{display:flex;flex-direction:column;align-items:center;gap:10px;padding:56px 0}
+.ph-done svg{width:104px;height:104px;stroke:#fff;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.ph-done svg circle{opacity:.35}
+.ph-done svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:phTick .45s .1s ease-out forwards}
+@keyframes phTick{to{stroke-dashoffset:0}}
+.ph-done b{font-size:30px;font-weight:800}
+.ph-done span{font-size:15px;opacity:.9}
 /* Settings → Phone remote */
 .ph-pair{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;margin-top:10px;padding:16px;border-radius:12px;background:var(--panel-2, rgba(255,255,255,.04));border:1px solid var(--line)}
 .ph-qr{width:168px;height:168px;background:#fff;border-radius:10px;padding:6px;box-sizing:border-box}
@@ -951,6 +969,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <button class="upd-btn" id="updBtn" type="button" hidden title="A new version of the controller is ready"><i data-lucide="download"></i><span>UPDATE READY</span></button>
     <button class="safe-btn" id="safeBtn" type="button" aria-pressed="false" title="Safe mode stops accidental changes to the livestream"><i data-lucide="lock-open" class="safe-ico"></i><span class="safe-lbl">SAFE MODE</span><b class="safe-st">OFF</b></button>
     <button class="icon-btn ready-btn" id="readyBtn" type="button" aria-label="Ready check" title="Ready check"><i data-lucide="check-check"></i><span class="ready-dot" id="readyDot" hidden></span></button>
+    <button class="icon-btn" id="phoneBtn" type="button" aria-label="Pair a phone remote" title="Phone remote"><i data-lucide="smartphone"></i></button>
     <button class="icon-btn" id="fsBtn" aria-label="Enter fullscreen"><i data-lucide="maximize"></i></button>
     <button class="icon-btn" id="settingsBtn" aria-label="Settings">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
@@ -1850,6 +1869,12 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <div class="ready-head"><h2 id="readyH">Ready check</h2><span class="ready-sum" id="readySum" aria-live="polite"></span></div>
     <div class="ready-list" id="readyList"></div>
     <div class="apply-row"><button type="button" class="btn" id="readyAgain"><i data-lucide="refresh-cw"></i> Check again</button><button type="button" class="btn primary" id="readyClose">Done</button></div>
+  </div>
+</div>
+<div class="overlay" id="phOverlay" hidden>
+  <div class="dialog ph-dlg" role="dialog" aria-modal="true" aria-labelledby="phH">
+    <div class="ph-pop" id="phPop" aria-live="polite"></div>
+    <div class="apply-row" id="phPopFoot"><button type="button" class="btn" id="phCancel">Cancel</button></div>
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -7148,19 +7173,71 @@ if(phApi){
     catch(e){ phApi.reply({id, ok:false, error:e.message || String(e), code:e.code || ""}); }
     phSend();
   });
-  phApi.onChanged(() => { if(!$("setOverlay").hidden && ui.setPage === "phone") renderPhone(); });
-  phApi.onPaired(d => toast(`${d.name} is paired as a phone remote`));
+  phApi.onChanged(() => { if(!$("setOverlay").hidden && ui.setPage === "phone") renderPhone(); renderPhonePop(); });
+  phApi.onPaired(d => { if(!phonePopPaired(d.name)) toast(`${d.name} is paired as a phone remote`); });
 }
 
 /* Settings → Phone remote. The pairing code only works while this page is open. */
 let phInfo = null, phTick = null;
 async function phPairing(){
-  const open = !!$("setOverlay") && !$("setOverlay").hidden && ui.setPage === "phone";
-  if(!phApi){ if(open) renderPhone(); return; }
+  const inSet = !!$("setOverlay") && !$("setOverlay").hidden && ui.setPage === "phone";
+  const pop = !!$("phOverlay") && !$("phOverlay").hidden && !phPopDone;
+  const open = inSet || pop;
+  if(!phApi){ if(inSet) renderPhone(); if(pop) renderPhonePop(); return; }
   clearInterval(phTick); phTick = null;
   try{ phInfo = await phApi.pairing(open); }catch(e){}
-  if(open){ renderPhone(); phTick = setInterval(renderPhone, 5000); }
+  if(open){ const f = () => { if(inSet) renderPhone(); if(pop) renderPhonePop(); }; f(); phTick = setInterval(f, 5000); }
 }
+/* The phone button beside Ready check: the QR code and pairing code in a popup */
+var phPopDone = false, phPopT = null;
+function openPhonePop(){ phPopDone = false; clearTimeout(phPopT); $("phOverlay").querySelector(".ph-dlg").classList.remove("ph-ok"); $("phPopFoot").hidden = false; $("phOverlay").hidden = false; renderPhonePop(); phPairing(); }
+function closePhonePop(){ clearTimeout(phPopT); $("phOverlay").hidden = true; phPopDone = false; phPairing(); }
+async function renderPhonePop(){
+  if($("phOverlay").hidden || phPopDone) return;
+  // #proto-start
+  if(!phApi) phInfo = phInfo || {enabled:true, running:true, urls:["http://192.168.1.20:8642"], code:"482", lockedFor:0, qr:"", devices:[]};
+  else
+  // #proto-end
+  try{ phInfo = await phApi.info(); }catch(e){ return; }
+  if(phPopDone) return;
+  const i = phInfo, el = $("phPop");
+  if(!i.enabled){
+    el.innerHTML = `<h2 id="phH">Pair a phone</h2><p class="ph-small">The phone remote is off. Turn it on so phones on the church Wi-Fi can change scenes, mute the mic, show hymns, verses and lower thirds, and watch Program.</p>
+      <button type="button" class="btn primary" id="phTurnOn"><i data-lucide="smartphone"></i>Turn on the phone remote</button>`;
+    if(window.lucide) lucide.createIcons();
+    $("phTurnOn").addEventListener("click", async () => {
+      // #proto-start
+      if(!phApi){ phInfo.enabled = true; renderPhonePop(); return; }
+      // #proto-end
+      phInfo = await phApi.enable(true); await phPairing();
+    });
+    return;
+  }
+  if(!i.running){ el.innerHTML = `<h2 id="phH">Pair a phone</h2><p class="ph-small ph-warn">The phone remote couldn't start: ${esc(i.error || "unknown problem")}</p>`; return; }
+  if(!i.urls.length){ el.innerHTML = `<h2 id="phH">Pair a phone</h2><p class="ph-small ph-warn">This computer isn't connected to a network, so phones can't reach it. Connect it to the church Wi-Fi or network.</p>`; return; }
+  if(i.lockedFor){ el.innerHTML = `<h2 id="phH">Pair a phone</h2><p class="ph-small ph-warn">Too many wrong codes. Pairing is paused for ${Math.ceil(i.lockedFor / 60)} min.</p>`; return; }
+  el.innerHTML = `<h2 id="phH">Pair a phone</h2>
+    <div class="ph-qr" aria-label="QR code that opens the phone remote">${i.qr || ""}</div>
+    <span class="ph-code" aria-label="Pairing code ${esc(String(i.code).split("").join(" "))}">${esc(i.code)}</span>
+    <p class="ph-small">On a phone on the church Wi-Fi, point the camera at the QR code, or open <b>${esc(i.urls[0])}</b> and type the code. The code changes after each phone pairs. Go Live, Stop and Record stay on the controller.</p>`;
+  // #proto-start  the prototype has no phones: tap the code to see what pairing looks like
+  if(!phApi){ el.querySelector(".ph-qr").innerHTML = `<svg viewBox="0 0 29 29" aria-hidden="true">${Array.from({length:29 * 29}, (_, k) => { const x = k % 29, y = Math.floor(k / 29), f = (x < 7 && y < 7) || (x > 21 && y < 7) || (x < 7 && y > 21); const on = f ? (Math.max(Math.abs(x % 22 - 3), Math.abs(y % 22 - 3)) !== 2) : ((x * 7 + y * 13 + x * y) % 5 < 2); return on ? `<rect x="${x}" y="${y}" width="1" height="1"/>` : ""; }).join("")}</svg>`;
+    el.querySelector(".ph-code").style.cursor = "pointer"; el.querySelector(".ph-code").title = "Prototype: tap to pretend a phone paired";
+    el.querySelector(".ph-code").addEventListener("click", () => phonePopPaired("iPhone")); }
+  // #proto-end
+}
+function phonePopPaired(name){
+  if($("phOverlay").hidden) return false;
+  phPopDone = true; clearInterval(phTick); phTick = null;
+  $("phOverlay").querySelector(".ph-dlg").classList.add("ph-ok");
+  $("phPopFoot").hidden = true;
+  $("phPop").innerHTML = `<div class="ph-done" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m7.5 12.5 3 3 6-6.5"/></svg><b>Paired</b>${name ? `<span>${esc(name)}</span>` : ""}</div>`;
+  phPopT = setTimeout(closePhonePop, 1800);
+  return true;
+}
+$("phoneBtn").addEventListener("click", openPhonePop);
+$("phCancel").addEventListener("click", closePhonePop);
+$("phOverlay").addEventListener("keydown", e => { if(e.key === "Escape"){ e.preventDefault(); closePhonePop(); } });
 const phAgo = t => { if(!t) return "never"; const m = Math.round((Date.now() - t) / 60000); if(m < 2) return "just now"; if(m < 60) return `${m} min ago`;
   const d = new Date(t); return d.toLocaleDateString(undefined, {month:"short", day:"numeric"}) + " " + d.toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"}); };
 async function renderPhone(){
