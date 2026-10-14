@@ -37,3 +37,9 @@ if(/https:\/\/(unpkg|fonts\.googleapis|cdn)/.test(html)) throw new Error("Build 
 
 writeFileSync(join(out, "index.html"), html);
 console.log(`app/index.html built: ${elements} prototype-only elements and ${blocks} code blocks removed, fonts and icons bundled.`);
+
+// The phone remote's page, served to phones by phone.js
+const phone = readFileSync(join(root, "src", "phone.html"), "utf8");
+if(/https?:\/\/(?!www\.w3\.org)/.test(phone.replace(/<!--[\s\S]*?-->/g, ""))) throw new Error("Build stopped: the phone page loads something from the internet");
+writeFileSync(join(out, "phone.html"), phone);
+console.log("app/phone.html built.");

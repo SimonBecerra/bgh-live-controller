@@ -272,6 +272,23 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .bk-row .btn{flex:none;min-height:46px;font-size:14px}
 .link-note{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 /* On/off switches: the whole row is the touch target */
+/* Settings → Phone remote */
+.ph-pair{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;margin-top:10px;padding:16px;border-radius:12px;background:var(--panel-2, rgba(255,255,255,.04));border:1px solid var(--line)}
+.ph-qr{width:168px;height:168px;background:#fff;border-radius:10px;padding:6px;box-sizing:border-box}
+.ph-qr svg{display:block;width:100%;height:100%}
+.ph-steps{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ph-steps p{margin:0;line-height:1.45}
+.ph-url{font-weight:700;font-size:18px;word-break:break-all;user-select:all}
+.ph-code{display:inline-block;font-size:34px;font-weight:800;letter-spacing:.3em;padding:2px 4px 2px 12px;border-radius:10px;background:var(--panel, #0f1a20);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.ph-note{font-size:13px;color:var(--muted);line-height:1.45;margin:10px 0 0}
+.ph-warn{color:var(--warn, #f5b700)}
+.ph-dev{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.ph-dev:last-child{border-bottom:0}
+.ph-dev .nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-weight:600}
+.ph-dev small{font-weight:400;color:var(--muted);font-size:13px}
+.ph-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none;opacity:.5}
+.ph-dot.on{background:#2fbf71;opacity:1}
+@media (max-width:640px){ .ph-pair{grid-template-columns:1fr} }
 .check{display:flex;gap:16px;align-items:center;font-weight:600;cursor:pointer;min-height:56px;padding:6px 0}
 .check span{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
 .check small{font-weight:400;font-size:13px;color:var(--muted);line-height:1.4}
@@ -1140,6 +1157,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         <button type="button" role="tab" id="tab-golive" data-page="golive" aria-controls="page-golive"><i data-lucide="radio"></i><span>Going live</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-alerts" data-page="alerts" aria-controls="page-alerts"><i data-lucide="bell"></i><span>Alerts</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-screen" data-page="screen" aria-controls="page-screen"><i data-lucide="monitor"></i><span>Screen</span><b class="tdot" aria-hidden="true"></b></button>
+        <button type="button" role="tab" id="tab-phone" data-page="phone" aria-controls="page-phone"><i data-lucide="smartphone"></i><span>Phone remote</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-backup" data-page="backup" aria-controls="page-backup"><i data-lucide="archive"></i><span>Backup</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-help" data-page="help" aria-controls="page-help"><i data-lucide="circle-help"></i><span>About &amp; help</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-testing" data-page="testing" aria-controls="page-testing" class="nav-proto" data-proto><i data-lucide="flask-conical"></i><span>Testing</span><b class="tdot" aria-hidden="true"></b></button>
@@ -1500,6 +1518,20 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <button type="button" class="btn" id="setTouchTest">Test touch</button>
             </div>
             <span class="path">If tapping the touchscreen clicks on another monitor, use Set up touch input: Windows asks you to tap the touchscreen once.</span>
+          </div>
+        </section>
+
+        <section class="set-page" id="page-phone" data-page="phone" role="tabpanel" aria-labelledby="tab-phone" tabindex="-1" hidden>
+          <h3 class="page-h">Phone remote</h3>
+          <div class="set-section">
+            <label class="check" for="setPhoneOn"><input type="checkbox" id="setPhoneOn" data-cfg data-keep>
+              <span>Turn on the phone remote<small>Phones on the church Wi-Fi can change scenes, mute the mic, show hymns, verses and lower thirds, and watch Program. Going live, stopping and recording stay here on the controller. This takes effect straight away.</small></span>
+            </label>
+            <div id="phBody" aria-live="polite"></div>
+          </div>
+          <div class="set-section">
+            <h4>Paired phones</h4>
+            <div id="phDevices"></div>
           </div>
         </section>
 
@@ -5303,7 +5335,7 @@ $("setVis").value = ui.defaultVis;
 /* Settings: a sidebar of categories, each its own page.
    Dots on a category: orange = needs attention, accent = unsaved changes. */
 const esc = v => String(v).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", golive:"Going live", alerts:"Alerts", screen:"Screen", backup:"Backup", help:"About & help", testing:"Testing"};
+const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", golive:"Going live", alerts:"Alerts", screen:"Screen", phone:"Phone remote", backup:"Backup", help:"About & help", testing:"Testing"};
 ui.setPage = (() => { try{ const p = localStorage.getItem("setPage"); return SET_PAGES[p] ? p : "connection"; }catch(e){ return "connection"; } })();
 function showSetPage(page, focusTab){
   if(!SET_PAGES[page] || !document.getElementById("tab-" + page)) page = "connection";
@@ -5315,6 +5347,7 @@ function showSetPage(page, focusTab){
   });
   document.querySelectorAll("#setBody .set-page").forEach(p => p.hidden = p.dataset.page !== page);
   $("setBody").scrollTop = 0;
+  phPairing();
 }
 $("setNav").addEventListener("click", e => { const t = e.target.closest("[role=tab]"); if(t) showSetPage(t.dataset.page); });
 $("setNav").addEventListener("keydown", e => {
@@ -5424,6 +5457,7 @@ async function openSettingsPanel(page = ui.setPage){
   $("setAsk").hidden = true;
   showSetPage(page);
   $("setOverlay").hidden = false;
+  phPairing();
   const tab = document.querySelector("#setNav [aria-selected=true]"); if(tab) tab.focus({preventScroll:true});
   updateSetDots();
   renderSetStatus();
@@ -6151,7 +6185,7 @@ $("setHomeNew").addEventListener("keydown", e => { if(e.key === "Enter"){ e.prev
 $("setVisitNew").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); $("setVisitAdd").click(); } });
 function closeSettings(){
   const wasOpen = !$("setOverlay").hidden;
-  $("setAsk").hidden = true; $("setOverlay").hidden = true;
+  $("setAsk").hidden = true; $("setOverlay").hidden = true; phPairing();
   if(wasOpen && $("setForm").contains(document.activeElement)) $("settingsBtn").focus({preventScroll:true});
 }
 $("setX").addEventListener("click", () => {
@@ -6945,6 +6979,238 @@ async function syncAll(){
   await loadAudio();
   await otSync();
 }
+/* ---------------- Phone remote ----------------
+   Desktop app: main.js runs a small web server on the church network (phone.js). Phones see what this page
+   sends (state when it changes, the mic level, a small Program picture every 3 s while a phone has View program
+   on) and ask this page to do things. Phone taps run through the same functions as the buttons here, so the rules
+   are the same: one thing on screen at a time, lower thirds wait for a hymn, Safe mode asks first. While no phone
+   is connected, none of this runs. */
+var PH = null;
+const phApi = window.bgh && window.bgh.phone ? window.bgh.phone : null;
+function phErr(message, code){ const e = new Error(message); e.code = code; return e; }
+function phLtEnds(){
+  const l = ui.lt;
+  if(!l || !l.showing || !(l.duration > 0) || !l.since) return 0;
+  return Math.round(performance.timeOrigin + l.since + l.duration * 1000);
+}
+function phItem(){
+  const it = ot.item; if(!it) return null;
+  const s = it.slides[ot.i] || {};
+  if(it.kind === "verse") return {kind:"verse", title:it.title, short:it.short, tr:it.tr, i:ot.i, started:!!it.started, showing:!!ot.showing,
+    ref:it.started ? s.reference : "", text:it.started ? String(s.text || "").slice(0, 600) : "",
+    verses:it.slides.map(x => x.v), seen:[...it.seen]};
+  const nx = it.slides[ot.i + 1];
+  return {kind:"hymn", title:it.title, short:it.short, i:ot.i, n:it.slides.length, showing:!!ot.showing,
+    intro:!!s.intro, label:s.label || "", page:s.page || 1, pages:s.pages || 1,
+    lines:s.intro ? [s.book || "", `Hymn ${s.number || ""}`] : (s.lines || []),
+    next:nx ? (nx.lines || []) : null,
+    labels:[...new Set(it.slides.filter(x => !x.intro).map(x => x.label))]};
+}
+function phState(){
+  const c = cfg() || {}, am = c.autoMic && c.autoMic.on ? c.autoMic : null;
+  const micOf = scene => !am || !srcAudio() ? null : ((am.scenes && am.scenes[scene]) || autoMicDefault(scene));
+  const host = ltOn() ? ltHost() : null;
+  const left = autoEnd ? Math.max(0, Math.ceil((autoEnd.t0 + ui.autoEndSec * 1000 - Date.now()) / 1000)) : null;
+  return {
+    collection:ui.collection || "", obs:ui.connected !== false && !!ui.everConnected,
+    live:!!ui.stream.active, liveT0:ui.stream.active ? ui.stream.t0 : 0,
+    rec:!!ui.rec.active, recT0:ui.rec.active ? ui.rec.t0 : 0,
+    viewers:ui.stream.active && vw.cfg.on && vw.state === "count" ? vw.now : null,
+    safe:!!ui.safe, program:ui.program || "",
+    scenes:BUTTONS.map(b => {
+      const on = b.group.includes(ui.program);
+      return {label:b.label, icon:b.icon, on, mic:micOf(b.scene), ending:isEnding(b.label) || isEnding(b.scene),
+        sub:b.waiting ? (on && ui.program !== b.label ? ui.program : "Title Slide") : ""};
+    }),
+    audio:{name:srcAudio() || "", missing:!!ui.audioMissing, muted:!!ui.muted},
+    autoEnd:{on:!!ui.autoEnd, sec:ui.autoEndSec, left, kept:!!ui.autoEndSkip && ui.autoEndSkip === ui.program},
+    ltOn:ltOn(),
+    item:phItem(),
+    lts:ltOn() ? [...ltItems().map(x => ({name:x.name, sub:x.sub || "", short:x.short || x.name, note:x.note || ""})),
+      ...(host ? [{name:host.name, sub:host.subtitle || "", short:ltShort(host.name, [host.name]), note:"Host", host:true}] : [])] : [],
+    ltUp:ui.lt.showing ? {name:ui.lt.showing, sub:ui.lt.subtitle || ""} : null,
+    ltEnds:phLtEnds(), ltDur:ui.lt.duration || 8,
+    books:ui.hymnBooks.map(b => ({id:b.id, name:b.name, short:b.short || ""})), book:ui.ot.book || "",
+    tr:ot.trSession || ui.ot.bbTr || "KJV"
+  };
+}
+function phSend(){ if(PH && PH.clients && phApi) phApi.state(phState()); }
+async function phFrame(){
+  if(!PH || !PH.view || !phApi || PH.grabbing || !ui.program || ui.connected === false) return;
+  PH.grabbing = true;
+  try{
+    const r = await withTimeout(obs.call("GetSourceScreenshot", {sourceName:ui.program, imageFormat:"jpg", imageWidth:320, imageHeight:180, imageCompressionQuality:55}), 2500);
+    if(r && r.imageData) phApi.frame(r.imageData);
+  }catch(e){}
+  finally{ PH.grabbing = false; PH.frameScene = ui.program; }
+}
+function phWatch(w){
+  PH.clients = w.clients || 0; PH.view = !!w.view && PH.clients > 0;
+  clearInterval(PH.stateT); clearInterval(PH.lvlT); clearInterval(PH.frameT);
+  if(PH.clients){
+    phSend();
+    PH.stateT = setInterval(() => {
+      phSend();
+      // A new scene on Program: a fresh picture as soon as the transition is over, not up to 3 s later
+      if(PH.view && PH.frameScene !== ui.program && !PH.frameSoon){ PH.frameSoon = setTimeout(() => { PH.frameSoon = null; phFrame(); }, 700); }
+    }, 300);
+    PH.lvlT = setInterval(() => phApi.level(ui.muted || ui.audioMissing ? 0 : pct(ui.lastPeak)), 150);
+  }
+  if(PH.view){ phFrame(); PH.frameT = setInterval(phFrame, 3000); }
+}
+const PH_SURE = new Set(["scene", "mute", "hymn", "bible", "lt"]);
+async function phRun(cmd, a){
+  if(ui.connected === false || !ui.everConnected) throw phErr("The controller isn't connected to OBS right now.", "NO_OBS");
+  if(ui.safe && PH_SURE.has(cmd) && !a.sure) throw phErr("Safe mode is on at the controller.", "SAFE");
+  const needOt = () => { if(!ltOn()) throw phErr(`Hymns, Bible and lower thirds are off for ${ui.collection}.`, "OFF"); };
+  switch(cmd){
+    case "scene": {
+      const b = BUTTONS.find(x => x.label === a.label);
+      if(!b) throw phErr(`There's no ${a.label} scene in ${ui.collection} any more.`);
+      if(b.group.includes(ui.program)) return {};
+      // The phone always changes Program, even in Studio Mode
+      if(ui.studio){ await obs.call("SetCurrentProgramScene", {sceneName:b.scene}); return {}; }
+      await selectScene(b); return {};
+    }
+    case "mute": {
+      if(!srcAudio() || ui.audioMissing) throw phErr("No microphone input is set up for this scene collection.");
+      await obs.call("SetInputMute", {inputName:srcAudio(), inputMuted:!!a.muted}); return {};
+    }
+    case "hymn-find": {
+      const b = bookById(a.book), num = String(a.num || "").trim().toUpperCase();
+      const h = b && num ? b.hymns.find(x => x.number === num) : null;
+      return h ? {title:h.title, verses:h.verses.length} : null;
+    }
+    case "hymn": {
+      needOt();
+      if(ui.lt.showing) throw phErr("A lower third is showing. Hymns wait until it's gone.");
+      const b = bookById(a.book), num = String(a.num || "").trim().toUpperCase();
+      if(!b || !b.hymns.find(x => x.number === num)) throw phErr(`There's no hymn ${num} in that book.`);
+      hy.book = b.id; hy.num = num;
+      await loadHymn(); return {};
+    }
+    case "bible-status": {
+      if(!bb.status) try{ bb.status = await bibleApi.status(); }catch(e){}
+      return (bb.status || [{abbr:"KJV", ok:true}]).map(x => ({abbr:x.abbr, ok:!!x.ok}));
+    }
+    case "bible-find": {
+      const p = parseBibleRef(String(a.ref || ""));
+      if(!p.ok) return {ok:false, error:p.error};
+      const s = p.segments[0];
+      return {ok:true, label:oneChapter(p.book) ? p.book.name : `${p.book.name} ${s.c1}`, from:phFromVerse(p, a.ref) };
+    }
+    case "bible": {
+      needOt();
+      if(ui.lt.showing) throw phErr("A lower third is showing. The Bible waits until it's gone.");
+      const p = parseBibleRef(String(a.ref || ""));
+      if(!p.ok) throw phErr(p.error);
+      if(!bb.status) try{ bb.status = await bibleApi.status(); }catch(e){}
+      const tr = String(a.tr || ot.trSession || ui.ot.bbTr || "KJV");
+      if(!trState(tr).ok) throw phErr(`${tr} isn't available on the controller. Choose another translation.`);
+      const book = p.book, chapter = p.segments[0].c1;
+      const r = await bbFetchChapter(book, chapter, tr);
+      if(!r.ok) throw phErr(r.error || "Couldn't get the verses.");
+      if(ot.showing) await otHide();
+      ot.trSession = tr; bb.tr = tr; bb.book = book; bb.chapter = chapter; bb.testament = testamentOf(book);
+      ot.item = {kind:"verse", title:`${r.name} · ${tr}`, short:r.name, slides:r.slides, book, chapter, tr, started:false, seen:new Set(),
+        sub:i => !ot.item.started ? "Tap a verse number to start" : `${ot.item.slides[i].reference}${ot.showing ? " on the stream" : " · hidden"}`};
+      ot.i = 0; bb.mode = "read";
+      renderOt();
+      const from = phFromVerse(p, a.ref);
+      if(from) { const n = ot.item.slides.findIndex(x => x.v === from); if(n >= 0) bbGo(n); }
+      toast(`From the phone: ${r.name} (${tr})`);
+      return {};
+    }
+    case "verse": { if(!ot.item || ot.item.kind !== "verse") throw phErr("No passage is open."); bbGo(+a.i); return {}; }
+    case "step": { if(!ot.item) throw phErr("Nothing is on screen."); otStep(a.d > 0 ? 1 : -1); return {}; }
+    case "jump": { if(!ot.item) throw phErr("Nothing is on screen."); otJump(String(a.label || "")); return {}; }
+    case "done": { if(ot.item) await otDone(); return {}; }
+    case "lt": {
+      needOt();
+      if(ot.item) throw phErr("Lower thirds wait until the hymn or passage is done.");
+      await ltShow(String(a.name || ""), String(a.sub || "")); return {};
+    }
+    default: throw phErr("The controller doesn't know that yet. Update it to the newest version.");
+  }
+}
+// "John 3:16" starts at verse 16; "John 3" waits for a verse to be tapped
+function phFromVerse(p, ref){
+  const s = p.segments[0];
+  const whole = s.v1 === 1 && s.v2 === p.book.chapters[s.c1 - 1];
+  return whole && !/\d\s*[:.]\s*\d/.test(String(ref || "")) ? 0 : s.v1;
+}
+if(phApi){
+  PH = {clients:0, view:false};
+  phApi.onWatch(phWatch);
+  phApi.watching().then(phWatch).catch(() => {});
+  phApi.onCmd(async ({id, cmd, args}) => {
+    try{ const data = await phRun(String(cmd), args || {}); phApi.reply({id, ok:true, data}); }
+    catch(e){ phApi.reply({id, ok:false, error:e.message || String(e), code:e.code || ""}); }
+    phSend();
+  });
+  phApi.onChanged(() => { if(!$("setOverlay").hidden && ui.setPage === "phone") renderPhone(); });
+  phApi.onPaired(d => toast(`${d.name} is paired as a phone remote`));
+}
+
+/* Settings → Phone remote. The pairing code only works while this page is open. */
+let phInfo = null, phTick = null;
+async function phPairing(){
+  const open = !!$("setOverlay") && !$("setOverlay").hidden && ui.setPage === "phone";
+  if(!phApi){ if(open) renderPhone(); return; }
+  clearInterval(phTick); phTick = null;
+  try{ phInfo = await phApi.pairing(open); }catch(e){}
+  if(open){ renderPhone(); phTick = setInterval(renderPhone, 5000); }
+}
+const phAgo = t => { if(!t) return "never"; const m = Math.round((Date.now() - t) / 60000); if(m < 2) return "just now"; if(m < 60) return `${m} min ago`;
+  const d = new Date(t); return d.toLocaleDateString(undefined, {month:"short", day:"numeric"}) + " " + d.toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"}); };
+async function renderPhone(){
+  // #proto-start
+  if(!phApi){
+    phInfo = phInfo || {enabled:false, running:false, urls:["http://192.168.1.20:8642"], code:"482", lockedFor:0, qr:"", devices:[{id:"a", name:"iPhone", pairedAt:Date.now() - 864e5 * 3, lastSeen:Date.now() - 6e5, online:false}]};
+    phInfo.running = phInfo.enabled;
+  } else
+  // #proto-end
+  try{ phInfo = await phApi.info(); }catch(e){ return; }
+  const i = phInfo, body = $("phBody");
+  $("setPhoneOn").checked = i.enabled;
+  if(!i.enabled) body.innerHTML = "";
+  else if(!i.running) body.innerHTML = `<p class="ph-note ph-warn">The phone remote couldn't start: ${esc(i.error || "unknown problem")}</p>`;
+  else if(!i.urls.length) body.innerHTML = `<p class="ph-note ph-warn">This computer isn't connected to a network, so phones can't reach it. Connect it to the church Wi-Fi or network.</p>`;
+  else body.innerHTML = `<div class="ph-pair">
+      ${i.qr ? `<div class="ph-qr" aria-label="QR code that opens the phone remote">${i.qr}</div>` : `<div class="ph-qr" aria-hidden="true"></div>`}
+      <div class="ph-steps">
+        <p>1. On a phone on the church Wi-Fi, point the camera at the code, or open<br><span class="ph-url">${esc(i.urls[0])}</span></p>
+        ${i.lockedFor ? `<p class="ph-warn">Too many wrong codes. Pairing is paused for ${Math.ceil(i.lockedFor / 60)} min.</p>`
+          : `<p>2. Type this pairing code:<br><span class="ph-code" aria-label="Pairing code ${esc(i.code.split("").join(" "))}">${esc(i.code)}</span></p>`}
+      </div></div>
+    <p class="ph-note">The code works only while this page is open, and changes after each phone pairs. A paired phone stays paired until you remove it below.${i.urls.length > 1 ? ` This computer is also at ${i.urls.slice(1).map(esc).join(", ")}.` : ""}</p>
+    <p class="ph-note">The first time, Windows may ask whether BGH LIVE Controller can use the network. Tick <b>Private networks</b> and choose <b>Allow</b>.</p>`;
+  const list = $("phDevices");
+  if(!i.devices.length){ list.innerHTML = `<p class="path">No phones yet.</p>`; return; }
+  list.innerHTML = "";
+  i.devices.forEach(d => {
+    const row = document.createElement("div"); row.className = "ph-dev";
+    row.innerHTML = `<i class="ph-dot ${d.online ? "on" : ""}" aria-hidden="true"></i><span class="nm"></span><button type="button" class="btn" data-keep>Remove</button>`;
+    row.querySelector(".nm").innerHTML = `${esc(d.name)}<small>${d.online ? "Connected now" : "Last used " + phAgo(d.lastSeen)} · paired ${new Date(d.pairedAt).toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"})}</small>`;
+    row.querySelector("button").addEventListener("click", async () => {
+      if(!await confirmDlg(`Remove ${d.name}?`, "It stops working as a remote straight away. To use it again, pair it with a new code.", "Remove", "danger", "Cancel")) return;
+      // #proto-start
+      if(!phApi){ phInfo.devices = phInfo.devices.filter(x => x.id !== d.id); renderPhone(); return; }
+      // #proto-end
+      await phApi.remove(d.id); renderPhone(); toast(`${d.name} removed`);
+    });
+    list.appendChild(row);
+  });
+}
+$("setPhoneOn").addEventListener("change", async e => {
+  const on = e.target.checked;
+  // #proto-start
+  if(!phApi){ phInfo.enabled = on; renderPhone(); return; }
+  // #proto-end
+  phInfo = await phApi.enable(on);
+  await phPairing();
+  toast(on ? "Phone remote on" : "Phone remote off: phones can't reach the controller");
+});
 function renderConnText(){
   $("connText").textContent = window.bgh ? "Connected to OBS" : "Prototype · simulated OBS connection";
   $("connText").title = `OBS at ${ui.obsAddr.host}:${ui.obsAddr.port}`;

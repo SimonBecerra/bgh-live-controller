@@ -23,6 +23,21 @@ contextBridge.exposeInMainWorld("bgh", {
     lookup: q => ipcRenderer.invoke("bible-lookup", q)
   },
   appCpu: () => ipcRenderer.invoke("app-cpu"),
+  phone: {
+    info: () => ipcRenderer.invoke("phone-info"),
+    enable: on => ipcRenderer.invoke("phone-enable", !!on),
+    pairing: open => ipcRenderer.invoke("phone-pairing", !!open),
+    remove: id => ipcRenderer.invoke("phone-remove", String(id)),
+    watching: () => ipcRenderer.invoke("phone-watching"),
+    state: s => ipcRenderer.send("phone-state", s),
+    level: l => ipcRenderer.send("phone-level", l),
+    frame: dataUrl => ipcRenderer.send("phone-frame", dataUrl),
+    reply: r => ipcRenderer.send("phone-reply", r),
+    onCmd: fn => ipcRenderer.on("phone-cmd", (e, c) => fn(c)),
+    onWatch: fn => ipcRenderer.on("phone-watch", (e, w) => fn(w)),
+    onChanged: fn => ipcRenderer.on("phone-changed", () => fn()),
+    onPaired: fn => ipcRenderer.on("phone-paired", (e, d) => fn(d))
+  },
   youtube: {
     viewers: q => ipcRenderer.invoke("youtube-viewers", q),
     test: q => ipcRenderer.invoke("youtube-test", q)
