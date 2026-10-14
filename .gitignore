@@ -1,2 +1,5 @@
 node_modules/
 dist/
+app/index.html
+app/phone.html
+app/vendor/
