@@ -5589,7 +5589,8 @@ async function renderSetStatus(){
   if(window.lucide) lucide.createIcons();
   updateSetDots();
 }
-async function openSettingsPanel(page = ui.setPage){
+// The Settings button always opens on Connection, at the top; links to a setting open its own page
+async function openSettingsPanel(page = "connection"){
   $("setVis").value = ui.defaultVis;
   // Offline (OBS closed, or the password still needs entering): Settings still opens, with what's known
   let r; try{ r = await obs.call("GetSceneCollectionList"); }catch(e){ r = {sceneCollections: ui.collection ? [ui.collection] : []}; }
@@ -5619,6 +5620,7 @@ async function openSettingsPanel(page = ui.setPage){
   $("setAsk").hidden = true;
   showSetPage(page);
   $("setOverlay").hidden = false;
+  if(page === "connection") $("setNav").scrollTop = 0;   // the menu starts at the top too
   phPairing();
   const tab = document.querySelector("#setNav [aria-selected=true]"); if(tab) tab.focus({preventScroll:true});
   updateSetDots();
