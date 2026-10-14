@@ -2440,9 +2440,13 @@ async function selectScene(b){
   const kind = ui.studio ? "pvw" : "pgm";
   clearScPending();
   if(!(kind === "pgm" ? b.group.includes(ui.program) : b.group.includes(ui.preview))){
-    scPending = {b, kind, timer:setTimeout(() => {
+    scPending = {b, kind, timer:setTimeout(async () => {
+      if(!scPending || scPending.b !== b) return;
+      // No word from OBS yet: ask it. If it did switch (and the message was lost), just catch up.
+      const now = kind === "pgm" ? await syncProgram() : null;
       if(!scPending || scPending.b !== b) return;
       clearScPending();
+      if(now && b.group.includes(now)) return;
       toast(`OBS didn't switch ${kind === "pgm" ? "Program" : "Preview"} to ${b.label || b.scene}. Check OBS isn't showing a message, then try again.`);
     }, 4000)};
     renderScenes();
@@ -2452,6 +2456,18 @@ async function selectScene(b){
     else await obs.call("SetCurrentProgramScene",{sceneName:b.scene});
   }catch(e){ clearScPending(); toast(e.message); }
 }
+/* Program as OBS has it right now. If the controller missed OBS's message about a switch (from the phone,
+   OBS itself, or a busy moment), this catches up exactly as if the message had arrived. Also checked every
+   5 seconds while connected, so the controller and the phone can never stay out of step for long. */
+async function syncProgram(){
+  try{
+    const r = await obs.call("GetCurrentProgramScene");
+    const n = r && (r.sceneName || r.currentProgramSceneName);
+    if(n && n !== ui.program){ console.warn(`Program was ${ui.program}, OBS says ${n}: catching up`); obs.emit("CurrentProgramSceneChanged", {sceneName:n}); }
+    return n || ui.program;
+  }catch(e){ return null; }
+}
+setInterval(() => { if(ui.connected !== false && ui.everConnected && obs.connected !== false) syncProgram(); }, 5000);
 function renderScenes(){
   BUTTONS.forEach((b,i) => {
     const el = sceneEls[i];
@@ -7411,8 +7427,12 @@ async function phRun(cmd, a){
       if(!b) throw phErr(`There's no ${a.label} scene in ${ui.collection} any more.`);
       if(b.group.includes(ui.program)) return {};
       // The phone always changes Program, even in Studio Mode
-      if(ui.studio){ await obs.call("SetCurrentProgramScene", {sceneName:b.scene}); return {}; }
-      await selectScene(b); return {};
+      if(ui.studio) await obs.call("SetCurrentProgramScene", {sceneName:b.scene});
+      else await selectScene(b);
+      // OBS has taken it; wait for its message, or ask, so the phone hears straight away
+      for(let i = 0; i < 10 && !b.group.includes(ui.program); i++) await sleep(150);
+      if(!b.group.includes(ui.program)) await syncProgram();
+      return {program:ui.program, on:b.group.includes(ui.program)};
     }
     case "mute": {
       if(!srcAudio() || ui.audioMissing) throw phErr("No microphone input is set up for this scene collection.");
