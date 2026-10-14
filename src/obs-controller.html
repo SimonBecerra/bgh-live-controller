@@ -639,6 +639,11 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
 .disk-note.bad svg{color:var(--pgm)}
 @media (prefers-reduced-motion:reduce){.disk-note.bad{animation:none}}
 #setSilenceDb{width:100%;accent-color:var(--accent);min-height:32px}
+/* Settings → Color matching */
+#setCmStrength{width:100%;accent-color:var(--accent);min-height:32px}
+.cm-cams{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+@media (max-width:640px){.cm-cams{grid-template-columns:minmax(0,1fr)}}
+#setCmMatch{min-width:200px}
 .sil-val{font-size:13px;color:var(--fg)}
 .sil-prev{position:relative;height:12px;border-radius:3px;background:var(--panel-2);overflow:hidden}
 .sil-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--dim);transition:width .08s}
@@ -1130,6 +1135,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         <button type="button" role="tab" id="tab-collections" data-page="collections" aria-controls="page-collections"><i data-lucide="layers"></i><span>Scene collections</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-speakers" data-page="speakers" aria-controls="page-speakers"><i data-lucide="users"></i><span>Speakers</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-ontext" data-page="ontext" aria-controls="page-ontext"><i data-lucide="captions"></i><span>On-screen text</span><b class="tdot" aria-hidden="true"></b></button>
+        <button type="button" role="tab" id="tab-colormatch" data-page="colormatch" aria-controls="page-colormatch"><i data-lucide="palette"></i><span>Color matching</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-golive" data-page="golive" aria-controls="page-golive"><i data-lucide="radio"></i><span>Going live</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-alerts" data-page="alerts" aria-controls="page-alerts"><i data-lucide="bell"></i><span>Alerts</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-screen" data-page="screen" aria-controls="page-screen"><i data-lucide="monitor"></i><span>Screen</span><b class="tdot" aria-hidden="true"></b></button>
@@ -1373,6 +1379,45 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <div class="field"><label class="label" for="setAbKey">API.Bible key</label><input id="setAbKey" type="password" autocomplete="off" spellcheck="false">
               <span class="path">For the NKJV, NIV, CSB and NASB 1995: sign up at api.bible. Each publisher decides whether its translation is offered on your plan; the list above shows which ones work with your key.</span></div>
             <span class="path">Keys are saved encrypted by Windows, like the OBS password, and never put in a backup. The KJV is built in and works without internet.</span>
+          </div>
+        </section>
+
+        <section class="set-page" id="page-colormatch" data-page="colormatch" role="tabpanel" aria-labelledby="tab-colormatch" tabindex="-1" hidden>
+          <h3 class="page-h">Color matching</h3>
+          <div class="set-status" id="setCmStatus"></div>
+          <div class="set-section">
+            <h4>Cameras</h4>
+            <div class="cm-cams">
+              <div class="field"><label class="label" for="setCmRef">Reference camera</label>
+                <select id="setCmRef" data-now></select>
+                <span class="path">Its colors are kept. It's never changed.</span></div>
+              <div class="field"><label class="label" for="setCmTarget">Camera to match</label>
+                <select id="setCmTarget" data-now></select>
+                <span class="path">Its colors are adjusted to look like the reference.</span></div>
+            </div>
+            <label class="check" for="setCmOn"><input type="checkbox" id="setCmOn" data-now>
+              <span>Color matching on<small>Off shows this camera's own colors. The match is kept, so turning it back on brings it back.</small></span>
+            </label>
+          </div>
+          <div class="set-section">
+            <h4>Matching</h4>
+            <div class="field"><label class="label" for="setCmMode">Mode</label>
+              <select id="setCmMode" data-now>
+                <option value="once">One-time match (recommended)</option>
+                <option value="continuous">Continuous: follows lighting changes</option>
+              </select>
+              <span class="path" id="setCmModeHint"></span></div>
+            <div class="field"><div class="field-top"><label class="label" for="setCmStrength">Match strength</label><span class="mono sil-val" id="setCmStrengthVal"></span></div>
+              <input type="range" id="setCmStrength" data-now min="0" max="100" step="5">
+              <span class="path">100% matches fully. Lower keeps some of the camera's own look.</span></div>
+            <div class="btn-row">
+              <button type="button" class="btn primary" id="setCmMatch"><i data-lucide="wand-sparkles"></i>Match Colors</button>
+              <button type="button" class="btn" id="setCmReset"><i data-lucide="rotate-ccw"></i>Reset</button>
+            </div>
+            <div class="set-status" id="setCmResult"></div>
+            <span class="path">These changes go to OBS straight away; they don't need Apply. OBS keeps them with the scene collection.</span>
+            <details class="more"><summary>How it works</summary>
+              <p class="path">Match Colors takes a few small pictures of both cameras and compares their white balance, tint, brightness, contrast and saturation, using walls, ceilings, white shirts and skin rather than whatever happens to be in the shot. It only changes the camera being matched, through a Color Match filter on that camera in OBS, and only when it's confident. If it isn't, it says why and leaves the colors alone. Best results come with both cameras on manual white balance and exposure, pointing at the same room. In OBS, View → Docks → Color Match has the same controls.</p></details>
           </div>
         </section>
 
@@ -1862,6 +1907,7 @@ class MockOBS {
         "Schedule":{kind:"image_source", file:FOLDER+"2. Afternoon Ministry Service.png"},
         "Church Logo":{kind:"image_source", file:"C:\\Users\\Media\\Livestream\\Logos\\Hall Logo.png"},
         "PYLE USB Mixer":{kind:"wasapi_input_capture", muted:false},
+        "Pulpit Cam":{kind:"dshow_input", video_device_id:"USB Video:\\\\?\\usb#vid_534d&pid_2109"},
         "Video":{kind:"dshow_input", video_device_id:"Cam Link 4K:\\\\?\\usb#vid_0fd9&pid_00a1&mi_00#6&1d5aba85&0&0000#{65e8773d-8f56-11d0-a3b9-00a0c9223196}\\global"},
         "Pulpit Mic":{kind:"wasapi_input_capture", muted:false},
         "Desktop Audio":{kind:"wasapi_output_capture", muted:false},
@@ -2025,6 +2071,7 @@ class MockOBS {
           });
         }
         if(d.vendorName === "church-controller" && /LowerThird|Text$|TextStatus$/.test(d.requestType)) return {responseData:this._onScreen(d.requestType, d.requestData || {})};
+        if(d.vendorName === "church-controller" && /ColorMatch|MatchColors/.test(d.requestType)) return {responseData:this._colorMatch(d.requestType, d.requestData || {})};
         throw new Error("Unknown vendor request");
       // Free space on the recording drive (MB), as obs-websocket's GetStats reports it
       case "GetVideoSettings": return {fpsNumerator:30, fpsDenominator:1, baseWidth:1920, baseHeight:1080, outputWidth:1920, outputHeight:1080};
@@ -2121,6 +2168,52 @@ class MockOBS {
         this.td = {showing:false, key:""};
         this.emit("VendorEvent",{vendorName:"church-controller", eventType:"TextChanged", eventData:tdState()});
         return {ok:true, found:true, code:"OK", ...tdState()};
+    }
+    throw new Error("Unknown vendor request");
+  }
+  // Stand-in for the plug-in's Color Match filter (color-match.cpp)
+  _colorMatch(type, q){
+    this.cmBy ||= {};
+    const coll = this.s.collection, ins = this.inputsByColl[coll] || {};
+    const sources = Object.entries(ins).filter(([, v]) => /dshow_input|image_source/.test(v.kind))
+      .map(([name, v]) => ({name, camera:v.kind === "dshow_input"})).sort((a, b) => b.camera - a.camera || a.name.localeCompare(b.name));
+    const cams = sources.filter(s => s.camera).map(s => s.name);
+    const defRef = cams.includes("Video") ? "Video" : cams[0] || "", defTgt = cams.find(n => n !== defRef) || "";
+    const all = this.cmBy[coll] ||= {};
+    const changed = m => { if(this.connected) this.emit("VendorEvent", {vendorName:"church-controller", eventType:"ColorMatchChanged", eventData:{...m}}); };
+    const m = all[q.target];
+    switch(type){
+      case "GetColorMatchStatus": return {sources, defaultReference:defRef, defaultTarget:defTgt, matches:Object.values(all).map(x => ({...x}))};
+      case "SetColorMatch": {
+        if(!ins[q.target]) return {ok:false, code:"NO_TARGET", message:"That camera isn't in this scene collection."};
+        if(q.reference && q.reference === q.target) return {ok:false, code:"SAME_SOURCE", message:"The reference and the camera being matched are the same source. Choose another reference."};
+        if(q.reference && all[q.reference]) return {ok:false, code:"FEEDBACK", message:`"${q.reference}" is itself being color matched, so it can't be the reference.`};
+        const x = all[q.target] ||= {target:q.target, reference:defRef, enabled:true, mode:"once", strength:100, state:"none", message:"Not matched yet. Press Match Colors.", confidence:0, applied:false, busy:false, matchedAt:0};
+        if(q.reference) x.reference = q.reference;
+        if(q.mode === "once" || q.mode === "continuous") x.mode = q.mode;
+        if(typeof q.strength === "number") x.strength = Math.max(0, Math.min(100, q.strength));
+        if(typeof q.enabled === "boolean") x.enabled = q.enabled;
+        changed(x); return {ok:true, code:"OK", message:"", ...x};
+      }
+      case "MatchColors": {
+        if(!m) return {accepted:false, ok:false, code:"NO_MATCH", message:"Set up color matching for that camera first."};
+        const jobId = String(this.nextJob = (this.nextJob || 0) + 1);
+        m.busy = true; changed(m);
+        setTimeout(() => {
+          const cam = this.cam || "ok", bad = cam !== "ok" && m.reference === "Video";
+          Object.assign(m, bad ? {busy:false, state:"error", confidence:0, message:"OBS isn't getting a picture from Video. Check that the camera is connected and on."}
+            : {busy:false, state:"matched", applied:true, confidence:86, matchedAt:Date.now(), message:"Matched (confidence 86)."});
+          if(!this.connected) return;
+          this.emit("VendorEvent", {vendorName:"church-controller", eventType:"ColorMatchResult", eventData:{jobId, target:m.target, ok:!bad, code:bad ? "NO_PICTURE" : "OK", message:m.message, confidence:m.confidence}});
+          changed(m);
+        }, 1600);
+        return {accepted:true, jobId, ok:true, code:"OK", message:""};
+      }
+      case "ResetColorMatch":
+        if(!m) return {ok:false, code:"NO_MATCH", message:"That camera has no color matching."};
+        Object.assign(m, {state:"none", applied:false, confidence:0, matchedAt:0, mode:"once", message:"Reset: showing the camera's own colors."});
+        changed(m); return {ok:true, code:"OK", message:"", ...m};
+      case "RemoveColorMatch": delete all[q.target]; return {ok:!!m, code:m ? "OK" : "NO_MATCH"};
     }
     throw new Error("Unknown vendor request");
   }
@@ -4041,6 +4134,7 @@ async function otSync(){
 obs.on("VendorEvent", ev => {
   if(!ev || ev.vendorName !== "church-controller" || !ev.eventData) return;
   const d = ev.eventData;
+  if(ev.eventType === "ColorMatchChanged") cmChanged();
   if(ev.eventType === "LowerThirdChanged"){
     ltApply(d);
     if(typeof d.enabled === "boolean" && d.enabled !== ltOn()){
@@ -5272,7 +5366,7 @@ $("setVis").value = ui.defaultVis;
 /* Settings: a sidebar of categories, each its own page.
    Dots on a category: orange = needs attention, accent = unsaved changes. */
 const esc = v => String(v).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", golive:"Going live", alerts:"Alerts", screen:"Screen", backup:"Backup", help:"About & help", testing:"Testing"};
+const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", colormatch:"Color matching", golive:"Going live", alerts:"Alerts", screen:"Screen", backup:"Backup", help:"About & help", testing:"Testing"};
 ui.setPage = (() => { try{ const p = localStorage.getItem("setPage"); return SET_PAGES[p] ? p : "connection"; }catch(e){ return "connection"; } })();
 function showSetPage(page, focusTab){
   if(!SET_PAGES[page] || !document.getElementById("tab-" + page)) page = "connection";
@@ -5313,6 +5407,7 @@ function setWarnings(){
   w.golive = ui.ytOk === false;
   w.ontext = ui.connected !== false && (ot.plugin === false || ot.tdFound === false || (ltOn() && ui.lt.found === false));
   w.screen = matchTarget().kind === "ambiguous";
+  w.colormatch = ui.connected !== false && !!cm.status && ((cm.status.matches || []).some(m => m.enabled && m.state === "error"));
   return w;
 }
 function updateSetDots(){
@@ -5360,6 +5455,7 @@ async function renderSetStatus(){
     if(ui.lt.found) setStatus("setOtLtStatus", "ok", "circle-check", "Lower Third source found", `In ${coll}. Lower thirds are ${ui.lt.enabled ? "on" : "off"} in OBS.`);
     else setStatus("setOtLtStatus", ltOn() ? "warn" : "", ltOn() ? "triangle-alert" : "info", `No Lower Third source in ${coll}`, "In OBS, click + under Sources and choose Lower Third. Put it at the top of each scene where speakers' names should appear.");
   }
+  await cmLoad();
   if(window.lucide) lucide.createIcons();
   updateSetDots();
 }
@@ -5796,6 +5892,126 @@ document.querySelectorAll("[data-sim]").forEach(b => b.addEventListener("click",
 }));
 // #proto-end
 
+/* Settings → Color matching. The companion plug-in's Color Match filter, on the camera being matched, keeps
+   everything (saved by OBS with the scene collection); this page shows it and sends changes straight away.
+   Nothing is on the main screen. Commands: GetColorMatchStatus, SetColorMatch, MatchColors (answers with a
+   jobId; the outcome is a ColorMatchResult event), ResetColorMatch. */
+const cm = {status:null, busy:false, err:"", timer:null};
+async function cmLoad(){
+  if(ui.connected === false) cm.status = {offline:true};
+  else {
+    try{ cm.status = await vcall("GetColorMatchStatus"); }
+    catch(e){ cm.status = e.code === "PLUGIN_MISSING" ? {missing:true} : e.code === "NOT_CONNECTED" ? {offline:true} : {failed:e.message}; }
+  }
+  cmRender();
+}
+// OBS says something changed (from its dock, or a Continuous match): refresh if the page is showing
+function cmChanged(){
+  if($("setOverlay").hidden) return;
+  clearTimeout(cm.timer); cm.timer = setTimeout(cmLoad, 300);
+}
+const cmMatchFor = name => ((cm.status && cm.status.matches) || []).find(m => m.target === name);
+function cmFill(sel, sources, value, skip){
+  sel.innerHTML = `<option value="">Choose a camera</option>` +
+    sources.filter(s => s.name !== skip).map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join("");
+  sel.value = sources.some(s => s.name === value && s.name !== skip) ? value : "";
+}
+const cmTime = ms => new Date(ms).toLocaleString("en-US", {weekday:"short", hour:"numeric", minute:"2-digit"});
+function cmRender(){
+  const st = cm.status || {}, fields = ["setCmRef","setCmTarget","setCmOn","setCmMode","setCmStrength","setCmMatch","setCmReset"];
+  const locked = $("setForm").classList.contains("locked");
+  const off = (on) => fields.forEach(id => { if(!locked || !$(id).dataset.locked) $(id).disabled = on; });
+  $("setCmResult").className = "set-status"; $("setCmResult").innerHTML = "";
+  if(st.offline || st.missing || st.failed || !cm.status){
+    if(st.missing) setStatus("setCmStatus", "warn", "triangle-alert", "The companion plug-in needs updating", "Color matching needs the newer plug-in. Update it in Settings → Connection → Updates.");
+    else if(st.failed) setStatus("setCmStatus", "warn", "triangle-alert", "Couldn't check color matching", st.failed);
+    else setStatus("setCmStatus", "warn", "triangle-alert", "Can't check color matching", "Not connected to OBS.");
+    off(true); if(window.lucide) lucide.createIcons(); return;
+  }
+  const sources = st.sources || [], matches = st.matches || [];
+  const active = document.activeElement;
+  // Camera to match: what's chosen, else a camera that's already matched, else the camera in Camera 2
+  let target = $("setCmTarget").value;
+  if(!sources.some(s => s.name === target)) target = (matches[0] || {}).target || st.defaultTarget || "";
+  cmFill($("setCmTarget"), sources, target);
+  const m = cmMatchFor(target);
+  let ref = m && m.reference ? m.reference : $("setCmRef").value;
+  if(!ref || ref === target || !sources.some(s => s.name === ref)) ref = st.defaultReference || "";
+  if(active !== $("setCmRef")) cmFill($("setCmRef"), sources, ref, target);
+  if(active !== $("setCmMode")) $("setCmMode").value = m ? m.mode : "once";
+  if(active !== $("setCmStrength")) $("setCmStrength").value = m ? m.strength : 100;
+  $("setCmStrengthVal").textContent = `${$("setCmStrength").value}%`;
+  $("setCmOn").checked = m ? m.enabled : true;
+  $("setCmModeHint").textContent = $("setCmMode").value === "continuous"
+    ? "Measures again every few seconds while both cameras are in use, and eases gently into lighting changes."
+    : "Matches when you press Match Colors, and keeps that until you match again or reset.";
+  off(false);
+  const busy = cm.busy || (m && m.busy);
+  if(!locked){
+    $("setCmMatch").disabled = !target || !$("setCmRef").value || busy;
+    $("setCmReset").disabled = !m || (!m.applied && m.state === "none");
+    ["setCmOn","setCmMode","setCmStrength"].forEach(id => $(id).disabled = !target);
+  }
+  $("setCmMatch").innerHTML = busy ? `<i data-lucide="loader"></i>Measuring…` : `<i data-lucide="wand-sparkles"></i>Match Colors`;
+
+  if(!sources.length) setStatus("setCmStatus", "warn", "triangle-alert", `No cameras in ${ui.collection || "this scene collection"}`, "Add the cameras to OBS first.");
+  else if(!m) setStatus("setCmStatus", "", "info", `${target || "This camera"} isn't matched yet`, "Check the reference camera, then press Match Colors.");
+  else if(!m.enabled) setStatus("setCmStatus", "", "circle-pause", `Color matching is off for ${m.target}`, "It shows its own colors.");
+  else if(busy) setStatus("setCmStatus", "", "loader", `Measuring ${m.reference} and ${m.target}…`, "This takes a second or two.");
+  else if(m.state === "matched") setStatus("setCmStatus", "ok", "circle-check", `${m.target} is matched to ${m.reference}`, m.mode === "continuous" ? "Continuous: following lighting changes." : "One-time match.");
+  else if(m.state === "declined" || m.state === "error") setStatus("setCmStatus", "warn", "triangle-alert", m.applied ? `${m.target} keeps its last match` : `${m.target} isn't matched`, m.message);
+  else setStatus("setCmStatus", "", "info", `${m.target} shows its own colors`, "Press Match Colors to match it to the reference.");
+
+  const msg = cm.err || (m && !busy && m.state !== "none" ? m.message : "");
+  if(msg){
+    const sub = m && m.matchedAt ? `Last matched ${cmTime(m.matchedAt)}` : "";
+    setStatus("setCmResult", cm.err || (m && m.state !== "matched") ? "warn" : "ok", cm.err || (m && m.state !== "matched") ? "triangle-alert" : "circle-check", msg, sub);
+  }
+  if(window.lucide) lucide.createIcons();
+  updateSetDots();
+}
+async function cmSet(change){
+  const target = $("setCmTarget").value; if(!target) return;
+  cm.err = "";
+  try{
+    const r = await vcall("SetColorMatch", {target, ...change});
+    if(r.ok === false) cm.err = r.message || "OBS didn't accept that.";
+  }catch(e){ cm.err = e.code === "PLUGIN_MISSING" ? "The companion plug-in needs updating for color matching." : `Couldn't change color matching: ${e.message}`; }
+  await cmLoad();
+}
+$("setCmTarget").addEventListener("change", () => { cm.err = ""; cmRender(); });
+$("setCmRef").addEventListener("change", () => { if($("setCmRef").value) cmSet({reference:$("setCmRef").value}); });
+$("setCmMode").addEventListener("change", () => cmSet({mode:$("setCmMode").value}));
+$("setCmStrength").addEventListener("input", () => $("setCmStrengthVal").textContent = `${$("setCmStrength").value}%`);
+$("setCmStrength").addEventListener("change", () => cmSet({strength:Number($("setCmStrength").value)}));
+$("setCmOn").addEventListener("change", () => cmSet({enabled:$("setCmOn").checked}));
+$("setCmReset").addEventListener("click", async () => {
+  const target = $("setCmTarget").value; if(!target) return;
+  cm.err = "";
+  try{ await vcall("ResetColorMatch", {target}); toast(`${target} shows its own colors again`); }
+  catch(e){ cm.err = `Couldn't reset: ${e.message}`; }
+  await cmLoad();
+});
+$("setCmMatch").addEventListener("click", async () => {
+  const target = $("setCmTarget").value, reference = $("setCmRef").value;
+  if(!target || !reference) return;
+  if(ui.stream.active && !(await confirmDlg("Match colors while live?",
+    `Viewers will see ${target}'s colors change, fading in over about a second, if it's on screen.`, "Match Colors", "primary", "Cancel"))) return;
+  cm.err = ""; cm.busy = true; cmRender();
+  try{
+    const set = await vcall("SetColorMatch", {target, reference, mode:$("setCmMode").value, strength:Number($("setCmStrength").value), enabled:true});
+    if(set.ok === false) throw Object.assign(new Error(set.message || set.code), {code:set.code});
+    const r = await vendorJob("MatchColors", {target}, "ColorMatchResult", 30000);
+    toast(r.message || "Colors matched");
+  }catch(e){
+    cm.err = e.code === "PLUGIN_MISSING" ? "The companion plug-in needs updating for color matching."
+      : e.code === "NO_ANSWER" ? "OBS didn't report back. Check the Color Match dock in OBS."
+      : e.message || "Couldn't match the colors.";
+  }
+  cm.busy = false;
+  await cmLoad();
+});
+
 /* Settings are read-only while live or recording, until "Change settings anyway" is confirmed.
    Export, the close X and the prototype-only tools stay usable. */
 function lockSettings(on){
@@ -5969,7 +6185,8 @@ $("setMeasure").addEventListener("click", () => {
 // Close with X: ask only when something changed
 // Speaker lists are edited as a working copy and only saved on Apply
 let workSpk = {home:[], visiting:[], teachers:[]};
-const setFields = () => Array.from($("setForm").querySelectorAll("input:not([data-spk]):not([data-cfg]),select:not([data-cfg])"));
+// Fields marked data-now act straight away (Color matching), so they never count as unsaved changes
+const setFields = () => Array.from($("setForm").querySelectorAll("input:not([data-spk]):not([data-cfg]):not([data-now]),select:not([data-cfg]):not([data-now])"));
 const snapSettings = () => { syncCfgFields(); return JSON.stringify({f:setFields().map(el => el.type === "checkbox" ? el.checked : el.value), s:workSpk, c:workCfg, r:workRels}); };
 /* Settings → Going live → Baptisms: the relationships to choose from (edited as a copy, saved on Apply) */
 let workRels = [];
