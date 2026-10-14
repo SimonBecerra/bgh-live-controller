@@ -3,7 +3,7 @@
 // choosing a monitor, reading the Schedule folder and OBS's saved scene collections, keeping the password
 // encrypted, keeping the screen awake, saving files, opening and closing OBS with the controller, the
 // "open with OBS" setting for the plug-in,
-// Bible text (bible.js) and the hymn books.
+// Bible text (bible.js), the hymn books, and the phone remote (phone.js).
 "use strict";
 const { app, BrowserWindow, ipcMain, screen, safeStorage, powerSaveBlocker, dialog, shell, Menu, net } = require("electron");
 const path = require("node:path");
@@ -171,6 +171,9 @@ ipcMain.handle("bible-lookup", (e, q) => bible.lookup(q || {}));
 ipcMain.handle("hymns-list", () => listHymnBooks());
 ipcMain.handle("hymns-save", (e, book) => saveHymnBook(book));
 ipcMain.handle("hymns-remove", async (e, id) => { await fsp.rm(hymnFile(id), {force:true}); return true; });
+
+/* Phone remote: a small web server on the church network, off until turned on in Settings → Phone remote */
+let phone = null;
 
 /* ---------------------------------------------------------------- IPC */
 ipcMain.handle("displays", () => (lastDisplays = describeDisplays()));
@@ -533,6 +536,7 @@ app.whenReady().then(() => {
   screen.on("display-added", (e, d) => displaysChanged("added", d));
   screen.on("display-removed", (e, d) => displaysChanged("removed", d));
   createWindow();
+  phone = require("./phone").setup({ ipcMain, getWin: () => win, userData, appDir: __dirname });
   setupAppUpdates();
 });
 app.on("window-all-closed", () => app.quit());

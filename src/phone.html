@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0f13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BGH Remote">
+<title>BGH Remote</title>
+<!-- BGH LIVE Controller: the phone remote. Served by the desktop app (phone.js) to phones on the church network.
+     Everything it shows comes from the controller; every tap is a request the controller carries out. -->
+<style>
+/* Layout: one thumb-reachable column — sticky status bar with two tabs (Scenes & Mic, On Screen), then that
+   page's controls. Dark by design, like the controller it pairs with (a dim sanctuary). */
+:root{
+  --bg:#0c0f13; --panel:#141920; --panel-2:#1b222b; --line:#29323d; --line-2:#36414e;
+  --fg:#e7ecf2; --muted:#8a96a6; --dim:#5d6876;
+  --accent:#3b8cff; --accent-soft:rgba(59,140,255,.16);
+  --pgm:#e5484d; --pgm-soft:rgba(229,72,77,.16);
+  --pvw:#2fbf71; --pvw-soft:rgba(47,191,113,.15);
+  --warn:#f5a524; --warn-soft:rgba(245,165,36,.16);
+  --brand:#F5B700;
+  --f-ui:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-brand:Georgia,"Times New Roman",serif;
+  --r:14px;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.stage{display:flex;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 8px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
+.phone{width:100%;max-width:430px;min-width:0;display:flex;flex-direction:column;gap:14px}
+
+/* Status bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding-block:6px 10px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.brand h1 b{font-family:var(--f-brand);font-weight:700;letter-spacing:.02em;font-size:17px;color:var(--brand);margin-right:4px}
+.conn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);min-width:0}
+.conn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--pvw);flex:none}
+.conn.lost .dot{background:var(--warn);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill .t{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.pill.live{background:var(--pgm);border-color:var(--pgm);color:#fff}.pill.live .t{background:#fff;animation:blink 1.4s infinite}
+.pill.rec{border-color:var(--pgm);color:var(--pgm)}.pill.rec .t{background:var(--pgm)}
+.pill.remind{border-color:var(--warn);color:var(--warn)}.pill.remind .t{background:var(--warn)}
+.pill.safe{border-color:var(--accent);color:var(--accent)}
+.pill svg.i{width:14px;height:14px}
+
+/* Two pages, switched like Go Live's "Create new / Select existing": the chosen one filled blue */
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line-2);border-radius:12px;background:var(--panel)}
+.tab{position:relative;min-height:44px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--fg);font-weight:600;font-size:15px}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab-dot{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--pgm)}
+/* Banner when the controller can't be reached */
+.banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r);background:var(--warn-soft);border:1px solid var(--warn);color:var(--fg);font-size:14px;line-height:1.4}
+.banner svg.i{color:var(--warn);margin-top:1px}
+
+/* Sections */
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hint{font-size:12px;color:var(--muted)}
+.off .ctl{opacity:.4;pointer-events:none}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 16px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:16px}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.quiet{background:transparent}
+.btn.danger{background:var(--pgm);border-color:var(--pgm);color:#fff}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* What's on screen */
+.now{border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:12px}
+.now-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.now-h h2{margin:0;font-size:18px;font-weight:700;text-wrap:balance}
+.now-h .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.tag{flex:none;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;border-radius:999px;background:var(--pgm-soft);color:var(--pgm)}
+.lines{background:var(--panel-2);border-radius:12px;padding:12px 14px;font-size:16px;line-height:1.45;min-height:70px;display:flex;flex-direction:column;justify-content:center}
+.lines .next{color:var(--muted);font-size:13px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line-2)}
+.lines .next b{font-weight:600;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-right:6px}
+.nav{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.nav .btn{min-height:76px;font-size:18px}
+.nav .next-btn{background:var(--accent);border-color:var(--accent);color:#fff;font-size:20px}
+.verses{display:flex;flex-wrap:wrap;gap:6px}
+.vchip{min-width:44px;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:600}
+.vchip[aria-current="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.page{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* Lower thirds */
+.lts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lt{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left}
+.lt .nm{display:flex;flex-direction:column;min-width:0;font-weight:600;line-height:1.2}
+.lt .nm small{font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.lt[aria-pressed="true"]{border-color:var(--pgm);background:var(--pgm-soft)}
+.lt .bar{position:absolute;left:0;bottom:0;height:3px;background:var(--pgm);width:0}
+.lt[aria-pressed="true"] .bar{animation:countdown var(--dur,8s) linear forwards}
+@keyframes countdown{from{width:100%}to{width:0}}
+
+/* Scenes */
+.pv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;cursor:pointer}
+.switch{position:relative;width:52px;height:32px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.switch i{position:absolute;inset:0;border-radius:99px;background:var(--panel-2);border:1px solid var(--line);transition:background .2s}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+.switch input:checked + i{background:var(--accent);border-color:transparent}
+.switch input:checked + i::after{transform:translateX(20px)}
+.switch input:focus-visible + i{outline:2px solid #fff;outline-offset:2px}
+.pv{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;border:2px solid var(--pgm)}
+.pv img{display:block;width:100%;height:100%;object-fit:cover}
+.pv-tag{position:absolute;top:8px;left:8px;background:var(--pgm);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:5px}
+.pv-age{position:absolute;bottom:6px;right:8px;font-size:11px;color:rgba(255,255,255,.75);text-shadow:0 1px 2px #000}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cams .sc{min-height:64px}
+.sc{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:92px;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--panel-2);text-align:left;font-weight:600}
+.sc-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+/* Mic for each scene: a mic where the mic comes on, a red muted mic where it goes off */
+.sc-n{display:flex;align-items:center;gap:6px;min-width:0}
+.sc svg.sc-mic{width:16px;height:16px;color:var(--muted)}
+.sc svg.sc-mic.off{color:var(--pgm)}
+/* The same icon as the controller's scene button, on the right */
+.sc svg.sc-i{width:26px;height:26px;color:var(--muted);margin-top:10px}
+.sc[aria-pressed="true"] svg.sc-i{color:var(--pgm)}
+.sc small{font-weight:500;font-size:12px;color:var(--muted)}
+.sc[aria-pressed="true"]{border-color:var(--pgm);background:var(--pgm-soft)}
+.sc[aria-pressed="true"]::after{content:"LIVE";position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--pgm);border-radius:5px;padding:2px 5px}
+.safe-note{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--accent)}
+
+/* Mic */
+.mic{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
+.mute{min-width:120px}
+.mute[aria-pressed="true"]{background:var(--pgm);border-color:var(--pgm);color:#fff}
+.meter{height:12px;border-radius:6px;background:var(--panel-2);overflow:hidden;border:1px solid var(--line)}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pvw) 70%,var(--warn) 88%,var(--pgm));transition:width 90ms linear}
+.meter-l{font-size:12px;color:var(--muted);margin-top:6px}
+
+.only{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);line-height:1.45;padding:12px 14px;border:1px dashed var(--line-2);border-radius:var(--r)}
+
+/* Sheets (hymn and Bible pickers, confirmations) */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:460px;background:var(--panel);border:1px solid var(--line);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:88%;overflow:auto}
+.sheet h3{margin:0;font-size:20px}
+.sheet p{margin:0;color:var(--muted);line-height:1.45}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.big-in{width:100%;box-sizing:border-box;height:64px;border-radius:12px;border:1px solid var(--line-2);background:var(--bg);padding:0 16px;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.ref-in{font-size:20px;font-weight:600}
+.found{font-size:14px;color:var(--muted);min-height:20px}
+.found b{color:var(--fg)}
+.err{color:var(--pgm)}
+
+/* Pairing */
+.pair{display:flex;flex-direction:column;gap:18px;padding-block:28px 10px}
+.pair h2{margin:0;font-size:26px;text-wrap:balance}
+.pair p{margin:0;color:var(--muted);line-height:1.5}
+.code{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:280px;margin:0 auto;width:100%}
+.code input{height:72px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel);text-align:center;font-size:32px;font-weight:700;width:100%;box-sizing:border-box;min-width:0}
+.where{display:flex;gap:10px;font-size:13px;color:var(--muted);line-height:1.45;padding:12px 14px;border-radius:var(--r);background:var(--panel)}
+
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;z-index:30;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Real-app additions */
+.btn:disabled,.lt:disabled,.vchip:disabled,.chip:disabled{opacity:.4}
+.tag.off{background:var(--panel-2);color:var(--muted)}
+.lt[aria-pressed="true"] .bar{animation-delay:var(--delay,0s)}
+.sc.pending{border-color:var(--pgm);animation:pend 1s ease-in-out infinite}
+@keyframes pend{50%{border-color:var(--line)}}
+.vnums{max-height:184px;overflow:auto}
+.vnums .vchip{min-width:48px}
+.vchip.seen{color:var(--muted)}
+.hint{line-height:1.4}
+</style>
+</head>
+<body>
+<div class="stage"><main class="phone" id="phone" aria-live="polite"></main></div>
+<div id="sheetRoot"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+"use strict";
+/* ---------------- icons (Lucide shapes, inline) */
+const ICON = {
+  music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  book:'<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>',
+  mic:'<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>',
+  micOff:'<line x1="2" x2="22" y1="2" y2="22"/><path d="M18.89 13.23A7 7 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/><line x1="12" x2="12" y1="19" y2="22"/>',
+  lock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  wifi:'<path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M19 12.86a10 10 0 0 0-2-1.39"/><path d="M2 8.82a15 15 0 0 1 4.18-2.65"/><path d="M22 8.82a15 15 0 0 0-11.29-3.76"/><line x1="2" x2="22" y1="2" y2="22"/>',
+  eye:'<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  laptop:'<path d="M18 5a2 2 0 0 1 2 2v8.53a2 2 0 0 0 .2.9l1.58 3.15A1 1 0 0 1 20.9 21H3.1a1 1 0 0 1-.9-1.45l1.6-3.13a2 2 0 0 0 .2-.9V7a2 2 0 0 1 2-2z"/><path d="M20.05 16H3.95"/>',
+  cap:'<path d="M21.42 10.92a1 1 0 0 0-.02-1.84l-8.57-3.9a2 2 0 0 0-1.66 0l-8.57 3.9a1 1 0 0 0 0 1.84l8.57 3.9a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
+  x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  hourglass:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
+  timer:'<line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>',
+  video:'<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  presentation:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>',
+  flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+  square:'<rect width="18" height="18" x="3" y="3" rx="2"/>',
+  clapperboard:'<path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'
+};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ic = (n, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[n] || ICON.clapperboard}</svg>`;
+const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, "0")).join(":"); };
+const ls = {get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); }catch(e){} }};
+const durTxt = sec => sec < 60 ? `${sec} seconds` : sec === 60 ? "1 minute" : `${sec / 60} minutes`;
+const secTxt = n => n === 1 ? "1 second" : `${n} seconds`;
+
+/* ---------------- state: what the controller sends, plus this phone's own choices */
+const S = {
+  token:ls.get("bghRemoteToken") || "", note:"",
+  connected:false, st:null, sid:"", offset:0,
+  tab:ls.get("remoteTab") === "onscreen" ? "onscreen" : "scenes",
+  pvOn:ls.get("remoteView") === "1", pvImg:"", pvAt:0, level:0,
+  pending:null, pendingT:null, stAt:0
+};
+const now = () => Date.now() + S.offset;   // the controller's clock
+
+/* ---------------- talking to the controller */
+let es = null, retryT = null;
+function connect(){
+  clearTimeout(retryT);
+  if(es){ es.close(); es = null; }
+  if(!S.token) return render();
+  const view = S.pvOn && !document.hidden ? 1 : 0;
+  es = new EventSource(`/api/events?t=${encodeURIComponent(S.token)}&view=${view}`);
+  es.addEventListener("hello", e => { const d = JSON.parse(e.data); S.sid = d.sid; S.offset = (d.now || Date.now()) - Date.now(); S.connected = true; render(); });
+  es.addEventListener("state", e => {
+    const prev = S.st; S.st = JSON.parse(e.data); S.stAt = Date.now(); S.connected = true;
+    if(S.pending && S.st.program !== (prev && prev.program)){ clearPending(); }
+    render();
+  });
+  es.addEventListener("lvl", e => { S.level = +e.data; const el = $("lvl"); if(el) el.style.width = S.level + "%"; });
+  es.addEventListener("frame", e => { const d = JSON.parse(e.data); S.pvImg = d.img; S.pvAt = d.at; const img = document.querySelector(".pv img"); if(img) img.src = S.pvImg; else if(document.querySelector(".pv")) render(); ageTick(); });
+  es.addEventListener("unpaired", () => unpair("This phone was removed in the controller's Settings. Pair it again to use it."));
+  es.onopen = () => { S.connected = true; render(); };
+  es.onerror = async () => {
+    if(es && es.readyState !== 2){ if(S.connected){ S.connected = false; render(); } return; }   // the browser is retrying by itself
+    S.connected = false; render();
+    // Closed for good: removed in Settings (401), or the controller is closed. Ask, then try again.
+    try{ const r = await fetch("/api/cmd", {method:"POST", headers:{"Content-Type":"application/json", "Authorization":"Bearer " + S.token}, body:JSON.stringify({cmd:"ping"})});
+      if(r.status === 401) return unpair("This phone isn't paired with the controller any more. Pair it again to use it."); }catch(e){}
+    retryT = setTimeout(connect, 3000);
+  };
+}
+function unpair(note){
+  S.token = ""; ls.set("bghRemoteToken", null); S.st = null; S.note = note || "";
+  if(es){ es.close(); es = null; }
+  closeSheet(); render();
+}
+async function cmd(c, args = {}){
+  let r;
+  try{ r = await fetch("/api/cmd", {method:"POST", headers:{"Content-Type":"application/json", "Authorization":"Bearer " + S.token}, body:JSON.stringify({cmd:c, args, sid:S.sid})}); }
+  catch(e){ toast("Can't reach the controller. Check this phone is on the church Wi-Fi."); return {ok:false}; }
+  if(r.status === 401){ unpair("This phone isn't paired with the controller any more. Pair it again to use it."); return {ok:false}; }
+  let j = {ok:false}; try{ j = await r.json(); }catch(e){}
+  return j;
+}
+// Anything that changes the stream: in Safe mode the phone asks first, as the controller does
+async function act(c, args, ask){
+  if(!ask) args = {...args, sure:true};   // taking something off, or muting: never needs asking
+  else if(S.st && S.st.safe){
+    const yes = await confirmSheet(ask, "Safe mode is on at the controller, so the phone asks before changing the livestream.", "Yes, do it");
+    if(!yes) return {ok:false};
+    args = {...args, sure:true};
+  }
+  const j = await cmd(c, args);
+  if(!j.ok && j.error) toast(j.error);
+  return j;
+}
+function setPending(label){ clearPending(true); S.pending = label; S.pendingT = setTimeout(() => { if(S.pending === label){ clearPending(); toast(`OBS didn't switch to ${label}.`); } }, 4000); }
+function clearPending(quiet){ clearTimeout(S.pendingT); S.pending = null; if(!quiet) render(); }
+
+/* ---------------- drawing */
+function render(){
+  const P = $("phone");
+  if(!S.token){ P.className = "phone"; P.innerHTML = pairHTML(); wirePair(); return; }
+  const st = S.st;
+  if(!st){ P.className = "phone"; P.innerHTML = `<header class="top"><div class="brand"><h1><b>BGH</b>Remote</h1><div class="conn lost"><i class="dot"></i><span>Connecting…</span></div></div></header>`; return; }
+  const ok = S.connected && st.obs, it = st.item, ltUp = st.ltUp;
+  P.className = "phone" + (ok ? "" : " off");
+  const live = st.live, remind = live && !st.rec;
+  P.innerHTML = `
+  <header class="top">
+    <div class="brand"><h1><b>BGH</b>Remote</h1>
+      <div class="conn ${ok ? "" : "lost"}"><i class="dot"></i><span>${!S.connected ? "Reconnecting…" : !st.obs ? "Controller can't reach OBS" : "Connected · " + esc(st.collection)}</span></div></div>
+    <div class="pills">
+      <span class="pill ${live ? "live" : ""}"><i class="t"></i>${live ? "LIVE <span id='lt'>" + fmt(now() - st.liveT0) + "</span>" : "OFFLINE"}</span>
+      ${live && st.viewers != null ? `<span class="pill" aria-label="${st.viewers} watching">${ic("eye")}<span>${esc(st.viewers)}</span></span>` : ""}
+      <span class="pill ${st.rec ? "rec" : remind ? "remind" : ""}"><i class="t"></i>${st.rec ? "REC <span id='rt'>" + fmt(now() - st.recT0) + "</span>" : "NOT RECORDING"}</span>
+      ${st.safe ? `<span class="pill safe">${ic("lock")}SAFE</span>` : ""}
+    </div>
+    <div class="tabs" role="tablist" aria-label="Remote">
+      <button class="tab" role="tab" type="button" data-tab="scenes" aria-selected="${S.tab === "scenes"}">Scenes &amp; Mic</button>
+      <button class="tab" role="tab" type="button" data-tab="onscreen" aria-selected="${S.tab === "onscreen"}">On Screen${(it || ltUp) && S.tab !== "onscreen" ? '<i class="tab-dot" aria-label="(something is on screen)"></i>' : ""}</button>
+    </div>
+  </header>
+  ${!S.connected ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the controller.</b> Check this phone is on the church Wi-Fi and the controller is open. It reconnects by itself; nothing on the stream has changed.</div></div>`
+    : !st.obs ? `<div class="banner">${ic("wifi")}<div><b>The controller can't reach OBS.</b> Check OBS is open on the computer. Nothing can be changed until it's back.</div></div>` : ""}
+
+  <section class="sec ctl pv-sec" aria-labelledby="hPv">
+    <label class="pv-row" for="pvSw"><span class="label" id="hPv">View program</span>
+      <span class="switch"><input type="checkbox" id="pvSw" role="switch" ${S.pvOn ? "checked" : ""}><i></i></span></label>
+    ${S.pvOn ? `<div class="pv">${S.pvImg ? `<img src="${S.pvImg}" alt="What's on Program: ${esc(st.program)}">` : ""}<span class="pv-tag">PROGRAM</span><span class="pv-age" id="pvAge"></span></div>` : ""}
+  </section>
+
+  ${S.tab === "scenes" ? `
+  <section class="sec ctl" aria-labelledby="hSc">
+    <div class="sec-h"><span class="label" id="hSc">Scenes</span>${st.safe ? `<span class="safe-note">${ic("lock")}Asks first</span>` : ""}</div>
+    <div class="scenes">${st.scenes.map(scBtn).join("") || `<p class="hint">No scenes in OBS yet.</p>`}</div>
+  </section>
+
+  <section class="sec ctl" aria-labelledby="hMic">
+    <span class="label" id="hMic">Microphone${st.audio.name ? " · " + esc(st.audio.name) : ""}</span>
+    ${st.audio.name && !st.audio.missing ? `
+    <div class="mic"><button class="btn mute" id="mute" type="button" aria-pressed="${st.audio.muted}">${ic(st.audio.muted ? "micOff" : "mic")}${st.audio.muted ? "Muted" : "Mute"}</button>
+      <div><div class="meter"><i id="lvl" style="width:${st.audio.muted ? 0 : S.level}%"></i></div><div class="meter-l">${st.audio.muted ? "Muted: the stream hears nothing" : "Sound going to the stream"}</div></div></div>`
+    : `<div class="only">${ic("info")}<span>No microphone is set up for ${esc(st.collection)}. Choose one on the controller in Settings → Scene collections.</span></div>`}
+  </section>` : ""}
+
+  ${S.tab !== "onscreen" ? "" : st.ltOn ? `
+  <section class="sec ctl" aria-labelledby="hOn">
+    <div class="sec-h"><span class="label" id="hOn">On screen</span>${it && it.kind === "hymn" ? `<span class="page">${it.i + 1} of ${it.n}</span>` : ""}</div>
+    ${it ? (it.kind === "hymn" ? hymnHTML(it) : verseHTML(it)) : `
+    <div class="row2"><button class="btn" id="hymn" type="button" ${ltUp ? "disabled" : ""}>${ic("music")}Hymn</button><button class="btn" id="bible" type="button" ${ltUp ? "disabled" : ""}>${ic("book")}Bible</button></div>
+    ${ltUp ? `<span class="hint">Hymn and Bible wait until the lower third is gone.</span>` : ""}`}
+  </section>
+
+  <section class="sec ctl" aria-labelledby="hLt">
+    <div class="sec-h"><span class="label" id="hLt">Lower thirds</span><span class="hint">${ltUp ? `Hides itself after ${st.ltDur} s` : st.lts.length ? `Tap to show for ${st.ltDur} s` : ""}</span></div>
+    ${st.lts.length ? `<div class="lts">${st.lts.map((l, i) => {
+      const up = !!ltUp && ltUp.name === l.name && ltUp.sub === l.sub;
+      const left = up && st.ltEnds ? Math.max(0, (st.ltEnds - now()) / 1000) : 0;
+      return `<button class="lt" type="button" data-lt="${i}" aria-pressed="${up}" style="--dur:${st.ltDur}s;--delay:${up && st.ltEnds ? -(st.ltDur - left) : 0}s" ${it ? "disabled" : ""}>${ic(l.host ? "mic" : l.note === "Testimony" ? "book" : "user")}<span class="nm">${esc(l.short)}${l.note ? `<small>${esc(l.note)}</small>` : ""}</span>${up && st.ltEnds ? '<i class="bar"></i>' : ""}</button>`;
+    }).join("")}</div>` : `<span class="hint">No speakers yet. Choose them on the controller in Go Live or Change speaker.</span>`}
+    ${it && st.lts.length ? `<span class="hint">Lower thirds wait until the ${it.kind === "hymn" ? "hymn" : "passage"} is done.</span>` : ""}
+  </section>` : `
+  <div class="only">${ic("info")}<span>Hymns, Bible and lower thirds are off for ${esc(st.collection)}, as on the controller. Turn them on in the controller's Settings → Scene collections.</span></div>`}
+
+  ${S.tab === "onscreen" && st.scenes.some(s => s.icon === "video") ? `
+  <section class="sec ctl" aria-labelledby="hCam">
+    <div class="sec-h"><span class="label" id="hCam">Cameras</span>${st.safe ? `<span class="safe-note">${ic("lock")}Asks first</span>` : ""}</div>
+    <div class="scenes cams">${st.scenes.filter(s => s.icon === "video").map(scBtn).join("")}</div>
+  </section>` : ""}
+
+  <div class="only">${ic("laptop")}<span>Go Live, Stop and Record stay on the controller, so a pocket tap can't start or end the stream.</span></div>`;
+  wire();
+  ageTick();
+}
+function scBtn(s){
+  const st = S.st, ae = st.autoEnd;
+  let sub = s.sub ? esc(s.sub) : "";
+  if(s.ending && ae.on){
+    if(s.on && ae.kept) sub = "Staying live: Keep streaming was tapped";
+    else sub = `Turns stream off in <span class="end-cd">${s.on && ae.left != null ? secTxt(endLeft()) : durTxt(ae.sec)}</span>`;
+  }
+  const mic = s.mic === "off" ? ic("micOff", "i sc-mic off") : s.mic === "on" ? ic("mic", "i sc-mic") : "";
+  const pend = S.pending === s.label && !s.on;
+  return `<button class="sc${pend ? " pending" : ""}" type="button" data-sc="${esc(s.label)}" aria-pressed="${s.on}"><span class="sc-t"><span class="sc-n">${mic}${esc(s.label)}</span>${sub ? `<small>${sub}</small>` : ""}</span>${ic(s.icon, "i sc-i")}</button>`;
+}
+// Seconds left before the stream ends by itself, counted on from the last update
+function endLeft(){ const ae = S.st.autoEnd; return Math.max(0, ae.left - Math.floor((Date.now() - S.stAt) / 1000)); }
+function hymnHTML(it){
+  const sub = it.intro ? "Hymn number on the stream · Next brings in the words" : `${esc(it.label)}${it.pages > 1 ? ` (part ${it.page} of ${it.pages})` : ""}`;
+  return `<div class="now">
+      <div class="now-h"><div><h2>${esc(it.title)}</h2><div class="sub">${sub}</div></div><span class="tag ${it.showing ? "" : "off"}">${it.showing ? "On screen" : "Hidden"}</span></div>
+      <div class="lines">${it.lines.map(esc).join("<br>")}${it.next ? `<div class="next"><b>Next</b>${esc(it.next.join(" / "))}</div>` : `<div class="next"><b>Last</b>Tap Done when it ends</div>`}</div>
+      <div class="nav"><button class="btn" id="back" type="button" ${it.i ? "" : "disabled"}>Back</button><button class="btn next-btn" id="next" type="button" ${it.next ? "" : "disabled"}>Next</button></div>
+      ${it.labels.length > 1 ? `<div class="verses">${it.labels.map(l => `<button class="vchip" type="button" data-v="${esc(l)}" aria-current="${!it.intro && l === it.label}">${esc(l.replace(/^Verse /, ""))}</button>`).join("")}</div>` : ""}
+      <button class="btn quiet" id="done" type="button">Done · take it off the screen</button>
+    </div>`;
+}
+function verseHTML(it){
+  const seen = new Set(it.seen);
+  return `<div class="now">
+      <div class="now-h"><div><h2>${esc(it.title)}</h2><div class="sub">${it.started ? esc(it.ref) : "Tap a verse number as it's read"}</div></div><span class="tag ${it.showing ? "" : "off"}">${it.showing ? "On screen" : it.started ? "Hidden" : "Ready"}</span></div>
+      ${it.started ? `<div class="lines">${esc(it.text)}</div>` : ""}
+      <div class="verses vnums">${it.verses.map((v, i) => `<button class="vchip${seen.has(i) && i !== it.i ? " seen" : ""}" type="button" data-vi="${i}" aria-current="${it.started && i === it.i}" aria-label="Show verse ${v}">${v}</button>`).join("")}</div>
+      <div class="nav"><button class="btn" id="back" type="button" ${it.started && it.i ? "" : "disabled"}>Back</button><button class="btn next-btn" id="next" type="button" ${!it.started || it.i < it.verses.length - 1 ? "" : "disabled"}>${it.started ? "Next" : "Start"}</button></div>
+      <button class="btn quiet" id="done" type="button">Done · take it off the screen</button>
+    </div>`;
+}
+function ageTick(){ const a = $("pvAge"); if(a) a.textContent = S.pvAt ? Math.max(0, Math.round((now() - S.pvAt) / 1000)) + " s ago" : "Waiting for a picture…"; }
+
+function wire(){
+  const on = (id, f) => { const el = $(id); if(el) el.onclick = f; };
+  on("hymn", openHymn); on("bible", openBible);
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+    const to = b.dataset.tab;
+    if(to === S.tab) return;
+    // Leaving On Screen with a hymn or passage still up acts as Done
+    if(S.tab === "onscreen" && S.st && S.st.item){ cmd("done").then(j => { if(j.ok) toast("Taken off the screen"); else if(j.error) toast(j.error); }); }
+    S.tab = to; ls.set("remoteTab", to); render(); window.scrollTo(0, 0);
+  });
+  on("next", () => cmd("step", {d:1}).then(j => !j.ok && j.error && toast(j.error)));
+  on("back", () => cmd("step", {d:-1}).then(j => !j.ok && j.error && toast(j.error)));
+  on("done", () => cmd("done").then(j => j.ok ? toast("Taken off the screen") : j.error && toast(j.error)));
+  document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => cmd("jump", {label:b.dataset.v}));
+  document.querySelectorAll("[data-vi]").forEach(b => b.onclick = () => cmd("verse", {i:+b.dataset.vi}));
+  document.querySelectorAll("[data-lt]").forEach(b => b.onclick = () => {
+    const l = S.st.lts[+b.dataset.lt]; if(!l) return;
+    const up = S.st.ltUp && S.st.ltUp.name === l.name && S.st.ltUp.sub === l.sub;
+    act("lt", {name:l.name, sub:l.sub}, up ? null : `Show ${l.name}'s lower third?`);
+  });
+  document.querySelectorAll("[data-sc]").forEach(b => b.onclick = async () => {
+    const n = b.dataset.sc, s = S.st.scenes.find(x => x.label === n);
+    if(!s || s.on) return;
+    if(S.st.safe){ if(!await confirmSheet(`Switch to ${n}?`, "Safe mode is on at the controller, so the phone asks before changing what's live.", "Switch")) return; }
+    setPending(n); render();
+    const j = await cmd("scene", {label:n, sure:true});
+    if(!j.ok){ clearPending(); if(j.error) toast(j.error); }
+  });
+  on("mute", () => { const m = !S.st.audio.muted; act("mute", {muted:m}, m ? null : "Unmute the mic?"); });
+  const sw = $("pvSw"); if(sw) sw.onchange = () => {
+    S.pvOn = sw.checked; ls.set("remoteView", S.pvOn ? "1" : "0");
+    if(!S.pvOn){ S.pvImg = ""; S.pvAt = 0; }
+    sendView(); render();
+  };
+}
+function sendView(){ if(S.sid) cmd("view", {on:S.pvOn && !document.hidden}); }
+// Pictures only while this phone's screen is on
+document.addEventListener("visibilitychange", () => { if(S.pvOn) sendView(); if(!document.hidden && S.token && (!es || es.readyState === 2)) connect(); });
+
+/* ---------------- pairing */
+function pairHTML(){
+  return `<div class="pair">
+    <div class="brand"><h1><b>BGH</b>LIVE Remote</h1></div>
+    <h2>Pair this phone with the controller</h2>
+    ${S.note ? `<div class="banner">${ic("info")}<div>${esc(S.note)}</div></div>` : ""}
+    <p>On the controller, open <b>Settings → Phone remote</b> and type the 3-digit code shown there.</p>
+    <div class="code" role="group" aria-label="Pairing code">${[0,1,2].map(i => `<input id="c${i}" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Digit ${i + 1}">`).join("")}</div>
+    <div class="found err" id="pairErr" role="alert"></div>
+    <button class="btn primary" id="pairGo" type="button">Pair this phone</button>
+    <div class="where">${ic("info")}<span>Only phones on the church Wi-Fi can reach the controller. Once paired, this phone stays paired until it's removed in the controller's Settings.</span></div>
+  </div>`;
+}
+function wirePair(){
+  const ins = [0,1,2].map(i => $("c" + i));
+  ins.forEach((el, i) => {
+    el.addEventListener("input", () => {
+      const d = el.value.replace(/\D/g, "");
+      if(d.length > 1){ d.slice(0, 3).split("").forEach((x, k) => { if(ins[i + k]) ins[i + k].value = x; }); }   // pasted or autofilled
+      else el.value = d;
+      const nx = ins.find(x => !x.value); if(nx && el.value) nx.focus();
+      if(ins.every(x => x.value)) tryPair();
+    });
+    el.addEventListener("keydown", e => { if(e.key === "Backspace" && !el.value && ins[i - 1]){ ins[i - 1].focus(); ins[i - 1].value = ""; } });
+  });
+  $("pairGo").onclick = tryPair;
+  let busy = false;
+  async function tryPair(codeIn){
+    const code = typeof codeIn === "string" ? codeIn : ins.map(x => x.value).join("");
+    if(code.length < 3){ $("pairErr").textContent = "Type all 3 digits."; return; }
+    if(busy) return; busy = true; $("pairGo").disabled = true;
+    let r, j = {};
+    try{ r = await fetch("/api/pair", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code})}); j = await r.json(); }
+    catch(e){ $("pairErr").textContent = "Can't reach the controller. Check this phone is on the church Wi-Fi."; }
+    busy = false; if($("pairGo")) $("pairGo").disabled = false;
+    if(j.token){ S.token = j.token; S.note = ""; ls.set("bghRemoteToken", j.token); history.replaceState(null, "", location.pathname); render(); connect(); toast("Paired. This phone can now control the service."); return; }
+    if(!r) return;
+    $("pairErr").textContent = j.code === "LOCKED" ? `Too many wrong codes. Try again in ${Math.ceil((j.wait || 300) / 60)} minutes.`
+      : j.code === "CLOSED" ? "Open Settings → Phone remote on the controller first, then type the code shown there."
+      : `That code doesn't match. Check the code on the controller and try again.${j.left && j.left <= 2 ? ` ${j.left} ${j.left === 1 ? "try" : "tries"} left.` : ""}`;
+    ins.forEach(x => x.value = ""); ins[0].focus();
+  }
+  // Scanned the QR code in Settings: the code comes in the address
+  const m = location.hash.match(/pair=(\d{3})/);
+  if(m){ m[1].split("").forEach((x, k) => ins[k].value = x); history.replaceState(null, "", location.pathname); tryPair(m[1]); }
+}
+
+/* ---------------- sheets */
+let sheetClose = null;
+function sheet(html, after){
+  closeSheet();
+  const root = $("sheetRoot");
+  root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  const close = () => { root.innerHTML = ""; sheetClose = null; };
+  sheetClose = close;
+  $("scrim").addEventListener("click", e => { if(e.target.id === "scrim") close(); });
+  after(close);
+}
+function closeSheet(){ if(sheetClose) sheetClose(); }
+function confirmSheet(title, body, ok){
+  return new Promise(res => sheet(`<h3>${esc(title)}</h3><p>${esc(body)}</p><div class="row2"><button class="btn" id="cx" type="button">Cancel</button><button class="btn primary" id="cok" type="button">${esc(ok)}</button></div>`,
+    close => { $("cx").onclick = () => { close(); res(false); }; $("cok").onclick = () => { close(); res(true); }; $("scrim").addEventListener("click", e => { if(e.target.id === "scrim") res(false); }); }));
+}
+function openHymn(){
+  const st = S.st; if(!st.books.length) return toast("There are no hymn books yet. Add one on the controller in Settings → On-screen text.");
+  let book = st.books.some(b => b.id === st.book) ? st.book : st.books[0].id, found = null, t = null;
+  sheet(`<h3>Hymn</h3>${st.books.length > 1 ? `<div class="chips" id="books">${st.books.map(b => `<button class="chip" type="button" data-b="${esc(b.id)}" aria-pressed="${b.id === book}">${esc(b.short || b.name)}</button>`).join("")}</div>` : `<p>${esc(st.books[0].name)}</p>`}
+    <label class="label" for="hn">Number</label><input class="big-in" id="hn" inputmode="numeric" placeholder="45" autocomplete="off">
+    <div class="found" id="hf">Type the hymn number</div>
+    <div class="row2"><button class="btn" id="hx" type="button">Cancel</button><button class="btn primary" id="hgo" type="button" disabled>Show</button></div>`,
+  close => {
+    const look = () => {
+      clearTimeout(t); found = null; $("hgo").disabled = true;
+      const n = $("hn").value.trim();
+      if(!n){ $("hf").textContent = "Type the hymn number"; return; }
+      $("hf").textContent = "Looking…";
+      t = setTimeout(async () => {
+        const j = await cmd("hymn-find", {book, num:n});
+        if(!$("hf") || $("hn").value.trim() !== n) return;
+        found = j.ok && j.data ? j.data : null;
+        $("hf").innerHTML = found ? `<b>${esc(found.title)}</b> · ${found.verses} verse${found.verses === 1 ? "" : "s"}` : `<span class="err">No hymn ${esc(n)} in ${esc((st.books.find(b => b.id === book) || {}).name || "this book")}</span>`;
+        $("hgo").disabled = !found;
+      }, 250);
+    };
+    document.querySelectorAll("[data-b]").forEach(b => b.onclick = () => { book = b.dataset.b; document.querySelectorAll("[data-b]").forEach(x => x.setAttribute("aria-pressed", x === b)); look(); });
+    $("hn").oninput = look; $("hx").onclick = close;
+    $("hn").addEventListener("keydown", e => { if(e.key === "Enter" && found) $("hgo").click(); });
+    $("hgo").onclick = async () => {
+      const n = $("hn").value.trim(); close();
+      await act("hymn", {book, num:n}, `Show hymn ${n} on the stream?`);
+    };
+    setTimeout(() => $("hn").focus(), 50);
+  });
+}
+async function openBible(){
+  const st = S.st;
+  let tr = st.tr || "KJV", trs = [{abbr:tr, ok:true}], ok = false, t = null;
+  const j = await cmd("bible-status"); if(j.ok && Array.isArray(j.data)) trs = j.data;
+  if(!trs.some(x => x.abbr === tr && x.ok)) tr = (trs.find(x => x.ok) || {abbr:"KJV"}).abbr;
+  sheet(`<h3>Bible</h3><div class="chips">${trs.map(x => `<button class="chip" type="button" data-t="${esc(x.abbr)}" aria-pressed="${x.abbr === tr}" ${x.ok ? "" : "disabled"}>${esc(x.abbr)}</button>`).join("")}</div>
+    <label class="label" for="br">Chapter or verse</label><input class="big-in ref-in" id="br" placeholder="John 3 or John 3:16" autocomplete="off" autocapitalize="words" enterkeyhint="go">
+    <div class="found" id="bf">Type a book and chapter. Add a verse to start there.</div>
+    <div class="row2"><button class="btn" id="bx" type="button">Cancel</button><button class="btn primary" id="bgo" type="button" disabled>Open</button></div>`,
+  close => {
+    const look = () => {
+      clearTimeout(t); ok = false; $("bgo").disabled = true;
+      const ref = $("br").value.trim();
+      if(!ref){ $("bf").textContent = "Type a book and chapter. Add a verse to start there."; return; }
+      t = setTimeout(async () => {
+        const j = await cmd("bible-find", {ref});
+        if(!$("bf") || $("br").value.trim() !== ref) return;
+        const d = j.ok ? j.data : null;
+        ok = !!(d && d.ok);
+        $("bf").innerHTML = ok ? `<b>${esc(d.label)}</b> · ${esc(tr)}${d.from ? ` · starts at verse ${d.from}` : " · tap verses as they're read"}` : `<span class="${d && d.error ? "err" : ""}">${esc(d && d.error ? d.error : "Keep typing…")}</span>`;
+        $("bgo").disabled = !ok;
+      }, 250);
+    };
+    document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tr = b.dataset.t; document.querySelectorAll("[data-t]").forEach(x => x.setAttribute("aria-pressed", x === b)); look(); });
+    $("br").oninput = look; $("bx").onclick = close;
+    $("br").addEventListener("keydown", e => { if(e.key === "Enter" && ok) $("bgo").click(); });
+    $("bgo").onclick = async () => { const ref = $("br").value.trim(); close(); await act("bible", {ref, tr}, `Open ${ref} on the controller?`); };
+    setTimeout(() => $("br").focus(), 50);
+  });
+}
+
+let toastT;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600 + Math.max(0, msg.length - 60) * 40); }
+
+/* ---------------- clocks: stream and recording time, the Ending countdown, the picture's age */
+setInterval(() => {
+  const st = S.st; if(!st) return;
+  if(st.live && $("lt")) $("lt").textContent = fmt(now() - st.liveT0);
+  if(st.rec && $("rt")) $("rt").textContent = fmt(now() - st.recT0);
+  if(st.autoEnd.left != null) document.querySelectorAll(".end-cd").forEach(el => el.textContent = secTxt(endLeft()));
+  ageTick();
+}, 500);
+
+render();
+connect();
+
+</script>
+</body>
+</html>
