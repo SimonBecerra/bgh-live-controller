@@ -421,7 +421,12 @@ function wire(){
     if(S.st.safe){ if(!await confirmSheet(`Switch to ${n}?`, "Safe mode is on at the controller, so the phone asks before changing what's live.", "Switch")) return; }
     setPending(n); render();
     const j = await cmd("scene", {label:n, sure:true});
-    if(!j.ok){ clearPending(); if(j.error) toast(j.error); }
+    if(!j.ok){ clearPending(); if(j.error) toast(j.error); return; }
+    // The controller says it's switched: show it now, even before the next update arrives
+    if(j.data && j.data.on && S.pending === n){
+      S.st.program = j.data.program; S.st.scenes.forEach(x => x.on = x.label === n);
+      clearPending();
+    }
   });
   on("mute", () => { const m = !S.st.audio.muted; act("mute", {muted:m}, m ? null : "Unmute the mic?"); });
   const sw = $("pvSw"); if(sw) sw.onchange = () => {

@@ -498,7 +498,9 @@ function createWindow() {
     width: 1280, height: 800, minWidth: 640, minHeight: 480, show: false,
     title: "BGH LIVE Controller", backgroundColor: "#0B1418",
     icon: path.join(__dirname, "build", "icon.ico"),
-    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false }
+    // backgroundThrottling off: the controller keeps full speed when OBS covers it or it's minimized
+    // (the phone remote, the auto-end countdown and the timers mustn't slow down to once a minute)
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false, backgroundThrottling: false }
   });
   win.loadFile(path.join(__dirname, "app", "index.html"));
   // Opened by OBS (the plug-in's "Open the controller when OBS starts"): come up in front of OBS
