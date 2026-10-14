@@ -762,6 +762,9 @@ body.compact .ot-done{min-height:44px}
 .teach-fields .teach-sub{grid-column:1 / -1}
 .teach-row .teach-name small{display:block;font-weight:500;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
 .teach-prev{font-size:13px;color:var(--muted)}
+/* A second teacher for the same class: a link that opens prefix / first / last for them */
+.teach-co-tog{grid-column:1 / -1;justify-self:start;font-size:14px}
+.teach-co[hidden]{display:none}
 /* Settings → Scene collections → Lower thirds: the chosen theme's options, and the host, each in a box */
 .opt-box{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;margin-top:4px}
 .opt-box[hidden],.teach-box[hidden]{display:none}
@@ -1300,12 +1303,16 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <span class="path" id="setLtColorMsg">A hex code, like #132932. It's shown at the same see-through level as the Barrington lower third.</span></div>
               <div class="teach-box" id="setTeachBox" hidden>
                 <h5 id="setTeachHdr">Sunday School teachers</h5>
-                <span class="path">Every teacher gets a lower third button, shown as "Mrs. Setty’s Class" with the subtitle under it. Teachers aren't offered in Go Live. The list is shared by every scene collection that uses the Sunday School theme.</span>
+                <span class="path">Every class gets a lower third button, shown as "Mrs. Setty’s Class" with the subtitle under it. A class with two teachers shows "Ms. Faith and Mrs. Hope’s Class". Teachers aren't offered in Go Live. The list is shared by every scene collection that uses the Sunday School theme.</span>
               <div class="spk-list" id="setTeach"></div>
               <div class="teach-add" role="group" aria-labelledby="setTeachHdr">
                 <select id="setTeachPrefix" data-spk aria-label="Prefix"><option value="">No prefix</option><option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Miss</option></select>
                 <input id="setTeachFirst" data-spk placeholder="First name" aria-label="First name" autocomplete="off" spellcheck="false">
                 <input id="setTeachLast" data-spk placeholder="Last name" aria-label="Last name" autocomplete="off" spellcheck="false">
+                <button type="button" class="link-btn teach-co-tog" id="setTeachCoTog" aria-expanded="false">+ Second teacher for this class</button>
+                <select id="setTeachCoPrefix" data-spk class="teach-co" aria-label="Second teacher's prefix" hidden><option value="">No prefix</option><option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Miss</option></select>
+                <input id="setTeachCoFirst" data-spk class="teach-co" placeholder="Second teacher's first name" aria-label="Second teacher's first name" autocomplete="off" spellcheck="false" hidden>
+                <input id="setTeachCoLast" data-spk class="teach-co" placeholder="Last name" aria-label="Second teacher's last name" autocomplete="off" spellcheck="false" hidden>
                 <input id="setTeachSub" data-spk class="teach-sub" placeholder="Subtitle (optional), like Ages 10–12 Class" aria-label="Subtitle" autocomplete="off" enterkeyhint="done">
                 <button type="button" class="btn" id="setTeachAdd">Add</button>
               </div>
@@ -2773,8 +2780,11 @@ const homeLabel = () => (ui.speakers.homeLabel || "").trim() || "Barrington Spea
 /* Sunday School teachers (Settings → Speakers). Never offered in Go Live: when a scene collection's lower third
    theme is Sunday School, each teacher is a lower third button showing "Mrs. Setty’s Class" with their subtitle. */
 const TEACH_PREFIXES = ["Mr.", "Ms.", "Mrs.", "Miss"];
-const teacherTitle = t => `${t.prefix ? t.prefix + " " : ""}${t.first || t.last}’s Class`;
-const teacherShort = t => `${t.prefix ? t.prefix + " " : ""}${t.first || t.last}`;
+// A class can have two teachers (t.co): "Ms. Faith and Mrs. Hope’s Class"; its button says "Faith & Hope" so it fits
+const teacherOne = t => `${t.prefix ? t.prefix + " " : ""}${t.first || t.last}`;
+const hasCo = t => !!(t && t.co && (t.co.first || t.co.last));
+const teacherTitle = t => `${hasCo(t) ? `${teacherOne(t)} and ${teacherOne(t.co)}` : teacherOne(t)}’s Class`;
+const teacherShort = t => hasCo(t) ? `${t.first || t.last} & ${t.co.first || t.co.last}` : teacherOne(t);
 // "10-12" or "1 - 3" → "10–12", "1–3"
 const dashFix = v => String(v).replace(/(\d)\s*[-‐‑‒—−–]\s*(?=\d)/g, "$1–");
 const byFirstName = list => [...list].sort((a, b) => `${a.first} ${a.last}`.localeCompare(`${b.first} ${b.last}`, undefined, {sensitivity:"base"}));
@@ -6422,7 +6432,24 @@ function teacherFields(t, onChange){
   pre.addEventListener("change", () => { t.prefix = pre.value; onChange(); });
   [[first, "first"], [last, "last"]].forEach(([i, k]) => i.addEventListener("input", () => { capFirst(i); t[k] = i.value; onChange(); }));
   sub.addEventListener("input", () => { fixDash(sub); t.subtitle = sub.value; onChange(); });
-  return {pre, first, last, sub};
+  // Second teacher for the same class
+  const co = t.co || {prefix:"", first:"", last:""};
+  const cpre = pre.cloneNode(true); cpre.value = co.prefix || ""; cpre.setAttribute("aria-label", "Second teacher's prefix"); cpre.classList.add("teach-co");
+  const cmk = (key, ph) => { const i = mk("first", ph); i.value = co[key] || ""; i.classList.add("teach-co"); return i; };
+  const cfirst = cmk("first", "Second teacher's first name"), clast = cmk("last", "Last name");
+  clast.setAttribute("aria-label", "Second teacher's last name");
+  const tog = document.createElement("button"); tog.type = "button"; tog.className = "link-btn teach-co-tog";
+  const showCo = on => { [cpre, cfirst, clast].forEach(x => x.hidden = !on); tog.textContent = on ? "Remove the second teacher" : "+ Second teacher for this class"; tog.setAttribute("aria-expanded", String(on)); };
+  const saveCo = () => { const c = {prefix:cpre.value, first:cfirst.value, last:clast.value}; if(c.first || c.last) t.co = c; else delete t.co; onChange(); };
+  cpre.addEventListener("change", saveCo);
+  [cfirst, clast].forEach(i => i.addEventListener("input", () => { capFirst(i); saveCo(); }));
+  tog.addEventListener("click", () => {
+    const on = cfirst.hidden;
+    if(!on){ cpre.value = ""; cfirst.value = ""; clast.value = ""; saveCo(); }
+    showCo(on); if(on) cfirst.focus();
+  });
+  showCo(hasCo(t));
+  return {pre, first, last, sub, tog, cpre, cfirst, clast};
 }
 function renderSetTeachers(){
   const el = $("setTeach"); el.innerHTML = "";
@@ -6443,31 +6470,46 @@ function renderSetTeachers(){
     });
     paint();
     const fields = document.createElement("div"); fields.className = "teach-fields"; fields.hidden = true;
-    fields.append(f.pre, f.first, f.last, f.sub);
+    fields.append(f.pre, f.first, f.last, f.tog, f.cpre, f.cfirst, f.clast, f.sub);
     edit.addEventListener("click", () => { fields.hidden = !fields.hidden; edit.textContent = fields.hidden ? "Edit" : "Done"; edit.setAttribute("aria-expanded", String(!fields.hidden)); if(!fields.hidden) f.first.focus(); });
     edit.setAttribute("aria-label", `Edit ${name.firstChild ? name.firstChild.textContent : "teacher"}`);
     row.append(name, edit, del, fields); el.appendChild(row);
   });
 }
 // The new-teacher row: shows how it will look as you type
-const teachDraft = () => ({prefix:$("setTeachPrefix").value, first:formatName($("setTeachFirst").value), last:formatName($("setTeachLast").value), subtitle:dashFix($("setTeachSub").value.trim())});
+const teachDraft = () => {
+  const t = {prefix:$("setTeachPrefix").value, first:formatName($("setTeachFirst").value), last:formatName($("setTeachLast").value), subtitle:dashFix($("setTeachSub").value.trim())};
+  const co = {prefix:$("setTeachCoPrefix").value, first:formatName($("setTeachCoFirst").value), last:formatName($("setTeachCoLast").value)};
+  if(!$("setTeachCoFirst").hidden && (co.first || co.last)) t.co = co;
+  return t;
+};
+function showTeachCo(on){
+  ["setTeachCoPrefix", "setTeachCoFirst", "setTeachCoLast"].forEach(id => { $(id).hidden = !on; if(!on) $(id).value = ""; });
+  $("setTeachCoTog").textContent = on ? "Remove the second teacher" : "+ Second teacher for this class";
+  $("setTeachCoTog").setAttribute("aria-expanded", String(on));
+  renderTeachPrev();
+}
+$("setTeachCoTog").addEventListener("click", () => { const on = $("setTeachCoFirst").hidden; showTeachCo(on); if(on) $("setTeachCoFirst").focus(); });
 function renderTeachPrev(){
   const t = teachDraft();
   $("setTeachPrev").textContent = (t.first || t.last) ? `On screen: ${teacherTitle(t)}${t.subtitle ? " · " + t.subtitle.toUpperCase() : ""}` : "";
 }
-["setTeachFirst", "setTeachLast"].forEach(id => $(id).addEventListener("input", () => { capFirst($(id)); renderTeachPrev(); }));
+["setTeachFirst", "setTeachLast", "setTeachCoFirst", "setTeachCoLast"].forEach(id => $(id).addEventListener("input", () => { capFirst($(id)); renderTeachPrev(); }));
+$("setTeachCoPrefix").addEventListener("change", renderTeachPrev);
 $("setTeachSub").addEventListener("input", () => { fixDash($("setTeachSub")); renderTeachPrev(); });
 $("setTeachPrefix").addEventListener("change", renderTeachPrev);
 $("setTeachAdd").addEventListener("click", () => {
   const t = teachDraft(), err = msg => { $("setTeachErr").textContent = msg; $("setTeachErr").hidden = !msg; };
   if(!t.first) return err("Type the teacher's first name first.");
+  if(!$("setTeachCoFirst").hidden && !t.co) return err("Type the second teacher's first name, or remove the second teacher.");
   const dup = workSpk.teachers.find(x => teacherTitle(x).toLowerCase() === teacherTitle(t).toLowerCase() && String(x.last || "").toLowerCase() === t.last.toLowerCase());
   if(dup) return err(`${teacherTitle(dup)} (${dup.first} ${dup.last}) is already saved.`);
   workSpk.teachers.push({id:newId(), ...t});
   ["setTeachFirst", "setTeachLast", "setTeachSub"].forEach(id => $(id).value = ""); $("setTeachPrefix").value = "";
+  showTeachCo(false);
   err(""); renderTeachPrev(); renderSetSpk();
 });
-["setTeachFirst", "setTeachLast", "setTeachSub"].forEach(id => $(id).addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); $("setTeachAdd").click(); } }));
+["setTeachFirst", "setTeachLast", "setTeachCoFirst", "setTeachCoLast", "setTeachSub"].forEach(id => $(id).addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); $("setTeachAdd").click(); } }));
 $("setHomeLbl").addEventListener("input", e => { $("setHomeHdr").textContent = e.target.value.trim() || "Barrington Speakers"; });
 // Add a speaker in Settings (home or visiting): same capitalization and duplicate check as Go Live
 function setAddSpeaker(list, inputId, errId){
@@ -6520,7 +6562,8 @@ $("setForm").addEventListener("submit", e => {
   const clean = list => list.map(x => ({id:x.id, name:x.name.trim().replace(/\s+/g," "), ...(x.subtitle && x.subtitle.trim() ? {subtitle:x.subtitle.trim().replace(/\s+/g," ")} : {}), ...(x.elder ? {elder:true} : {}), ...(x.supt ? {supt:true} : {})}))
     .filter(x => x.name && !seen.has(nameKey(x.name)) && seen.add(nameKey(x.name)));
   const tseen = new Set(), tidy = v => String(v || "").trim().replace(/\s+/g, " ");
-  const teachers = (workSpk.teachers || []).map(t => ({id:t.id, prefix:TEACH_PREFIXES.includes(t.prefix) ? t.prefix : "", first:formatName(tidy(t.first)), last:formatName(tidy(t.last)), subtitle:dashFix(tidy(t.subtitle))}))
+  const tidyCo = c => { if(!c) return null; const x = {prefix:TEACH_PREFIXES.includes(c.prefix) ? c.prefix : "", first:formatName(tidy(c.first)), last:formatName(tidy(c.last))}; return x.first || x.last ? x : null; };
+  const teachers = (workSpk.teachers || []).map(t => { const co = tidyCo(t.co); return {id:t.id, prefix:TEACH_PREFIXES.includes(t.prefix) ? t.prefix : "", first:formatName(tidy(t.first)), last:formatName(tidy(t.last)), subtitle:dashFix(tidy(t.subtitle)), ...(co ? {co} : {})}; })
     .filter(t => (t.first || t.last) && !tseen.has(teacherTitle(t).toLowerCase() + "|" + t.last.toLowerCase()) && tseen.add(teacherTitle(t).toLowerCase() + "|" + t.last.toLowerCase()));
   ui.speakers = {homeLabel: $("setHomeLbl").value.trim() || "Barrington Speakers", max: Math.min(10, Math.max(1, parseInt($("setMax").value,10) || 3)), home: clean(workSpk.home), visiting: clean(workSpk.visiting), teachers};
   if(ltTheme() === "sundayschool") renderOt();
