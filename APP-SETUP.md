@@ -102,11 +102,33 @@ The double-tick button beside Safe mode checks Camera 1 (picture, no-signal scre
 device), the microphone, OBS's YouTube sign-in and disk space. A red dot appears on it when something needs
 attention; tap it for what's wrong and the buttons that fix it.
 
+## Phone remote
+
+A phone on the church Wi-Fi can change scenes, mute the mic, show hymns, Bible verses and lower thirds, and
+watch a small picture of Program. Going live, stopping and recording stay on the controller.
+
+1. On the controller: **Settings → Phone remote**, turn on **Turn on the phone remote**.
+2. The first time, Windows asks whether BGH LIVE Controller can use the network: tick **Private networks**
+   and choose **Allow**. (If the church Wi-Fi is set as a *Public* network in Windows, change it to *Private*:
+   Settings → Network & internet → Wi-Fi → the network → Private network.)
+3. On the phone (iPhone or Android, any browser): point the camera at the QR code on that page, or type the
+   address shown there (like `http://192.168.1.20:8642`). Type the 3-digit pairing code if it asks.
+4. Optional: in Safari, Share → **Add to Home Screen**, so it opens like an app.
+
+- The code only works while Settings → Phone remote is open, and changes after each phone pairs.
+  Five wrong codes pause pairing for 5 minutes.
+- A paired phone stays paired. Remove it in Settings → Phone remote and it stops working straight away.
+- Only phones on the same network can reach it. If the laptop's address changes (a new Wi-Fi router, say),
+  open the new address shown in Settings; the phone stays paired.
+- With **View program** on, the phone gets a small picture (320×180, about 10 KB) every 3 seconds, and only
+  while its screen is on.
+
 ## Where things are kept on the laptop
 
 - Settings, speakers and automatic backups: `%APPDATA%\BGH LIVE Controller`
 - The OBS password: in the same folder, encrypted by Windows so only your Windows account can read it
 - The "open with OBS" setting the plug-in reads: `%APPDATA%\BGH LIVE Controller\open-with-obs.json`
+- Paired phones (each phone's key, stored scrambled) and whether the phone remote is on: `%APPDATA%\BGH LIVE Controller\phone-remote.json`
 - The OBS plug-in, as the controller installs it: `C:\ProgramData\obs-studio\plugins\church-controller`
 
 ---
