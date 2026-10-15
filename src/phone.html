@@ -69,6 +69,26 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 /* Banner when the controller can't be reached */
 .banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r);background:var(--warn-soft);border:1px solid var(--warn);color:var(--fg);font-size:14px;line-height:1.4}
 .banner svg.i{color:var(--warn);margin-top:1px}
+.ss-sheet{display:flex;flex-direction:column;gap:10px}
+.ss-sheet h3{margin:0}
+.ss-sheet > .btn{width:100%;min-height:52px}
+.ss-sheet .chips{display:flex;flex-wrap:wrap;gap:8px}
+.ss-pill{cursor:pointer;font:inherit;font-size:12px;font-weight:700}
+.ss-pill svg.i{width:14px;height:14px}
+.ss-pill.on{border-color:var(--accent);color:var(--fg)} .ss-pill.bad{border-color:var(--pgm);color:var(--pgm)}
+.ss-bar{display:grid;grid-template-columns:72px 1fr 96px;gap:8px;flex:none}
+.ss-bar .btn{min-height:60px} .ss-bar svg.i{width:28px;height:28px}
+.ss-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+.ss-mid b{font-size:18px} .ss-mid span{font-size:12px;color:var(--muted);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-openbtn{min-height:56px;flex:none}
+.ss-shapes{display:flex;gap:14px;align-items:flex-end}
+.ss-shape{display:grid;place-items:center;height:72px;border-radius:8px;border:2px solid var(--line-2);background:var(--bg);font-weight:800;font-size:17px;color:var(--muted)}
+.ss-shape.r43{width:96px} .ss-shape.r169{width:128px}
+.ss-shape[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft,rgba(80,140,255,.15));color:var(--fg)}
+.ss-srcs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ss-srcs .btn{min-height:60px;flex-direction:column;gap:2px;font-size:14px}
+.ss-srcs .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft,rgba(80,140,255,.15))}
+.ss-feed{font-size:13px;padding:8px 10px;border-radius:10px;border:1px solid var(--line-2)} .ss-feed.none{border-color:var(--pgm);color:var(--pgm)}
 .reading-btn{width:100%;min-height:60px;justify-content:flex-start;text-align:left}
 .reading-btn span{display:flex;flex-direction:column;gap:2px}
 .reading-btn small{font-size:12px;font-weight:500;opacity:.85}
@@ -282,6 +302,8 @@ const ICON = {
   hourglass:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
   timer:'<line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>',
   video:'<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  cast:'<path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><line x1="2" x2="2.01" y1="20" y2="20"/>',
+  fwd:'<path d="m9 18 6-6-6-6"/>',
   presentation:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>',
   flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
   square:'<rect width="18" height="18" x="3" y="3" rx="2"/>',
@@ -303,15 +325,16 @@ if(PROTO){
   for(let v = 4; v <= 36; v++) JOHN3.push(v === 16 ? "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life." : `Verse ${v} of John 3 (the prototype only has a few verses written out).`);
   const P = window.PROTO_CTL = {
     st:{collection:"Sunday Service", obs:true, live:false, liveT0:0, rec:false, recT0:0, viewers:null, safe:false, program:"Waiting",
-      scenes:[["Waiting","hourglass","off","Title Slide"],["Live Soon","timer","off",""],["Camera 1","video","on",""],["Slideshow","presentation","on",""],["Camera 2","video","on",""],["Ending","flag","off",""]]
+      scenes:[["Waiting","hourglass","off","Title Slide"],["Live Soon","timer","off",""],["Camera 1","video","on",""],["Slideshow 4:3","presentation","on",""],["Camera 2","video","on",""],["Slideshow 16:9","presentation","on",""],["Ending","flag","off",""]]
         .map(([label, icon, mic, sub]) => ({label, icon, mic, sub, on:label === "Waiting", ending:label === "Ending"})),
+      slides:{on:false, ratio:"", src:"", feed:"", live:false, open:false, n:0, total:0, title:"", recent:[{title:"Sunday Announcements", on:true}, {title:"Missionary Report: Peru", on:false}]},
       audio:{name:"PYLE USB Mixer", missing:false, muted:true}, autoEnd:{on:true, sec:30, left:null, kept:false},
       ltOn:true, item:null,
       lts:[{name:"Andres Bodden", sub:"", short:"Bodden", note:""}, {name:"Daniel Chung", sub:"", short:"Chung", note:""}, {name:"Simon Becerra", sub:"", short:"Becerra", note:"Host", host:true}],
       ltUp:null, ltEnds:0, ltDur:8, books:[{id:"how", name:"Hymns of Worship", short:"HOW"}], book:"how", tr:"KJV"},
     es:null, endT0:0, endTimer:null, ltT:null,
     send(ev, data){ if(this.es) this.es._fire(ev, typeof data === "string" ? data : JSON.stringify(data)); },
-    push(){ this.send("state", this.st); },
+    push(){ const st = this.st; this.send("state", {...st, scenes:st.scenes.filter(x => !/slideshow/i.test(x.label) || st.program === x.label || (st.slides.on && (!st.slides.ratio || x.label.includes(st.slides.ratio)))), slides:{...st.slides, live:/slideshow/i.test(st.program)}}); },
     setScene(n){
       const st = this.st; st.program = n; st.scenes.forEach(s => s.on = s.label === n);
       const sc = st.scenes.find(s => s.label === n);
@@ -355,6 +378,14 @@ if(PROTO){
         case "ping": return {ok:true};
         case "view": this.view_on = !!a.on; this.frame(); return {ok:true};
         case "scene": this.setScene(a.label); return {ok:true, data:{program:a.label, on:true}};
+        case "ss": { const g = st.slides; Object.assign(g, a); if(a.on === false){ g.ratio = ""; g.src = ""; g.open = false; }
+          if(g.src === "projector") g.feed = "live";
+          if(g.on && g.src === "laptop" && !g.open){ g.open = true; g.n = 1; g.total = 12; g.title = g.recent.find(x => x.on).title; }
+          st.scenes.forEach(sc => { if(/slideshow/i.test(sc.label)) sc.hidden = !g.on || (g.ratio && !sc.label.includes(g.ratio)); });
+          this.push(); return {ok:true}; }
+        case "slide": { const g = st.slides; g.n = Math.max(1, Math.min(g.total, g.n + a.d)); this.push(); return {ok:true}; }
+        case "slide-open": { const g = st.slides; g.open = true; g.n = 1; g.total = 12; this.push(); return {ok:true}; }
+        case "slide-rec": { const g = st.slides; g.recent.forEach((x, i) => x.on = i === a.i); g.title = g.recent[a.i].title; g.n = 1; this.push(); return {ok:true}; }
         case "keep": clearInterval(this.endTimer); st.autoEnd.left = null; st.autoEnd.kept = true; this.push(); return {ok:true};
         case "mute": st.audio.muted = !!a.muted; this.push(); return {ok:true};
         case "hymn-find": return {ok:true, data:HY[String(a.num)] ? {title:HY[a.num].title, verses:HY[a.num].verses.length} : null};
@@ -409,6 +440,7 @@ function connect(){
     const prev = S.st; S.st = JSON.parse(e.data); S.stAt = Date.now(); S.connected = true;
     if(S.pending && S.st.program !== (prev && prev.program)){ clearPending(); }
     render();
+    if(S.ssDraw && $("ssSheet")) S.ssDraw(); else S.ssDraw = null;
   });
   es.addEventListener("lvl", e => { S.level = +e.data; const el = $("lvl"); if(el) el.style.width = S.level + "%"; });
   es.addEventListener("frame", e => { const d = JSON.parse(e.data); S.pvImg = d.img; S.pvAt = d.at; const img = document.querySelector(".pv img"); if(img) img.src = S.pvImg; else if(document.querySelector(".pv")) render(); ageTick(); });
@@ -481,6 +513,7 @@ function render(){
       ${live && st.viewers != null ? `<span class="pill" aria-label="${st.viewers} watching">${ic("eye")}<span>${esc(st.viewers)}</span></span>` : ""}
       <span class="pill ${st.rec ? "rec" : remind ? "remind" : ""}"><i class="t"></i>${st.rec ? "REC <span id='rt'>" + fmt(now() - st.recT0) + "</span>" : "NOT REC"}</span>
       ${st.safe ? `<span class="pill safe">${ic("lock")}SAFE</span>` : ""}
+      ${st.slides ? `<button class="pill ss-pill${st.slides.on ? " on" : ""}${st.slides.feed === "none" ? " bad" : ""}" id="ssPill" type="button">${ic("presentation")}${st.slides.on ? `${esc(st.slides.ratio || "?")}${st.slides.src ? " · " + (st.slides.src === "projector" ? "Projector" : "Laptop") : ""}` : "SLIDES"}</button>` : ""}
     </div>
     <div class="tabs" role="tablist" aria-label="Remote">
       <button class="tab" role="tab" type="button" data-tab="scenes" aria-selected="${S.tab === "scenes"}">Scenes &amp; Mic</button>
@@ -505,9 +538,17 @@ function render(){
   const vn = document.querySelector(".vnums"), cur = vn && vn.querySelector('[aria-current="true"]');
   if(cur && (cur.offsetTop < vn.scrollTop || cur.offsetTop + cur.offsetHeight > vn.scrollTop + vn.clientHeight)) vn.scrollTop = cur.offsetTop - vn.offsetTop - 4;
 }
+function slideBar(st){
+  const g = st.slides;
+  if(!g || !g.on || g.src !== "laptop" || !g.live) return "";
+  if(!g.open) return `<button class="btn ss-openbtn" id="ssOpen" type="button">${ic("presentation")}Open the slideshow</button>`;
+  return `<div class="ss-bar"><button class="btn" id="ssBack" type="button" aria-label="Previous slide" ${g.n <= 1 ? "disabled" : ""}>${ic("back")}</button>
+    <div class="ss-mid"><b>${g.total ? `${g.n} of ${g.total}` : `Slide ${g.n}`}</b><span>${esc(g.title || "")}</span></div>
+    <button class="btn primary" id="ssNext" type="button" aria-label="Next slide" ${g.total && g.n >= g.total ? "disabled" : ""}>${ic("fwd")}</button></div>`;
+}
 function scenesHTML(st){
   const list = arrange(st.scenes);
-  return list.length ? `<div class="scenes" style="--rows:${Math.ceil(list.length / 2)}">${list.map(scBtn).join("")}</div>` : `<p class="hint">No scenes in OBS yet.</p>`;
+  return list.length ? slideBar(st) + `<div class="scenes" style="--rows:${Math.ceil(list.length / 2)}">${list.map(scBtn).join("")}</div>` : `<p class="hint">No scenes in OBS yet.</p>`;
 }
 function onScreenHTML(st){
   const it = st.item, ltUp = st.ltUp, cams = arrange(st.scenes).filter(s => s.icon === "video");
@@ -563,6 +604,10 @@ function ageTick(){ const a = $("pvAge"); if(a) a.textContent = S.pvAt ? Math.ma
 function wire(){
   const on = (id, f) => { const el = $(id); if(el) el.onclick = f; };
   on("hymn", openHymn); on("bible", openBible);
+  on("ssPill", openSlides);
+  on("ssBack", () => cmd("slide", {d:-1}).then(j => !j.ok && j.error && toast(j.error)));
+  on("ssNext", () => cmd("slide", {d:1}).then(j => !j.ok && j.error && toast(j.error)));
+  on("ssOpen", () => cmd("slide-open").then(j => !j.ok && j.error && toast(j.error)));
   document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
     const to = b.dataset.tab;
     if(to === S.tab) return;
@@ -672,6 +717,25 @@ function sheet(html, after){
   sheetClose = close;
   $("scrim").addEventListener("click", e => { if(e.target.id === "scrim") close(); });
   after(close);
+}
+// Slideshow for this service, as on the controller: on/off, size (drawn to scale), where it comes from, recent slideshows
+function openSlides(){
+  const draw = () => {
+    const g = S.st.slides || {}; if(!$("ssSheet")) return;
+    $("ssSheet").innerHTML = `<h3>Slideshow</h3>
+      <button class="btn${g.on ? " primary" : ""}" id="ssOn" type="button">${g.on ? "On for this service · tap to turn off" : "Off · tap to turn on"}</button>
+      ${!g.on ? "" : `<span class="label">Size</span><div class="ss-shapes"><button type="button" class="ss-shape r43" data-ratio="4:3" aria-pressed="${g.ratio === "4:3"}">4:3</button><button type="button" class="ss-shape r169" data-ratio="16:9" aria-pressed="${g.ratio === "16:9"}">16:9</button></div>
+      <span class="label">Where it comes from</span><div class="ss-srcs"><button class="btn" type="button" data-src="projector" aria-pressed="${g.src === "projector"}">${ic("cast")}Projector</button><button class="btn" type="button" data-src="laptop" aria-pressed="${g.src === "laptop"}">${ic("laptop")}This laptop</button></div>
+      ${g.src === "projector" ? `<div class="ss-feed ${g.feed || ""}">${g.feed === "live" ? "Projector feed: live" : g.feed === "none" ? "No picture from the projector. Check its laptop and NDI output." : "Checking the projector's feed…"}</div>` : ""}
+      ${g.src === "laptop" ? (g.recent && g.recent.length ? `<span class="label">Slideshow</span><div class="chips">${g.recent.map((x, i) => `<button class="chip" type="button" data-rec="${i}" aria-pressed="${!!x.on}">${esc(x.title)}</button>`).join("")}</div>` : `<p class="hint">Paste the Google Slides link on the controller (the Slideshow button at the top).</p>`) : ""}`}
+      <button class="btn" id="ssClose" type="button">Done</button>`;
+    $("ssOn").onclick = () => cmd("ss", {on:!g.on});
+    document.querySelectorAll("#ssSheet [data-ratio]").forEach(b => b.onclick = () => cmd("ss", {ratio:b.dataset.ratio}));
+    document.querySelectorAll("#ssSheet [data-src]").forEach(b => b.onclick = () => cmd("ss", {src:b.dataset.src}));
+    document.querySelectorAll("#ssSheet [data-rec]").forEach(b => b.onclick = () => cmd("slide-rec", {i:+b.dataset.rec}));
+    $("ssClose").onclick = closeSheet;
+  };
+  sheet(`<div id="ssSheet" class="ss-sheet"></div>`, () => { S.ssDraw = draw; draw(); });
 }
 function closeSheet(){ if(sheetClose) sheetClose(); }
 function confirmSheet(title, body, ok){
