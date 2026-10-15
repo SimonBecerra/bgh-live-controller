@@ -606,7 +606,8 @@ textarea:disabled,select:disabled{opacity:.5}
 /* Conference colour: a small piece of the lower third, with "Conference" in the darker shade */
 /* See-through level: the box over a stand-in camera picture */
 .op-val{font-weight:700;font-variant-numeric:tabular-nums}
-#setBoxOp{width:100%;max-width:340px;accent-color:var(--accent)}
+.op-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#setBoxOp{flex:1;min-width:200px;max-width:340px;accent-color:var(--accent)}
 .op-prev{position:relative;height:56px;max-width:340px;border-radius:8px;overflow:hidden;border:1px solid var(--line-2);margin-top:4px;
   background:linear-gradient(100deg,#d9c7a8 0%,#8a6f55 30%,#f2efe9 55%,#3d4b5c 80%,#c2a27e 100%)}
 .op-prev i{position:absolute;left:10px;right:40%;top:10px;bottom:10px;border-radius:4px;background:var(--op-box,rgba(19,41,50,.9))}
@@ -1294,7 +1295,8 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <div class="opt-box" id="setLtOpts">
               <h5 id="setLtOptsH">Theme options</h5>
               <div class="field" id="setBoxOpField"><div class="field-top"><label class="label" for="setBoxOp">See-through level</label><span class="op-val" id="setBoxOpVal">90%</span></div>
-                <input type="range" id="setBoxOp" data-cfg min="50" max="100" step="5" value="90" aria-describedby="setBoxOpHelp">
+                <div class="op-row"><input type="range" id="setBoxOp" data-cfg min="50" max="100" step="5" value="90" aria-describedby="setBoxOpHelp">
+                  <button type="button" class="btn" id="setBoxOpReset">Reset to default</button></div>
                 <div class="op-prev" id="setBoxOpPrev" aria-hidden="true"><i></i><span>Simon Becerra</span></div>
                 <span class="path" id="setBoxOpHelp">How solid the lower third box and the hymn and Bible box are. 100% is solid; 90% is the default. The words stay solid white.</span></div>
               <div class="field" id="setLtSsMaxField" hidden><label class="label" for="setLtSsMax">Speakers in Go Live</label>
@@ -6055,11 +6057,18 @@ const rgba = (hex, a = (parseInt($("setBoxOp").value, 10) || BOX_OPACITY_DEFAULT
 function renderBoxOp(){
   const v = parseInt($("setBoxOp").value, 10) || BOX_OPACITY_DEFAULT, th = $("setLtTheme").value;
   $("setBoxOpVal").textContent = `${v}%${v === BOX_OPACITY_DEFAULT ? " (default)" : ""}`;
+  $("setBoxOpReset").disabled = v === BOX_OPACITY_DEFAULT;
   const col = th === "conference" ? (hexColor($("setLtColor").value) || LT_COLOR) : th === "christmas" ? "#B32929" : LT_COLOR;
   $("setBoxOpPrev").style.setProperty("--op-box", th === "christmas"
     ? `linear-gradient(180deg, ${rgba("#B32929", v / 100)} 0%, ${rgba("#D0787A", Math.min(1, v / 100 + .06))} 100%)` : rgba(col, v / 100));
 }
 $("setBoxOp").addEventListener("input", () => { renderBoxOp(); renderLtColor(); });
+// Back to the default (and stored as "default", so a new default in a later update applies here too)
+$("setBoxOpReset").addEventListener("click", () => {
+  $("setBoxOp").value = String(BOX_OPACITY_DEFAULT);
+  $("setBoxOp").dispatchEvent(new Event("input", {bubbles:true}));
+  $("setBoxOp").dispatchEvent(new Event("change", {bubbles:true}));
+});
 ui.ltRecent = (() => { try{ const l = JSON.parse(localStorage.getItem("ltRecentColors")); return Array.isArray(l) ? l.filter(hexColor).slice(0, 2) : []; }catch(e){ return []; } })();
 function renderLtColor(){
   const on = $("setLtOnColl").checked, th = $("setLtTheme").value, conf = th === "conference";
