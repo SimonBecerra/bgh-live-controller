@@ -307,6 +307,12 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .ph-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none;opacity:.5}
 .ph-dot.on{background:#2fbf71;opacity:1}
 @media (max-width:640px){ .ph-pair{grid-template-columns:1fr} }
+/* Settings → Scene collections → Transitions: Fade after Live Soon */
+.fade-after{display:flex;flex-wrap:wrap;gap:6px 14px}
+.fade-chk{display:flex;align-items:center;gap:8px;min-height:40px;font-weight:500;cursor:pointer}
+.fade-chk input{width:20px;height:20px}
+.fade-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:600px){.fade-pair{grid-template-columns:1fr}}
 .check{display:flex;gap:16px;align-items:center;font-weight:600;cursor:pointer;min-height:56px;padding:6px 0}
 .check span{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
 .check small{font-weight:400;font-size:13px;color:var(--muted);line-height:1.4}
@@ -1348,6 +1354,22 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <div class="automic-list" id="setAutoMicList"></div>
               <span class="path">Going from a "Mic off" scene to a "Mic on" scene unmutes; going the other way mutes. "No change" scenes never change it.</span>
             </div>
+          </div>
+          <div class="set-section">
+            <h4>Transitions</h4>
+            <label class="check" for="setFadeIn"><input type="checkbox" id="setFadeIn" data-cfg>
+              <span>Fade after Live Soon<small>Go straight from Live Soon (or a scene chosen below) to the first camera, and the next switch to the second camera is a 1.2-second fade. Every other camera switch stays as your Transition Table sets it. For switches made from the controller or the phone.</small></span>
+            </label>
+            <div class="automic sub-check" id="setFadeBox" hidden>
+              <span class="label">Coming straight from</span>
+              <div class="fade-after" id="setFadeAfter"></div>
+              <div class="fade-pair">
+                <div class="field"><label class="label" for="setFadeFrom">First camera</label><select id="setFadeFrom" data-cfg></select></div>
+                <div class="field"><label class="label" for="setFadeTo">Then fades to</label><select id="setFadeTo" data-cfg></select></div>
+              </div>
+              <span class="path" id="setFadeHint"></span>
+            </div>
+          </div>
           <div class="set-section">
             <h4>Recording</h4>
             <label class="check" for="setRecRemind"><input type="checkbox" id="setRecRemind" data-cfg>
@@ -2053,6 +2075,13 @@ class MockOBS {
         this.emit("StudioModeStateChanged",{studioModeEnabled:s.studio});
         if(s.studio) this.emit("CurrentPreviewSceneChanged",{sceneName:s.preview});
         return {};
+      case "GetSceneTransitionList": return {currentSceneTransitionName:s.transition, transitions:[{transitionName:"Cut", transitionKind:"cut_transition"}, {transitionName:"Fade", transitionKind:"fade_transition"}]};
+      case "GetSceneSceneTransitionOverride": { const o = (this.overrides || {})[d.sceneName] || {}; return {transitionName:o.transitionName || null, transitionDuration:o.transitionDuration || null}; }
+      case "SetSceneSceneTransitionOverride":
+        this.overrides ||= {};
+        if(d.transitionName) this.overrides[d.sceneName] = {transitionName:d.transitionName, transitionDuration:d.transitionDuration || null};
+        else delete this.overrides[d.sceneName];
+        return {};
       case "SetCurrentSceneTransition":
         s.transition = d.transitionName; this.emit("CurrentSceneTransitionChanged",{transitionName:s.transition}); return {};
       case "SetInputMute":
@@ -2326,7 +2355,8 @@ class MockOBS {
     this.emit(ev,{outputActive:start, t0:o.t0}); return {};
   }
   _transitionFor(from, to){
-    const T = this.table;
+    const T = this.table, o = (this.overrides || {})[to];
+    if(o && o.transitionName) return o.transitionName;   // a scene's own Transition Override comes first
     return T[`${from} -> ${to}`] || T[`Any -> ${to}`] || T[`${from} -> Any`] || this.s.transition;
   }
   _switch(n){
@@ -2433,6 +2463,46 @@ const noExt = f => f.replace(/\.[^.]+$/,"").replace(/^\s*\d+\s*[.)\-–:]\s*/, "
 const serviceName = () => noExt(base(ui.schedule || ""));
 const fmt = ms => { const s = Math.floor(ms/1000); return [s/3600, s/60%60, s%60].map(v => String(Math.floor(v)).padStart(2,"0")).join(":"); };
 
+/* Fade after Live Soon (Settings → Scene collections → Transitions, per collection). Straight from Live Soon or
+   We'll Be Right Back (or the scenes chosen) to the first camera (Camera 2) arms it; the next switch, from that camera
+   to the second one (Camera 1), gets a 1200 ms Fade through OBS's Transition Override on the second camera for that
+   one switch. Any other switch disarms it. Everything else stays as OBS and the Transition Table decide. */
+const FADE_MS = 1200;
+const isBreakScene = n => /\b(live soon|we'?ll be right back|be right back|brb)\b/i.test(String(n || ""));
+function fadeCfgOf(c, scenes = []){
+  const f = (c && c.fadeIn) || {};
+  const pick = re => scenes.find(n => re.test(n.trim())) || "";
+  return {on:!!f.on, after:Array.isArray(f.after) ? f.after : scenes.filter(isBreakScene),
+    from:f.from !== undefined ? f.from : pick(/^cam(era)?\s*2$/i), to:f.to !== undefined ? f.to : pick(/^cam(era)?\s*1$/i)};
+}
+let fadeArmed = false;
+// Every Program change, however it was made: arm on "Live Soon → Camera 2", disarm on anything else
+function fadeTrack(prev, next){
+  const f = fadeCfgOf(cfg(), BUTTONS.flatMap(b => b.group));
+  fadeArmed = !!(f.on && f.from && next === f.from && f.after.includes(prev));
+}
+// Just before the controller (or the phone) switches Program to `to`
+let fadeRestore = null;   // {scene, was, timer}: the override to put back after the fade
+async function fadeFlush(){
+  const r = fadeRestore; if(!r) return;
+  fadeRestore = null; clearTimeout(r.timer);
+  await obs.call("SetSceneSceneTransitionOverride", {sceneName:r.scene, transitionName:r.was.transitionName || null, transitionDuration:r.was.transitionDuration || null}).catch(() => {});
+}
+async function fadeBeforeSwitch(to){
+  await fadeFlush();   // a quick switch after the fade: the scene's own override is back first
+  const f = fadeCfgOf(cfg(), BUTTONS.flatMap(b => b.group));
+  if(!fadeArmed || !f.on || ui.program !== f.from || to !== f.to) return;
+  try{
+    const list = await obs.call("GetSceneTransitionList");
+    const fade = (list.transitions || []).find(t => t.transitionKind === "fade_transition") || (list.transitions || []).find(t => /fade/i.test(t.transitionName));
+    if(!fade) return;
+    const was = await obs.call("GetSceneSceneTransitionOverride", {sceneName:to}).catch(() => ({}));
+    await obs.call("SetSceneSceneTransitionOverride", {sceneName:to, transitionName:fade.transitionName, transitionDuration:FADE_MS});
+    // Put the scene's own override back once the fade has run (or before the next switch, if that's sooner)
+    fadeRestore = {scene:to, was, timer:setTimeout(fadeFlush, FADE_MS + 800)};
+  }catch(e){ /* never stop the switch because of the fade */ }
+}
+
 // Scene bank. A tap shows straight away as "switching" (a pulsing outline on that button); the button turns
 // solid only when OBS reports the switch, so it still always matches what OBS is really showing.
 let scPending = null;   // {b, kind:"pgm"|"pvw", timer}
@@ -2454,7 +2524,7 @@ async function selectScene(b){
   }
   try{
     if(ui.studio) await obs.call("SetCurrentPreviewScene",{sceneName:b.scene});
-    else await obs.call("SetCurrentProgramScene",{sceneName:b.scene});
+    else { await fadeBeforeSwitch(b.scene); await obs.call("SetCurrentProgramScene",{sceneName:b.scene}); }
   }catch(e){ clearScPending(); toast(e.message); }
 }
 /* Program as OBS has it right now. If the controller missed OBS's message about a switch (from the phone,
@@ -2523,6 +2593,7 @@ $("sqStudio").addEventListener("click", toggleStudio);
 // Done by the controller so it works whatever OBS's own "swap after transitioning" setting is.
 $("cutBtn").addEventListener("click", async () => {
   const prev = ui.program;
+  if(ui.preview) await fadeBeforeSwitch(ui.preview);
   await obs.call("TriggerStudioModeTransition");
   if(!prev || prev === ui.program && prev === ui.preview) return;
   // Leaving the waiting rotation mid-cycle: queue Title Slide so cutting back restarts the sequence
@@ -5841,6 +5912,8 @@ function syncCfgFields(){
     ssMax: parseInt($("setLtSsMax").value, 10) || 1,
     ltHost: {on:$("setLtHostOn").checked, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
     ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
+    fadeIn: {on:$("setFadeIn").checked, from:$("setFadeFrom").value, to:$("setFadeTo").value,
+      after:[...document.querySelectorAll("#setFadeAfter input:checked")].map(el => el.dataset.scene)},
     autoMic: {on: $("setAutoMic").checked,
       scenes: Object.fromEntries([...document.querySelectorAll("#setAutoMicList select")].map(el => [el.dataset.scene, el.value]))}};
 }
@@ -5895,6 +5968,20 @@ async function fillCfgFields(coll){
     $("setAutoMicList").appendChild(row);
   });
   $("setAutoMicBox").hidden = !am.on;
+  // Fade after Live Soon
+  const fd = fadeCfgOf(c, scenes);
+  $("setFadeIn").checked = !!fd.on;
+  $("setFadeAfter").innerHTML = "";
+  scenes.forEach(n => {
+    const l = document.createElement("label"); l.className = "fade-chk";
+    l.innerHTML = `<input type="checkbox" data-cfg><span></span>`;
+    l.querySelector("span").textContent = n;
+    const cb = l.querySelector("input"); cb.dataset.scene = n; cb.checked = fd.after.includes(n);
+    $("setFadeAfter").appendChild(l);
+  });
+  fill($("setFadeFrom"), scenes, fd.from); fill($("setFadeTo"), scenes, fd.to);
+  $("setFadeBox").hidden = !fd.on;
+  renderFadeHint();
   const f = c ? c.folder : "auto";
   $("setFolderMode").value = f === "auto" || f === "" ? f : "custom";
   $("setFolder").value = f === "auto" || f === "" ? "" : f;
@@ -5913,6 +6000,16 @@ document.querySelectorAll("#page-collections [data-cfg]").forEach(el => {
 });
 $("setAutoMicList").addEventListener("change", touchCfg);   // the per-scene choices are made fresh for each collection
 $("setAutoMic").addEventListener("change", () => { $("setAutoMicBox").hidden = !$("setAutoMic").checked; });
+$("setFadeIn").addEventListener("change", () => { $("setFadeBox").hidden = !$("setFadeIn").checked; renderFadeHint(); });
+["setFadeFrom", "setFadeTo"].forEach(id => $(id).addEventListener("change", renderFadeHint));
+$("setFadeAfter").addEventListener("change", renderFadeHint);
+function renderFadeHint(){
+  const after = [...document.querySelectorAll("#setFadeAfter input:checked")].map(el => el.dataset.scene), from = $("setFadeFrom").value, to = $("setFadeTo").value;
+  const h = $("setFadeHint");
+  h.classList.toggle("warn-txt", !after.length || !from || !to || from === to);
+  h.textContent = !after.length ? "Tick at least one scene it comes from." : !from || !to ? "Choose both cameras." : from === to ? "Choose two different cameras."
+    : `${listWords(after.map(n => `"${n}"`))} → ${from}: then ${from} → ${to} fades over 1.2 seconds, once.`;
+}
 $("setAutoEnd").addEventListener("change", () => { $("setAutoEndBox").hidden = !$("setAutoEnd").checked; });
 $("setCfgUse").addEventListener("click", () => {
   cfgTouched.add(cfgColl); syncCfgFields(); renderCfgState(); updateSetDots();
@@ -6892,6 +6989,7 @@ obs.on("CurrentProgramSceneChanged", d => {
   if(scPending && scPending.kind === "pgm"){ clearTimeout(scPending.timer); scPending = null; }   // OBS has switched (to that, or something else)
   renderScenes();
   autoMute(prev, d.sceneName);
+  fadeTrack(prev, d.sceneName);
   if(ui.autoEndSkip && ui.autoEndSkip !== d.sceneName) ui.autoEndSkip = null;   // "Keep streaming" lasts until Ending is left
   if(!ui.autoEndSkip) checkAutoEnd(d.sceneName);
 });
@@ -7497,7 +7595,7 @@ async function phRun(cmd, a){
       if(!b) throw phErr(`There's no ${a.label} scene in ${ui.collection} any more.`);
       if(b.group.includes(ui.program)) return {};
       // The phone always changes Program, even in Studio Mode
-      if(ui.studio) await obs.call("SetCurrentProgramScene", {sceneName:b.scene});
+      if(ui.studio){ await fadeBeforeSwitch(b.scene); await obs.call("SetCurrentProgramScene", {sceneName:b.scene}); }
       else await selectScene(b);
       // OBS has taken it; wait for its message, or ask, so the phone hears straight away
       for(let i = 0; i < 10 && !b.group.includes(ui.program); i++) await sleep(150);
