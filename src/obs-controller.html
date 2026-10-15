@@ -3041,6 +3041,26 @@ const brChapterOf = br => { const b = br && br.book != null ? BIBLE_BOOKS[br.boo
   return !b ? "" : b.chapters.length === 1 ? b.name : br.chapter ? `${b.name === "Psalms" ? "Psalm" : b.name} ${br.chapter}` : ""; };   // one psalm: "Psalm 23"
 const brLeadId = () => gl.sel.includes(gl.br.lead) ? gl.br.lead : gl.sel[0] || "";
 const brWith = () => { const n = selNames(gl.sel); return n.length ? formatNames(gl.br.others ? [...n, "Others"] : n) : ""; };
+/* The Bible Reading title, shortened in steps when it's over YouTube's 100 characters (the first that fits is used):
+   1. "Ephesians 3 with Dan Rudge, A.J. Higgins, David Vallance, and Others | July 29, 2026"
+   2. last names: "Ephesians 3 with Rudge, Higgins, Vallance, and Others | July 29, 2026"
+   3. the leader: "Ephesians 3 — Led by Dan Rudge and Others | July 29, 2026"
+   4. the leader's last name: "Ephesians 3 — Led by Rudge and Others | July 29, 2026"
+   One speaker (no others) is "Ephesians 3 — Led by Simon Becerra" to start with. */
+const lastNameOf = n => { const w = String(n).trim().split(/\s+/); while(w.length > 1 && SUFFIX.test(w[w.length - 1])) w.pop(); return w[w.length - 1] || n; };
+function brTitle(){
+  const ch = brChapterOf(gl.br) || "Chapter", end = ` | ${gl.date ? longDate(gl.date) : "Date"}`;
+  const names = selNames(gl.sel), others = gl.br.others, lead = speakerName(brLeadId()) || "";
+  if(!names.length) return {title:`${ch}${end}`, short:false};
+  const withList = list => ` with ${formatNames(others ? [...list, "Others"] : list)}`;
+  const ledBy = n => ` — Led by ${n}${others || names.length > 1 ? " and Others" : ""}`;
+  const steps = names.length === 1 && !others
+    ? [ledBy(names[0]), ledBy(lastNameOf(names[0]))]
+    : [withList(names), withList(names.map(lastNameOf)), ledBy(lead), ledBy(lastNameOf(lead))];
+  const tries = steps.map(x => `${ch}${x}${end}`);
+  const i = tries.findIndex(t => t.length <= 100);
+  return i < 0 ? {title:tries[0], short:false} : {title:tries[i], short:i > 0};
+}
 ui.brProg = false;   // this livestream is a Bible Reading (a host can be chosen); forgotten when it ends
 const isBaptismTitle = t => /^\s*the baptisms? of\b/i.test(String(t || ""));
 // "Lucas Becerra", "Lucas Becerra and Carolina Lugo", "A, B, and C" (Oxford comma)
@@ -3058,7 +3078,7 @@ function bapFromTitle(t){
   return m ? m[1].split(/\s*,\s*(?:and\s+)?|\s+and\s+/i).map(x => x.trim()).filter(Boolean).slice(0, BAP_MAX) : [];
 }
 const autoTitle = () => isSsSvc(gl.svc) ? `${SS_TEXT} | ${gl.date ? monthYear(gl.date) : "Month"}`
-  : isBrSvc(gl.svc) ? `${brChapterOf(gl.br) || "Chapter"}${gl.sel.length === 1 && !gl.br.others ? ` — Led by ${speakerName(gl.sel[0])}` : gl.sel.length ? " with " + brWith() : ""} | ${gl.date ? longDate(gl.date) : "Date"}`
+  : isBrSvc(gl.svc) ? brTitle().title
   : `${isBaptismSvc(gl.svc) && bapNames().length ? bapHeading() : gl.svc || svcLabel()} | ${gl.date ? longDate(gl.date) : "Date"}`;
 // No speakers in this collection (None): the description leaves out the "Service Led by" part
 // Sunday School: the speaker (if one is chosen) is named even when the collection has no speakers text source
@@ -3297,7 +3317,7 @@ function glRender(){
   const ct = gl.customTitle != null, cd = gl.customDesc != null;
   $("glPvTitle").textContent = autoTitle(); $("glPvTitle").hidden = ct; $("glTitleIn").hidden = !ct;
   $("glPvDesc").textContent = autoDesc(); $("glPvDesc").hidden = cd; $("glDescIn").hidden = !cd;
-  $("glCustTitle").setAttribute("aria-pressed", ct); $("glTitleTag").textContent = ct ? "Custom" : "Automatic";
+  $("glCustTitle").setAttribute("aria-pressed", ct); $("glTitleTag").textContent = ct ? "Custom" : isBrSvc(gl.svc) && gl.mode !== "existing" && brTitle().short ? "Automatic · shortened to fit YouTube" : "Automatic";
   $("glCustDesc").setAttribute("aria-pressed", cd); $("glDescTag").textContent = cd ? "Custom" : "Automatic";
   // YouTube limits: title up to 100 characters, no < or > in either
   const bad = t => /[<>]/.test(t);
