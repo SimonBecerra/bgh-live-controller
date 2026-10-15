@@ -2283,6 +2283,10 @@ class MockOBS {
           items.push({sceneItemId:id, sourceName:n, inputKind:k, sceneItemEnabled:this.ssItems[d.sceneName + id] ?? true, isGroup:false})); }
         return {sceneItems:items};
       }
+      case "GetSceneItemTransform": { this.ssTf ||= {}; const k = d.sceneName + d.sceneItemId;
+        const base = d.sceneItemId === 11 ? {sourceWidth:1440, sourceHeight:1080, positionX:240, positionY:0} : {sourceWidth:1920, sourceHeight:1080, positionX:0, positionY:0};
+        return {sceneItemTransform:{alignment:5, scaleX:1, scaleY:1, rotation:0, boundsType:"OBS_BOUNDS_NONE", cropTop:0, cropBottom:0, cropLeft:0, cropRight:0, ...base, ...(this.ssTf[k] || {})}}; }
+      case "SetSceneItemTransform": { this.ssTf ||= {}; const k = d.sceneName + d.sceneItemId; this.ssTf[k] = {...(this.ssTf[k] || {}), ...d.sceneItemTransform}; return {}; }
       case "SetSceneItemEnabled": if(this.cam === "hidden" && d.sceneItemEnabled) this.cam = "ok"; (this.ssItems ||= {})[d.sceneName + d.sceneItemId] = d.sceneItemEnabled; return {};
       case "GetSourceScreenshot": {
         const cam = this.cam || "ok";
@@ -7595,13 +7599,45 @@ async function ssSet(ch){
   Object.assign(ss, ch);
   if(ch.on === false){ ss.ratio = ""; ss.src = ""; }
   ssRender();
-  if(ch.src && ch.src !== was.src) await ssApplySources();
+  if((ch.src && ch.src !== was.src) || (ch.ratio && ch.ratio !== was.ratio && ss.src)) await ssApplySources(!!ch.src && ch.src !== was.src);
   if(ss.on && ss.ratio && !BUTTONS.some(b => b.slide && slideShown(b) && !b.group.includes(ui.program))) toast(`There's no Slideshow ${ss.ratio} scene in ${ui.collection}.`);
 }
-/* Sources: in every scene of the loaded collection, the chosen kind is shown and the other hidden (their eye in OBS) */
-async function ssApplySources(){
+/* Sources: in every scene of the loaded collection, the chosen kind is shown and the other hidden (their eye in OBS),
+   and both are cropped to the slideshow's shape:
+   - the projector's feed is 4:3, so a 16:9 slideshow has black bars top and bottom: those are cropped off;
+   - this laptop's screen is 16:9, so a 4:3 slideshow has black bars left and right: those are cropped off;
+   - otherwise no crop. The amounts come from the source's real size in OBS.
+   The slideshow never changes size: only the crop changes (the scale isn't touched), and if the source's position is
+   measured from an edge rather than its center, the position moves by exactly the cropped amount so the picture stays
+   where it was. A source in a bounding box isn't cropped (OBS would stretch it to fill the box); it's reported instead. */
+function ssCropFor(kind, w, h){
+  const c = {cropTop:0, cropBottom:0, cropLeft:0, cropRight:0};
+  if(!w || !h || !ss.ratio) return c;
+  if(kind === "projector" && ss.ratio === "16:9"){ const bar = Math.max(0, Math.round((h - w * 9 / 16) / 2)); c.cropTop = c.cropBottom = bar; }
+  if(kind === "laptop" && ss.ratio === "4:3"){ const bar = Math.max(0, Math.round((w - h * 4 / 3) / 2)); c.cropLeft = c.cropRight = bar; }
+  return c;
+}
+async function ssCropItem(sceneName, it, kind, report){
+  const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
+  if(t.boundsType && t.boundsType !== "OBS_BOUNDS_NONE"){ report.bounded.push(`${it.sourceName} in ${sceneName}`); return; }
+  if(t.rotation){ report.rotated.push(`${it.sourceName} in ${sceneName}`); return; }
+  const c = ssCropFor(kind, t.sourceWidth, t.sourceHeight);
+  const d = k => c[k] - (t[k] || 0);
+  if(!d("cropTop") && !d("cropBottom") && !d("cropLeft") && !d("cropRight")) return;
+  // Keep the picture in place: alignment says where the position is measured from (OBS: 1 left, 2 right, 4 top, 8 bottom)
+  const al = t.alignment ?? 5, sx = t.scaleX ?? 1, sy = t.scaleY ?? 1;
+  const dx = al & 1 ? d("cropLeft") : al & 2 ? -d("cropRight") : (d("cropLeft") - d("cropRight")) / 2;
+  const dy = al & 4 ? d("cropTop") : al & 8 ? -d("cropBottom") : (d("cropTop") - d("cropBottom")) / 2;
+  const nt = {...c};
+  if(dx) nt.positionX = (t.positionX || 0) + dx * sx;
+  if(dy) nt.positionY = (t.positionY || 0) + dy * sy;
+  await obs.call("SetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId, sceneItemTransform:nt});
+  report.cropped++;
+}
+async function ssApplySources(vis = true){
   const show = ss.src === "projector" ? ui.ssNames.projector : ui.ssNames.laptop, hide = ss.src === "projector" ? ui.ssNames.laptop : ui.ssNames.projector;
   let shown = 0, hidden = 0;
+  const report = {cropped:0, bounded:[], rotated:[]};
   try{
     const scenes = (await obs.call("GetSceneList")).scenes || [];
     for(const sc of scenes){
@@ -7612,13 +7648,17 @@ async function ssApplySources(){
           if(on === null) continue;
           if(it.sceneItemEnabled !== on) await obs.call("SetSceneItemEnabled", {sceneName:group || sc.sceneName, sceneItemId:it.sceneItemId, sceneItemEnabled:on});
           on ? shown++ : hidden++;
+          await ssCropItem(group || sc.sceneName, it, it.sourceName === ui.ssNames.projector ? "projector" : "laptop", report);
         }
       };
       await walk((await obs.call("GetSceneItemList", {sceneName:sc.sceneName})).sceneItems || []);
     }
   }catch(e){ return toast(`Couldn't switch the slideshow sources in OBS: ${e.message}`); }
-  if(!shown) toast(`No source called "${show}" was found in ${ui.collection}. Check the names in Settings → Slideshow.`);
-  else toast(`Showing "${show}"${hidden ? `, hid "${hide}"` : ""} in the slideshow scenes.`);
+  if(!shown) return toast(`No source called "${show}" was found in ${ui.collection}. Check the names in Settings → Slideshow.`);
+  if(report.bounded.length) return toast(`Not cropped: ${report.bounded[0]} uses a bounding box, so cropping would change its size. In OBS, set its Bounding Box Type to "No bounds".`);
+  if(report.rotated.length) return toast(`Not cropped: ${report.rotated[0]} is rotated.`);
+  const cropTxt = ss.ratio ? (ss.src === "projector" && ss.ratio === "16:9" ? " Cropped the black bars off the top and bottom." : ss.src === "laptop" && ss.ratio === "4:3" ? " Cropped the black bars off the sides." : " No cropping needed.") : "";
+  toast(vis ? `Showing "${show}"${hidden ? `, hid "${hide}"` : ""} in the slideshow scenes.${cropTxt}` : cropTxt.trim() || `${ss.ratio}: no crop needed.`);
 }
 $("ssBtn").addEventListener("click", () => { $("ssOverlay").hidden = false; ssEditor($("ssPanelEd")); });
 $("ndiOk").addEventListener("click", () => { $("ndiBanner").hidden = true; });
