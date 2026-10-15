@@ -382,6 +382,22 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .health-banner svg{width:22px;height:22px;color:var(--pgm);flex:none}
 .health-banner b{display:block;font-size:16px}
 .health-banner .btn{flex:none;min-height:44px}
+/* Slideshow: Back / Next along the bottom of the Program picture while a Slideshow scene is on */
+.sl-host{position:relative}
+.sl-bar{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:stretch;gap:6px;padding:6px;border-radius:16px;background:rgba(8,10,14,.82);border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(0,0,0,.45);backdrop-filter:blur(6px)}
+.sl-bar[hidden],.sl-open[hidden]{display:none}
+.sl-btn{width:84px;min-height:64px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);display:grid;place-items:center;color:var(--fg)}
+.sl-btn:active{background:var(--accent);border-color:var(--accent)}
+.sl-btn svg{width:34px;height:34px}
+.sl-btn:disabled{opacity:.35}
+.sl-mid{min-width:150px;border:0;background:none;color:var(--fg);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;padding:0 10px}
+.sl-mid b{font-size:18px;font-variant-numeric:tabular-nums}
+.sl-mid span{font-size:12px;color:var(--muted);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-open{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);min-height:56px;background:rgba(8,10,14,.85)}
+.sl-recent{display:flex;flex-direction:column;gap:6px}
+.sl-recent button{display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:48px;padding:6px 14px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left;font-weight:600}
+.sl-recent button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.sl-recent small{color:var(--muted);font-weight:500;font-size:12px}
 .sum-dlg{width:min(620px,100%);max-width:620px}
 .sum-dlg .ready-head{flex-direction:column;align-items:flex-start;gap:2px}
 .sum-list{margin:0;display:flex;flex-direction:column;gap:2px}
@@ -1070,7 +1086,14 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         <div class="mon pgm">
           <div class="mon-head"><span class="tag">PROGRAM</span><span class="scene" id="pgmName">—</span>
             <button type="button" class="health-chip mono" id="healthChip" aria-label="Stream health"><span class="hdot"></span><span id="healthChipTxt">OBS —</span></button></div>
-          <div class="screen"><canvas id="cvPgm" width="1280" height="720"></canvas></div>
+          <div class="screen sl-host"><canvas id="cvPgm" width="1280" height="720"></canvas>
+            <div class="sl-bar" id="slBar" hidden>
+              <button type="button" class="sl-btn" id="slBack" aria-label="Previous slide"><i data-lucide="chevron-left"></i></button>
+              <button type="button" class="sl-mid" id="slMid"><b id="slNum"></b><span id="slTitle"></span></button>
+              <button type="button" class="sl-btn" id="slNext" aria-label="Next slide"><i data-lucide="chevron-right"></i></button>
+            </div>
+            <button type="button" class="btn sl-open" id="slOpen" hidden><i data-lucide="presentation"></i><span id="slOpenTxt">Open the slideshow</span></button>
+          </div>
         </div>
       </div>
     </section>
@@ -1258,6 +1281,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         <button type="button" role="tab" id="tab-golive" data-page="golive" aria-controls="page-golive"><i data-lucide="radio"></i><span>Going live</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-alerts" data-page="alerts" aria-controls="page-alerts"><i data-lucide="bell"></i><span>Alerts</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-screen" data-page="screen" aria-controls="page-screen"><i data-lucide="monitor"></i><span>Screen</span><b class="tdot" aria-hidden="true"></b></button>
+        <button type="button" role="tab" id="tab-slides" data-page="slides" aria-controls="page-slides"><i data-lucide="presentation"></i><span>Slideshow</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-phone" data-page="phone" aria-controls="page-phone"><i data-lucide="smartphone"></i><span>Phone remote</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-backup" data-page="backup" aria-controls="page-backup"><i data-lucide="archive"></i><span>Backup</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-help" data-page="help" aria-controls="page-help"><i data-lucide="circle-help"></i><span>About &amp; help</span><b class="tdot" aria-hidden="true"></b></button>
@@ -1687,6 +1711,25 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
           </div>
         </section>
 
+        <section class="set-page" id="page-slides" data-page="slides" role="tabpanel" aria-labelledby="tab-slides" tabindex="-1" hidden>
+          <h3 class="page-h">Slideshow</h3>
+          <div class="set-section">
+            <div class="field"><label class="label" for="setSlLink">Google Slides link</label>
+              <input id="setSlLink" data-now placeholder="https://docs.google.com/presentation/d/…" autocomplete="off" spellcheck="false">
+              <span class="path" id="setSlMsg">In Google Slides, press Share and set General access to "Anyone with the link" (Viewer), then Copy link and paste it here.</span></div>
+            <div class="field" id="setSlRecentField" hidden><span class="label">Recent slideshows</span><div class="sl-recent" id="setSlRecent"></div></div>
+            <div class="field"><label class="label" for="setSlScreen">Show it on</label><select id="setSlScreen" data-now></select>
+              <span class="path">The controller opens the slideshow full screen there, in its own Chrome window. In OBS, the Slideshow scenes' Window Capture points at that window (one time: choose "[chrome.exe]: BGH Slideshow").</span></div>
+          </div>
+          <div class="set-section">
+            <h4>Changing slides</h4>
+            <ul class="info-list">
+              <li>When a Slideshow scene is on Program, Back and Next sit along the bottom of the Program picture, with the slide number.</li>
+              <li>A presentation clicker changes slides too while a Slideshow scene is on (hymns and Bible verses come first when one is open).</li>
+              <li>The phone remote gets the same Back and Next.</li>
+            </ul>
+          </div>
+        </section>
         <section class="set-page" id="page-phone" data-page="phone" role="tabpanel" aria-labelledby="tab-phone" tabindex="-1" hidden>
           <h3 class="page-h">Phone remote</h3>
           <div class="set-section">
@@ -4701,6 +4744,12 @@ $("otNote").addEventListener("click", () => settingsGoTo("ontext"));
 $("otNote").addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); settingsGoTo("ontext"); } });
 // A presentation clicker or the keyboard: → / Page Down = next, ← / Page Up = back (when nothing else is open)
 document.addEventListener("keydown", e => {
+  // No hymn or passage open, a Slideshow scene on Program and the slideshow open: the clicker changes slides
+  if(!ot.item && sl.open && isSlideScene(ui.program) && !e.target.closest("input,textarea,select") && !document.querySelector(".overlay:not([hidden]), .spk-pop:not([hidden])")){
+    if(e.key === "ArrowRight" || e.key === "PageDown"){ e.preventDefault(); slStep(1); }
+    if(e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); slStep(-1); }
+    return;
+  }
   if(!ot.item || e.target.closest("input,textarea,select") || document.querySelector(".overlay:not([hidden]):not(#bbOverlay), .spk-pop:not([hidden])")) return;
   if(e.key === "ArrowRight" || e.key === "PageDown"){ e.preventDefault(); otStep(1); }
   if(e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); otStep(-1); }
@@ -6014,7 +6063,7 @@ $("setVis").value = ui.defaultVis;
 /* Settings: a sidebar of categories, each its own page.
    Dots on a category: orange = needs attention, accent = unsaved changes. */
 const esc = v => String(v).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", colormatch:"Color matching", golive:"Going live", alerts:"Alerts", screen:"Screen", phone:"Phone remote", backup:"Backup", help:"About & help", testing:"Testing"};
+const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", colormatch:"Color matching", golive:"Going live", alerts:"Alerts", screen:"Screen", slides:"Slideshow", phone:"Phone remote", backup:"Backup", help:"About & help", testing:"Testing"};
 ui.setPage = (() => { try{ const p = localStorage.getItem("setPage"); return SET_PAGES[p] ? p : "connection"; }catch(e){ return "connection"; } })();
 function showSetPage(page, focusTab){
   if(!SET_PAGES[page] || !document.getElementById("tab-" + page)) page = "connection";
@@ -6129,7 +6178,7 @@ async function openSettingsPanel(page = "connection"){
   $("setLayout").value = ui.layout; $("setTheme").value = ui.theme; $("setTextSize").value = String(ui.textSize); renderTextSizeNote(); renderAutoBackups();
   $("setHomeLbl").value = homeLabel(); $("setHomeHdr").textContent = homeLabel();
   workSpk = JSON.parse(JSON.stringify({home:ui.speakers.home, visiting:ui.speakers.visiting, teachers:ui.speakers.teachers || []}));
-  workRels = [...ui.bapRels]; renderRels();
+  workRels = [...ui.bapRels]; renderRels(); renderSlSet();
   $("setHomeNew").value = ""; $("setHomeErr").hidden = true; $("setVisitNew").value = ""; $("setVisitErr").hidden = true;
   renderSetSpk();
   await fillOtSettings();
@@ -7397,6 +7446,79 @@ obs.on("CurrentProgramSceneChanged", d => {
   if(ui.autoEndSkip && ui.autoEndSkip !== d.sceneName) ui.autoEndSkip = null;   // "Keep streaming" lasts until Ending is left
   if(!ui.autoEndSkip) checkAutoEnd(d.sceneName);
 });
+/* Slideshow (Settings → Slideshow). The controller opens the Google Slides link in its own Chrome window, full screen
+   on the chosen monitor, and moves it with Back / Next: along the bottom of the Program picture while a Slideshow
+   scene is on, from a presentation clicker, and from the phone. Recent links are kept so last week's is one tap.
+   Desktop app: window.bgh.slides (open / step / state); the prototype pretends. */
+const isSlideScene = n => /\b(slide ?shows?|slides|presentation|powerpoint)\b/i.test(String(n || ""));
+const sl = {open:false, title:"", n:0, total:0, busy:false,
+  cfg:(() => { try{ return JSON.parse(localStorage.getItem("slides") || "null") || {link:"", recent:[], screen:""}; }catch(e){ return {link:"", recent:[], screen:""}; } })()};
+const slSave = () => { try{ localStorage.setItem("slides", JSON.stringify(sl.cfg)); }catch(e){} };
+const slId = link => (String(link || "").match(/docs\.google\.com\/presentation\/d\/([\w-]{20,})/) || [])[1] || "";
+// #proto-start
+const SL_PROTO = {total:12, titles:{}};
+// #proto-end
+async function slOpen(){
+  const id = slId(sl.cfg.link);
+  if(!id){ toast("Choose the slideshow first: Settings → Slideshow."); return settingsGoTo("slides", "setSlLink"); }
+  sl.busy = true; renderSlides();
+  // #proto-start
+  await sleep(700); Object.assign(sl, {open:true, n:1, total:SL_PROTO.total, title:(sl.cfg.recent.find(x => slId(x.link) === id) || {}).title || "Sunday slides"});
+  // #proto-end
+  // #real try{ Object.assign(sl, await window.bgh.slides.open({id, screen:sl.cfg.screen})); }catch(e){ toast(`Couldn't open the slideshow: ${e.message}`); }
+  sl.busy = false; renderSlides();
+}
+async function slStep(d){
+  if(!sl.open) return;
+  // #proto-start
+  sl.n = Math.max(1, Math.min(sl.total, sl.n + d));
+  // #proto-end
+  // #real try{ Object.assign(sl, await window.bgh.slides.step(d)); }catch(e){ toast("The slideshow didn't respond. Is its window still open?"); }
+  renderSlides(); phSend && phSend();
+}
+function renderSlides(){
+  const on = isSlideScene(ui.program);
+  $("slBar").hidden = !on || !sl.open;
+  $("slOpen").hidden = !on || sl.open;
+  $("slOpenTxt").textContent = sl.busy ? "Opening…" : slId(sl.cfg.link) ? "Open the slideshow" : "Choose a slideshow in Settings";
+  if(sl.open){
+    $("slNum").textContent = sl.total ? `${sl.n} of ${sl.total}` : `Slide ${sl.n}`;
+    $("slTitle").textContent = sl.title;
+    $("slBack").disabled = sl.n <= 1; $("slNext").disabled = !!sl.total && sl.n >= sl.total;
+  }
+}
+$("slBack").addEventListener("click", () => slStep(-1));
+$("slNext").addEventListener("click", () => slStep(1));
+$("slOpen").addEventListener("click", () => sl.busy || slOpen());
+$("slMid").addEventListener("click", () => toast(`${sl.title}: slide ${sl.n}${sl.total ? " of " + sl.total : ""}. Change it in Settings → Slideshow.`));
+setInterval(renderSlides, 500);
+// Settings → Slideshow
+function renderSlSet(){
+  $("setSlLink").value = sl.cfg.link || "";
+  const scr = $("setSlScreen"); scr.innerHTML = "";
+  ["Monitor 2 (1920 × 1080)", "Monitor 1 (1920 × 1080, the touchscreen)", "Monitor 3 (1280 × 720)"].forEach((n, i) => { const o = document.createElement("option"); o.value = String(i + 1); o.textContent = n; scr.appendChild(o); });
+  scr.value = sl.cfg.screen || "1";
+  const rec = sl.cfg.recent || [];
+  $("setSlRecentField").hidden = !rec.length;
+  $("setSlRecent").innerHTML = rec.map((x, i) => `<button type="button" data-sl="${i}" aria-pressed="${slId(x.link) === slId(sl.cfg.link)}"><span>${esc(x.title || "Slideshow")}</span><small>${esc(x.when || "")}</small></button>`).join("");
+  $("setSlRecent").querySelectorAll("[data-sl]").forEach(b => b.onclick = () => { sl.cfg.link = rec[+b.dataset.sl].link; slSave(); renderSlSet(); toast(`Slideshow: ${rec[+b.dataset.sl].title}`); });
+}
+$("setSlLink").addEventListener("change", () => {
+  const v = $("setSlLink").value.trim(), id = slId(v);
+  $("setSlMsg").classList.toggle("warn-txt", !!v && !id);
+  if(v && !id){ $("setSlMsg").textContent = "That isn't a Google Slides link. It starts https://docs.google.com/presentation/d/"; return; }
+  $("setSlMsg").textContent = id ? "Saved. Open it from the Program picture when a Slideshow scene is on." : "In Google Slides, press Share and set General access to \u201cAnyone with the link\u201d (Viewer), then Copy link and paste it here.";
+  sl.cfg.link = v;
+  if(id){ const rec = (sl.cfg.recent || []).filter(x => slId(x.link) !== id); rec.unshift({link:v, title:"New slideshow", when:new Date().toLocaleDateString([], {month:"short", day:"numeric"})}); sl.cfg.recent = rec.slice(0, 5); }
+  slSave(); renderSlSet();
+});
+$("setSlScreen").addEventListener("change", () => { sl.cfg.screen = $("setSlScreen").value; slSave(); });
+// #proto-start  sample recent slideshows so the list shows
+if(!sl.cfg.recent.length) sl.cfg.recent = [
+  {link:"https://docs.google.com/presentation/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit", title:"Sunday Announcements", when:"Oct 11"},
+  {link:"https://docs.google.com/presentation/d/1ZyXwVuTsRqPoNmLkJiHgFeDcBa9876543210/edit", title:"Missionary Report: Peru", when:"Oct 4"}];
+if(!sl.cfg.link) sl.cfg.link = sl.cfg.recent[0].link;
+// #proto-end
 /* Going to Ending, the Waiting slides, Live Soon or We'll Be Right Back takes a hymn, Bible passage or lower third
    off the screen (as Done would), so nothing is left over the closing or waiting slides. However Program changes. */
 const isBreakTo = n => { const wb = BUTTONS.find(b => b.waiting); return !!n && (isEnding(n) || isBreakScene(n) || (!!wb && wb.group.includes(n))); };
@@ -7864,7 +7986,7 @@ function drawScene(c, name, t, clear = true){
     case "Slideshow 4:3": { c.fillStyle = "#000"; c.fillRect(0,0,W,H); const sw = H*4/3, x = (W-sw)/2;
       bg2(c,x,0,sw,H); txt(c,"Psalm 46:1",W/2,H*.3,40,{col:"#d9c38f",sp:2});
       txt(c,"God is our refuge and strength,",W/2,H*.48,50,{w:600}); txt(c,"a very present help in trouble.",W/2,H*.58,50,{w:600});
-      txt(c,"Slide 4 of 12",W/2,H*.88,22,{w:500,f:BODY,col:"rgba(255,255,255,.5)"}); break; }
+      txt(c,sl.open ? `Slide ${sl.n} of ${sl.total}` : "The slideshow isn't open yet",W/2,H*.88,22,{w:500,f:BODY,col:"rgba(255,255,255,.5)"}); break; }
     case "Slideshow 16:9": bg(c,W,H,"#173227","#08110d");
       txt(c,"Announcements",W*.08,H*.2,72,{al:"left"});
       ["Fellowship lunch after service · Fellowship Hall","Youth group meets Wednesday at 7 PM","Volunteer sign-up for the fall food drive"].forEach((s,i) => {
