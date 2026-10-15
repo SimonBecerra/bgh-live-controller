@@ -8296,7 +8296,15 @@ obs.on("CurrentSceneCollectionChanged", async d => {
   ot.showing = false; ui.lt.showing = "";
   await otSync();
   ui.cam2Found = null; cam2Check();
-  setTimeout(() => { ssCollMoving = false; ssTplSync(); }, 1500);   // once OBS has finished loading it
+  // Slideshow mode doesn't carry over to another collection: it's off until it's turned on again. Anything
+  // "16:9 on 4:3" moved in this collection earlier is put back where it was set up.
+  const ssWasOn = ss.on;
+  setTimeout(async () => {
+    ssCollMoving = false;
+    if(ssWasOn && ss.on){ await ssSet({on:false}); toast(`Slideshow mode is off in ${d.sceneCollectionName}. Turn it on again with the Slideshow button.`); }
+    else if(ssOrigAll().length) await ssApplySources(false, true);
+    ssTplSync();
+  }, 1500);   // once OBS has finished loading it
 });
 obs.on("InputMuteStateChanged", d => { if(d.inputName !== srcAudio()) return; ui.muted = d.inputMuted; renderMute(); if(!ui.muted) lastSoundAt = Date.now(); });
 let lastSoundAt = Date.now();
