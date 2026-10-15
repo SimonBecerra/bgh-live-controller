@@ -1831,7 +1831,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <button class="spk-trigger" id="glSpkBtn" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="glSpkLbl glSpkVal"><span id="glSpkVal"></span><i data-lucide="chevron-down"></i></button>
             <span class="path" id="glSpkHint">Names appear in the order you pick them. To remove a visiting speaker, select them first.</span>
             <label class="check br-others" for="glBrOthers" id="glBrOthersRow" hidden><input type="checkbox" id="glBrOthers"><span>Others are taking part too<small>Adds "and Others" to the title.</small></span></label>
-            <div class="br-lead" id="glBrLeadRow" hidden><span class="label" id="glBrLeadLbl">Leading the reading</span><div class="book-chips" id="glBrLead" role="radiogroup" aria-labelledby="glBrLeadLbl"></div><span class="path">Named in the description as leading it.</span></div>
+            <div class="br-lead" id="glBrLeadRow" hidden><span class="label" id="glBrLeadLbl">Leading the reading</span><div class="book-chips" id="glBrLead" role="radiogroup" aria-labelledby="glBrLeadLbl"></div><span class="path" id="glBrLeadHint">Named in the description as leading it.</span></div>
           </div>
           <div class="field bap-field" id="glBapField" hidden>
             <span class="label" id="glBapLbl">Baptisms</span>
@@ -3061,6 +3061,8 @@ function brTitle(){
   const i = tries.findIndex(t => t.length <= 100);
   return i < 0 ? {title:tries[0], short:false} : {title:tries[i], short:i > 0};
 }
+// Lower thirds: a Bible Reading gives a button only to the person leading it (and the host, if one is chosen)
+const glLtNames = () => brActive() ? [speakerName(brLeadId())].filter(Boolean) : selNames(gl.sel);
 ui.brProg = false;   // this livestream is a Bible Reading (a host can be chosen); forgotten when it ends
 const isBaptismTitle = t => /^\s*the baptisms? of\b/i.test(String(t || ""));
 // "Lucas Becerra", "Lucas Becerra and Carolina Lugo", "A, B, and C" (Oxford comma)
@@ -3162,7 +3164,7 @@ $("spkCancel").addEventListener("click", closeSpk);
 $("spkApply").addEventListener("click", () => { const sel = [...spkDraft]; closeSpk(); if(spkOnApply) spkOnApply(sel); });
 async function glApplySpeakers(sel){
   gl.sel = sel;
-  if(ltOn()) setLtPicked(selNames(sel));
+  if(ltOn()) setLtPicked(glLtNames());
   renderSpkTrigger(); glRender();
   // Confirmed: update the speakers text source in OBS for this scene collection
   const names = glSpeakersText();
@@ -3297,14 +3299,16 @@ function renderBr(on){
   if(!gl.br) gl.br = brNew();
   const br = gl.br, ex = gl.mode === "existing";
   $("glBrField").hidden = !on; $("glBrOthersRow").hidden = !on || ex;
-  $("glBrLeadRow").hidden = !on || ex || gl.sel.length < 2;
+  $("glBrLeadRow").hidden = !on || gl.sel.length < 2;
   if(!on){ $("glBrPick").hidden = true; return; }
   brField("gl", br, done => { glRender(); if(done) glBrApplyText(); });
   $("glBrHint").textContent = ex ? "Read from the broadcast's title. The speakers text in OBS shows it." : `The speakers text in OBS shows the chapter, like "Ephesians 3".`;
   $("glBrOthers").checked = br.others;
   const lead = brLeadId();
   $("glBrLead").innerHTML = gl.sel.map(id => `<button type="button" class="lead-chip" role="radio" aria-checked="${id === lead}" data-lead="${id}">${id === lead ? '<i data-lucide="check"></i>' : ""}${esc(speakerName(id))}</button>`).join("");
-  $("glBrLead").querySelectorAll("[data-lead]").forEach(b => b.onclick = () => { br.lead = b.dataset.lead; glRender(); });
+  $("glBrLead").querySelectorAll("[data-lead]").forEach(b => b.onclick = () => { br.lead = b.dataset.lead; if(ltOn()) setLtPicked(glLtNames()); glRender(); });
+  $("glBrLeadHint").textContent = ex ? (ltOn() ? "Gets the only speaker lower third button." : "Leading the reading.")
+    : ltOn() ? "Named in the description as leading it, and gets the only speaker lower third button." : "Named in the description as leading it.";
   if(window.lucide) lucide.createIcons();
 }
 // Chosen: the speakers text in OBS changes to the chapter straight away, as choosing speakers does
@@ -3367,7 +3371,8 @@ function glRender(){
   if(ltOn() && !ssOn() && !gl.sel.length) $("glSpkHint").textContent = "Choose the speakers: lower thirds are on for this scene collection.";
   if(ssp) $("glSpkHint").textContent = `Optional. Named in the description as the special speaker. OBS shows "${SS_TEXT}".`;
   else if(brOn && !gl.sel.length){ $("glSpkHint").textContent = "Choose at least one speaker for a Bible Reading."; $("glSpkHint").classList.add("warn-txt"); }
-  else if(brOn) $("glSpkHint").textContent = ex ? "Each gets a lower third button as usual." : gl.sel.length === 1 && !gl.br.others ? "With one speaker the title says \u201cLed by\u201d." : "Named in the title in the order you pick them. Each gets a lower third button as usual.";
+  else if(brOn) $("glSpkHint").textContent = (ex ? "" : gl.sel.length === 1 && !gl.br.others ? "With one speaker the title says \u201cLed by\u201d. " : "Named in the title in the order you pick them. ")
+    + (ltOn() ? (gl.sel.length === 1 ? "They get the lower third button." : "Only the person leading gets a lower third button.") : "");
   else if(!(ltOn() && !ssOn() && !gl.sel.length)) $("glSpkHint").textContent = "Names appear in the order you pick them. To remove a visiting speaker, select them first.";
   renderBc();
 }
@@ -3514,7 +3519,7 @@ async function goExisting(){
   // Speakers chosen for the lower thirds: on screen now, even though they don't change the broadcast
   if(ltOn()) applyHost(gl.host, ssProgActive() || brActive());
   applyBapReaders(); applySsProg();
-  if(gl.sel.length) setLtPicked(selNames(gl.sel));
+  if(gl.sel.length) setLtPicked(glLtNames());
   if(gl.sel.length || bapActive() || ssProgActive() || brActive()) await applySpeakersOnly();
   forgetBap();
   ui.streamPending = Date.now(); ui.streamMsg = "Starting in OBS…"; renderOutputs();
@@ -3574,7 +3579,7 @@ $("glGo").addEventListener("click", async () => {
   applyBapReaders(); applySsProg();
   forgetBap();   // the title, description and readers are made; the names aren't kept
   if(ltOn()) applyHost(gl.host, ssProgActive() || brActive());
-  if(gl.sel.length) setLtPicked(selNames(gl.sel));
+  if(gl.sel.length) setLtPicked(glLtNames());
   await titleBeforeLive();
   toast("Setting up the YouTube broadcast in OBS…");
   try{
@@ -3674,12 +3679,13 @@ function renderQc(){
   const ssq = isSsSvc(qc.svc);
   if(ssq && qc.sel.length > 1) qc.sel = qc.sel.slice(0, 1);
   const names = selNames(qc.sel);
-  $("qcSpkLbl").textContent = ssq ? "Special Speaker" : "Speakers";
+  if(isBrSvc(qc.svc) && qc.sel.length > 1) qc.sel = qc.sel.slice(0, 1);
+  $("qcSpkLbl").textContent = ssq ? "Special Speaker" : isBrSvc(qc.svc) ? "Leading the reading" : "Speakers";
   const brq = isBrSvc(qc.svc);
   $("qcHostField").hidden = !hostAllowed(ssq || brq || ui.ssProg || ui.brProg);
   $("qcBrField").hidden = !brq;
   if(brq) brField("qc", qc.br, () => renderQc());
-  $("qcSpkVal").textContent = names.length ? formatNames(names) : ssq ? "No special speaker" : "Select speakers";
+  $("qcSpkVal").textContent = names.length ? formatNames(names) : ssq ? "No special speaker" : isBrSvc(qc.svc) ? "Select who's leading" : "Select speakers";
   $("qcSpkBtn").classList.toggle("empty", !names.length);
   $("qcSpkBtn").disabled = !canWriteSpk() && !ltOn();
   $("qcSpkNow").textContent = ui.spkMode === "error" ? ui.spkMsg : ui.spkMode === "off" ? `Lower thirds now: ${formatNames(ui.ltPicked) || "nobody yet"}` : `Showing now: ${ui.speaker || "nothing"}`;
@@ -3712,7 +3718,7 @@ $("qcBapAdd").addEventListener("click", () => {
 $("defWarn").addEventListener("click", () => settingsGoTo("collections", "setCfgColl"));
 function forgetQcBap(){ qc.bap = [{name:"", reader:"", rel:ui.bapRels[0] || ""}]; const l = $("qcBapList"); l.innerHTML = ""; l._arr = null; }
 $("qcCancel").addEventListener("click", () => { $("qcOverlay").hidden = true; forgetQcBap(); });
-$("qcSpkBtn").addEventListener("click", () => openSpk(qc.sel, sel => { qc.sel = sel; renderQc(); }, isSsSvc(qc.svc) ? {max:1, title:"Select the special speaker"} : {}));
+$("qcSpkBtn").addEventListener("click", () => openSpk(qc.sel, sel => { qc.sel = sel; renderQc(); }, isSsSvc(qc.svc) ? {max:1, title:"Select the special speaker"} : isBrSvc(qc.svc) ? {max:1, title:"Who's leading the reading?"} : {}));
 $("qcApply").addEventListener("click", async () => {
   const change = qcChange();
   $("qcOverlay").hidden = true;
