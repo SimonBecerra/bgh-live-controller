@@ -34,21 +34,26 @@ button{cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-.stage{display:flex;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 8px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
-.phone{width:100%;max-width:430px;min-width:0;display:flex;flex-direction:column;gap:14px}
+/* Everything on one screen: the page never scrolls. The header keeps its size; the scene buttons (or the
+   On Screen controls) share out whatever height is left, so they grow on a tall phone and shrink on a short one. */
+.stage{display:flex;justify-content:center;height:100vh;height:100dvh;box-sizing:border-box;padding:calc(env(safe-area-inset-top,0px) + 6px) 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
+.phone{width:100%;max-width:430px;min-width:0;height:100%;display:flex;flex-direction:column;gap:8px;min-height:0}
+.body{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.grow{flex:1;min-height:0}
 
 /* Status bar */
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding-block:6px 10px;border-bottom:1px solid var(--line)}
+.top{display:flex;flex-direction:column;gap:8px;flex:none}
+.bar1{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .brand{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.brand h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.brand h1{display:flex;align-items:center;gap:6px;margin:0;font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 .brand h1 b{font-family:var(--f-brand);font-weight:700;letter-spacing:.02em;font-size:17px;color:var(--brand);margin-right:4px}
 .conn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);min-width:0}
 .conn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--pvw);flex:none}
 .conn.lost .dot{background:var(--warn);animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.25}}
-.pills{display:flex;flex-wrap:wrap;gap:6px}
-.pill{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--muted);font-variant-numeric:tabular-nums}
+.pills{display:flex;gap:5px;flex-wrap:nowrap;min-width:0;overflow:hidden}
+.pill{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;flex:none;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--muted);font-variant-numeric:tabular-nums}
 .pill .t{width:7px;height:7px;border-radius:50%;background:var(--dim)}
 .pill.live{background:var(--pgm);border-color:var(--pgm);color:#fff}.pill.live .t{background:#fff;animation:blink 1.4s infinite}
 .pill.rec{border-color:var(--pgm);color:var(--pgm)}.pill.rec .t{background:var(--pgm)}
@@ -58,7 +63,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 
 /* Two pages, switched like Go Live's "Create new / Select existing": the chosen one filled blue */
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line-2);border-radius:12px;background:var(--panel)}
-.tab{position:relative;min-height:44px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--fg);font-weight:600;font-size:15px}
+.tab{position:relative;min-height:40px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--fg);font-weight:600;font-size:15px}
 .tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
 .tab-dot{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--pgm)}
 /* Banner when the controller can't be reached */
@@ -80,16 +85,18 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
 /* What's on screen */
-.now{border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:12px}
+.now{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:10px 12px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
 .now-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.now-h h2{margin:0;font-size:18px;font-weight:700;text-wrap:balance}
+.now-h h2{margin:0;font-size:16px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .now-h .sub{font-size:13px;color:var(--muted);margin-top:2px}
 .tag{flex:none;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;border-radius:999px;background:var(--pgm-soft);color:var(--pgm)}
-.lines{background:var(--panel-2);border-radius:12px;padding:12px 14px;font-size:16px;line-height:1.45;min-height:70px;display:flex;flex-direction:column;justify-content:center}
+.lines{background:var(--panel-2);border-radius:10px;padding:8px 12px;font-size:15px;line-height:1.4;flex:1;min-height:48px;overflow:auto;display:flex;flex-direction:column;justify-content:safe center}
 .lines .next{color:var(--muted);font-size:13px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line-2)}
+.lines button.next{display:block;width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;padding:8px 0 0;font:inherit;font-size:13px;color:var(--muted);line-height:1.4;cursor:pointer}
+.lines button.next:active{color:var(--fg)}
 .lines .next b{font-weight:600;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-right:6px}
 .nav{display:grid;grid-template-columns:1fr 2fr;gap:10px}
-.nav .btn{min-height:76px;font-size:18px}
+.nav .btn{min-height:60px;font-size:18px}
 .nav .next-btn{background:var(--accent);border-color:var(--accent);color:#fff;font-size:20px}
 .verses{display:flex;flex-wrap:wrap;gap:6px}
 .vchip{min-width:44px;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:600}
@@ -97,8 +104,8 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .page{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* Lower thirds */
-.lts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.lt{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left}
+.lts{display:grid;grid-template-columns:1fr 1fr;gap:8px;grid-auto-rows:minmax(44px,60px);align-content:start;overflow:auto;flex:1;min-height:0}
+.lt{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;min-height:0;padding:8px 12px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left}
 .lt .nm{display:flex;flex-direction:column;min-width:0;font-weight:600;line-height:1.2}
 .lt .nm small{font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 .lt[aria-pressed="true"]{border-color:var(--pgm);background:var(--pgm-soft)}
@@ -107,7 +114,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 @keyframes countdown{from{width:100%}to{width:0}}
 
 /* Scenes */
-.pv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;cursor:pointer}
+.pv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px;cursor:pointer;flex:none}
 .switch{position:relative;width:52px;height:32px;flex:none}
 .switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
 .switch i{position:absolute;inset:0;border-radius:99px;background:var(--panel-2);border:1px solid var(--line);transition:background .2s}
@@ -115,33 +122,37 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .switch input:checked + i{background:var(--accent);border-color:transparent}
 .switch input:checked + i::after{transform:translateX(20px)}
 .switch input:focus-visible + i{outline:2px solid #fff;outline-offset:2px}
-.pv{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;border:2px solid var(--pgm)}
+.pv{position:relative;aspect-ratio:16/9;max-height:28vh;max-height:28dvh;align-self:center;max-width:100%;border-radius:12px;overflow:hidden;background:#000;border:2px solid var(--pgm);flex:none}
 .pv img{display:block;width:100%;height:100%;object-fit:cover}
 .pv-tag{position:absolute;top:8px;left:8px;background:var(--pgm);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:5px}
 .pv-age{position:absolute;bottom:6px;right:8px;font-size:11px;color:rgba(255,255,255,.75);text-shadow:0 1px 2px #000}
-.scenes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.cams .sc{min-height:64px}
-.sc{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:92px;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--panel-2);text-align:left;font-weight:600}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:8px;grid-auto-rows:minmax(44px,1fr);flex:1;min-height:0}
+.scenes .gap{visibility:hidden}
+.cams{flex:none;grid-auto-rows:56px}
+.sc{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:0;padding:6px 12px;border-radius:12px;border:2px solid var(--line);background:var(--panel-2);text-align:left;font-weight:600}
 .sc-t{display:flex;flex-direction:column;gap:2px;min-width:0}
 /* Mic for each scene: a mic where the mic comes on, a red muted mic where it goes off */
 .sc-n{display:flex;align-items:center;gap:6px;min-width:0}
 .sc svg.sc-mic{width:16px;height:16px;color:var(--muted)}
 .sc svg.sc-mic.off{color:var(--pgm)}
 /* The same icon as the controller's scene button, on the right */
-.sc svg.sc-i{width:26px;height:26px;color:var(--muted);margin-top:10px}
+.sc svg.sc-i{width:24px;height:24px;color:var(--muted);margin-top:8px}
 .sc[aria-pressed="true"] svg.sc-i{color:var(--pgm)}
 .sc small{font-weight:500;font-size:12px;color:var(--muted)}
 .sc[aria-pressed="true"]{border-color:var(--pgm);background:var(--pgm-soft)}
-.sc[aria-pressed="true"]::after{content:"LIVE";position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--pgm);border-radius:5px;padding:2px 5px}
+.sc[aria-pressed="true"]::after{content:"LIVE";position:absolute;top:5px;right:6px;font-size:10px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--pgm);border-radius:5px;padding:2px 5px}
 .safe-note{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--accent)}
 
 /* Mic */
-.mic{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
-.mute{min-width:120px}
-.mute[aria-pressed="true"]{background:var(--pgm);border-color:var(--pgm);color:#fff}
-.meter{height:12px;border-radius:6px;background:var(--panel-2);overflow:hidden;border:1px solid var(--line)}
-.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pvw) 70%,var(--warn) 88%,var(--pgm));transition:width 90ms linear}
-.meter-l{font-size:12px;color:var(--muted);margin-top:6px}
+/* The mic: a thin level bar under the tabs; tap it to mute or unmute */
+.mic-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel);flex:none;text-align:left}
+.mic-bar svg.i{width:18px;height:18px;color:var(--pvw)}
+.mic-bar .meter{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden}
+.mic-bar .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pvw) 70%,var(--warn) 88%,var(--pgm));transition:width 90ms linear}
+.mic-bar b{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mic-bar[aria-pressed="true"]{background:var(--pgm-soft);border-color:var(--pgm)}
+.mic-bar[aria-pressed="true"] svg.i,.mic-bar[aria-pressed="true"] b{color:var(--pgm)}
+.mic-bar:disabled{opacity:.5}
 
 .only{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);line-height:1.45;padding:12px 14px;border:1px dashed var(--line-2);border-radius:var(--r)}
 
@@ -159,6 +170,21 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .found b{color:var(--fg)}
 .err{color:var(--pgm)}
 
+/* Bible: finding a chapter with buttons */
+.pick{display:flex;flex-direction:column;gap:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line-2);border-radius:12px;background:var(--bg)}
+.seg button{min-height:40px;border:0;border-radius:9px;background:transparent;font-weight:600}
+.seg button[aria-selected="true"]{background:var(--accent);color:#fff}
+.pick-grid{display:grid;gap:6px}
+.pick-grid.books{grid-template-columns:repeat(5,minmax(0,1fr))}
+.pick-grid.books button{white-space:nowrap;font-size:13px;padding:4px 2px}
+.pick-grid.nums{grid-template-columns:repeat(6,minmax(0,1fr))}
+.pick-grid button{min-height:44px;padding:4px 6px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:14px;line-height:1.15}
+.pick-grid button:active{background:var(--accent-soft);border-color:var(--accent)}
+.pick-h{display:flex;align-items:center;gap:10px}
+.pick-h b{font-size:17px}.pick-h span{color:var(--muted);font-size:13px}
+.link{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--accent);font-weight:600;padding:6px 0}
+.link svg.i{width:16px;height:16px}
 /* Pairing */
 .pair{display:flex;flex-direction:column;gap:18px;padding-block:28px 10px}
 .pair h2{margin:0;font-size:26px;text-wrap:balance}
@@ -177,14 +203,64 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .lt[aria-pressed="true"] .bar{animation-delay:var(--delay,0s)}
 .sc.pending{border-color:var(--pgm);animation:pend 1s ease-in-out infinite}
 @keyframes pend{50%{border-color:var(--line)}}
-.vnums{max-height:184px;overflow:auto}
+.vnums{flex:1;min-height:44px;overflow:auto;align-content:flex-start}
+.now .btn.quiet{min-height:40px}
+.row2 .btn{min-height:48px}
+.sec{flex:none}
+.sec.grow{flex:1;min-height:0}
 .vnums .vchip{min-width:48px}
 .vchip.seen{color:var(--muted)}
 .hint{line-height:1.4}
+/* One-screen layout pieces */
+.bar1 .brand{flex:none}
+.bar1 .conn{flex:1;justify-content:flex-start}
+.mic-row{display:flex;gap:8px;flex:none}
+.mic-row .mic-bar{flex:1;min-width:0}
+.mic-row .pv-tog{height:auto;min-height:36px;border-radius:10px}
+/* With the singing mic on, the row holds two mic bars and View Program shrinks to its eye */
+.mic-row.two .mic-bar{gap:6px;padding:0 8px}
+.mic-row.two .mic-bar b{font-size:10px;letter-spacing:.04em}
+.mic-row.two .pv-tog span{display:none}
+.mic-row.two .pv-tog{padding:0 10px}
+.mic-bar.sing .auto{font-size:9px;font-weight:800;color:var(--accent);margin-left:2px}
+.pv-tog{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel);color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;flex:none}
+.pv-tog svg.i{width:16px;height:16px}
+.pv-tog[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.body > .scenes:first-child{flex:1;grid-template-rows:repeat(var(--rows,3),minmax(44px,1fr))}
+.body .lts{grid-auto-rows:minmax(44px,56px)}
+.body .label{flex:none}
+.now .btn.quiet svg.i{width:16px;height:16px}
+.only.grow{align-self:stretch}
+/* On Screen needs the room for the hymn or passage: the Program picture is smaller there */
+.pv.small{max-height:15vh;max-height:15dvh}
+.pv.small .pv-tag{top:4px;left:4px;font-size:10px;padding:1px 5px}
+</style>
+<style data-proto>
+/* Prototype only: the phone drawn as a phone on a computer screen, the testing buttons beside it */
+@media (min-width:900px){
+  .stage{height:auto;min-height:100vh;align-items:flex-start;gap:28px;padding:24px}
+  .phone{max-width:390px;height:744px;flex:none;border:1px solid var(--line);border-radius:32px;padding:14px 12px 16px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+}
+.test{width:280px;flex:none;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.test h4{margin:0;color:var(--fg);font-size:14px}.test p{margin:0;line-height:1.45}
+.test .btn{min-height:38px;font-size:13px;justify-content:flex-start}
+.test code{font-size:15px;font-weight:700;color:var(--brand);letter-spacing:.2em}
+@media (max-width:899px){.stage{flex-direction:column;height:auto}.phone{height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}.test{width:auto;padding:16px 0}}
 </style>
 </head>
 <body>
-<div class="stage"><main class="phone" id="phone" aria-live="polite"></main></div>
+<div class="stage"><main class="phone" id="phone" aria-live="polite"></main>
+<aside class="test" data-proto aria-label="Testing the prototype">
+  <h4>Prototype</h4>
+  <p>A pretend controller. Pairing code <code>482</code>.</p>
+  <button class="btn" type="button" data-pt="live">Go live / stop (on the controller)</button>
+  <button class="btn" type="button" data-pt="rec">Record / stop</button>
+  <button class="btn" type="button" data-pt="safe">Safe mode on / off</button>
+  <button class="btn" type="button" data-pt="autoend">End stream after Ending on / off</button>
+  <button class="btn" type="button" data-pt="lt">Lower thirds on / off for this collection</button>
+  <button class="btn" type="button" data-pt="sing">Singing mic option on / off</button>
+  <button class="btn" type="button" data-pt="unpair">Start again at pairing</button>
+</aside></div>
 <div id="sheetRoot"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 <script>
@@ -202,6 +278,7 @@ const ICON = {
   laptop:'<path d="M18 5a2 2 0 0 1 2 2v8.53a2 2 0 0 0 .2.9l1.58 3.15A1 1 0 0 1 20.9 21H3.1a1 1 0 0 1-.9-1.45l1.6-3.13a2 2 0 0 0 .2-.9V7a2 2 0 0 1 2-2z"/><path d="M20.05 16H3.95"/>',
   cap:'<path d="M21.42 10.92a1 1 0 0 0-.02-1.84l-8.57-3.9a2 2 0 0 0-1.66 0l-8.57 3.9a1 1 0 0 0 0 1.84l8.57 3.9a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
   x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  back:'<path d="m15 18-6-6 6-6"/>',
   info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
   hourglass:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
   timer:'<line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>',
@@ -219,12 +296,104 @@ const ls = {get(k){ try{ return localStorage.getItem(k); }catch(e){ return null;
 const durTxt = sec => sec < 60 ? `${sec} seconds` : sec === 60 ? "1 minute" : `${sec / 60} minutes`;
 const secTxt = n => n === 1 ? "1 second" : `${n} seconds`;
 
+// #proto-start  The prototype (not served by the controller): a pretend controller answers instead
+const PROTO = location.port !== "8642";
+if(PROTO){
+  const HY = {"1":{title:"Amazing Grace", verses:[["Amazing grace! how sweet the sound","That saved a wretch like me!","I once was lost, but now am found;","Was blind, but now I see."],["'Twas grace that taught my heart to fear,","And grace my fears relieved;","How precious did that grace appear","The hour I first believed!"],["Through many dangers, toils and snares,","I have already come;","'Tis grace hath brought me safe thus far,","And grace will lead me home."]]}};
+  const JOHN3 = ["There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:","The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God…","Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God."];
+  for(let v = 4; v <= 36; v++) JOHN3.push(v === 16 ? "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life." : `Verse ${v} of John 3 (the prototype only has a few verses written out).`);
+  const P = window.PROTO_CTL = {
+    st:{collection:"Sunday Service", obs:true, live:false, liveT0:0, rec:false, recT0:0, viewers:null, safe:false, program:"Waiting",
+      scenes:[["Waiting","hourglass","off","Title Slide"],["Live Soon","timer","off",""],["Camera 1","video","on",""],["Slideshow","presentation","on",""],["Camera 2","video","on",""],["Ending","flag","off",""]]
+        .map(([label, icon, mic, sub]) => ({label, icon, mic, sub, on:label === "Waiting", ending:label === "Ending"})),
+      audio:{name:"PYLE USB Mixer", missing:false, muted:true}, sing:{on:true, name:"Singing Mic", missing:false, muted:true, auto:false}, autoEnd:{on:true, sec:30, left:null, kept:false},
+      ltOn:true, item:null,
+      lts:[{name:"Andres Bodden", sub:"", short:"Bodden", note:""}, {name:"Daniel Chung", sub:"", short:"Chung", note:""}, {name:"Simon Becerra", sub:"", short:"Becerra", note:"Host", host:true}],
+      ltUp:null, ltEnds:0, ltDur:8, books:[{id:"how", name:"Hymns of Worship", short:"HOW"}], book:"how", tr:"KJV"},
+    es:null, endT0:0, endTimer:null, ltT:null,
+    send(ev, data){ if(this.es) this.es._fire(ev, typeof data === "string" ? data : JSON.stringify(data)); },
+    push(){ this.send("state", this.st); },
+    setScene(n){
+      const st = this.st; st.program = n; st.scenes.forEach(s => s.on = s.label === n);
+      const sc = st.scenes.find(s => s.label === n);
+      if(sc && sc.mic && st.live) st.audio.muted = sc.mic === "off";
+      clearInterval(this.endTimer); st.autoEnd.left = null; st.autoEnd.kept = false;
+      if(st.live && st.autoEnd.on && sc && sc.ending){
+        this.endT0 = Date.now();
+        st.autoEnd.left = st.autoEnd.sec;
+        this.endTimer = setInterval(() => {
+          const left = Math.ceil((this.endT0 + st.autoEnd.sec * 1000 - Date.now()) / 1000);
+          if(left <= 0){ clearInterval(this.endTimer); st.autoEnd.left = null; st.live = false; st.viewers = null; toast("The livestream ended (pretend)."); }
+          else st.autoEnd.left = left;
+          this.push();
+        }, 1000);
+      }
+      this.push(); this.frame();
+    },
+    hymnItem(n){
+      const h = HY[n]; const slides = [{intro:true, lines:["Hymns of Worship", `Hymn ${n}`], label:""}];
+      h.verses.forEach((v, vi) => { for(let k = 0; k < v.length; k += 2) slides.push({label:`Verse ${vi + 1}`, lines:v.slice(k, k + 2), page:k / 2 + 1, pages:Math.ceil(v.length / 2)}); });
+      return {kind:"hymn", title:`HOW ${n} · ${h.title}`, slides, i:0, showing:true};
+    },
+    view(){ const it = this.st._it; if(!it){ this.st.item = null; return; }
+      if(it.kind === "hymn"){ const s = it.slides[it.i], nx = it.slides[it.i + 1];
+        this.st.item = {kind:"hymn", title:it.title, i:it.i, n:it.slides.length, showing:true, intro:!!s.intro, label:s.label, page:s.page || 1, pages:s.pages || 1, lines:s.lines, next:nx ? nx.lines : null, labels:[...new Set(it.slides.filter(x => !x.intro).map(x => x.label))]}; }
+      else { const john = /^john 3$/i.test(it.name), vv = john ? JOHN3 : Array.from({length:24}, (_, i) => `Verse ${i + 1} of ${it.name} (the prototype only has John 3 written out).`);
+        this.st.item = {kind:"verse", title:`${it.name} · KJV`, tr:"KJV", i:it.i, started:it.started, showing:it.started, ref:it.started ? `${it.name}:${it.i + 1}` : "", text:it.started ? vv[it.i] || "" : "", verses:vv.map((_, i) => i + 1), seen:[...it.seen]}; }
+    },
+    frame(){
+      if(!this.view_on) return;
+      const c = document.createElement("canvas"); c.width = 320; c.height = 180; const g = c.getContext("2d");
+      const n = this.st.program, col = {"Waiting":"#1d3a5c","Live Soon":"#2a2f6b","Camera 1":"#3b4a3a","Camera 2":"#4a3b32","Slideshow":"#30304a","Ending":"#4a2530"}[n] || "#333";
+      const gr = g.createLinearGradient(0, 0, 320, 180); gr.addColorStop(0, col); gr.addColorStop(1, "#111"); g.fillStyle = gr; g.fillRect(0, 0, 320, 180);
+      g.fillStyle = "rgba(255,255,255,.85)"; g.font = "600 22px system-ui"; g.textAlign = "center"; g.fillText(n, 160, 98);
+      this.send("frame", {img:c.toDataURL("image/jpeg", .6), at:Date.now()});
+    },
+    run(cmd, a){
+      const st = this.st;
+      if(st.safe && ["scene", "hymn", "bible", "lt"].includes(cmd) && !a.sure) return {ok:false, code:"SAFE", error:"Safe mode is on at the controller."};
+      switch(cmd){
+        case "ping": return {ok:true};
+        case "view": this.view_on = !!a.on; this.frame(); return {ok:true};
+        case "scene": this.setScene(a.label); return {ok:true, data:{program:a.label, on:true}};
+        case "keep": clearInterval(this.endTimer); st.autoEnd.left = null; st.autoEnd.kept = true; this.push(); return {ok:true};
+        case "mute": st.audio.muted = !!a.muted; this.push(); return {ok:true};
+        case "sing-mute": st.sing.muted = !!a.muted; st.sing.auto = false; this.push(); return {ok:true};
+        case "hymn-find": return {ok:true, data:HY[String(a.num)] ? {title:HY[a.num].title, verses:HY[a.num].verses.length} : null};
+        case "hymn": if(!HY[a.num]) return {ok:false, error:"The prototype only has hymn 1."}; st._it = this.hymnItem(a.num); this.view(); if(st.live && st.sing.on && st.sing.muted){ st.sing.muted = false; st.sing.auto = true; } this.push(); return {ok:true};
+        case "bible-status": return {ok:true, data:[{abbr:"KJV", ok:true}, {abbr:"ESV", ok:false}]};
+        case "bible-find": return {ok:true, data:/^john\s*3\b/i.test(a.ref) ? {ok:true, label:"John 3", from:(a.ref.match(/:(\d+)/) || [])[1] ? +a.ref.match(/:(\d+)/)[1] : 0} : {ok:false, error:"The prototype only has John 3."}};
+        case "bible": { const m = String(a.ref).match(/:(\d+)/); st._it = {kind:"verse", name:String(a.ref).replace(/:.*/, "").trim(), i:m ? +m[1] - 1 : 0, started:!!m, seen:new Set(m ? [+m[1] - 1] : [])}; this.view(); this.push(); return {ok:true}; }
+        case "verse": st._it.i = a.i; st._it.started = true; st._it.seen.add(a.i); this.view(); this.push(); return {ok:true};
+        case "step": { const it = st._it; if(it.kind === "hymn") it.i = Math.max(0, Math.min(it.slides.length - 1, it.i + a.d)); else { it.i = it.started ? Math.max(0, Math.min(JOHN3.length - 1, it.i + a.d)) : 0; it.started = true; it.seen.add(it.i); } this.view(); this.push(); return {ok:true}; }
+        case "jump": { const it = st._it; const n = it.slides.findIndex(x => x.label === a.label); if(n >= 0) it.i = n; this.view(); this.push(); return {ok:true}; }
+        case "done": st._it = null; st.item = null; if(st.sing.auto){ st.sing.muted = true; st.sing.auto = false; } this.push(); return {ok:true};
+        case "lt": { clearTimeout(this.ltT); const same = st.ltUp && st.ltUp.name === a.name;
+          if(same){ st.ltUp = null; st.ltEnds = 0; } else { st.ltUp = {name:a.name, sub:a.sub || ""}; st.ltEnds = Date.now() + 8000; this.ltT = setTimeout(() => { st.ltUp = null; st.ltEnds = 0; this.push(); }, 8000); }
+          this.push(); return {ok:true}; }
+      }
+      return {ok:false, error:"Not in the prototype."};
+    }
+  };
+  if(!localStorage.getItem("bghRemoteToken")) try{ localStorage.setItem("bghRemoteToken", "proto"); }catch(e){}
+  window.EventSource = class { constructor(){ this.h = {}; this.readyState = 1; P.es = this; setTimeout(() => { this._fire("hello", JSON.stringify({sid:"p", now:Date.now()})); P.push(); this.onopen && this.onopen(); }, 50); }
+    addEventListener(e, f){ (this.h[e] ||= []).push(f); } close(){ this.readyState = 2; } _fire(e, data){ (this.h[e] || []).forEach(f => f({data})); } };
+  window.fetch = async (url, o) => {
+    const b = o && o.body ? JSON.parse(o.body) : {};
+    const out = url.endsWith("/api/pair") ? (b.code === "482" ? {token:"proto", name:"iPhone"} : {code:"WRONG", left:4}) : P.run(b.cmd, b.args || {});
+    return {status:200, json:async () => out};
+  };
+  setInterval(() => { if(!P.es) return; P.send("lvl", P.st.audio.muted ? "0" : String(Math.round(35 + Math.random() * 45))); if(P.st.sing.on) P.send("slvl", P.st.sing.muted ? "0" : String(Math.round(45 + Math.random() * 40))); }, 150);
+  setInterval(() => P.frame(), 3000);
+}
+// #proto-end
+
 /* ---------------- state: what the controller sends, plus this phone's own choices */
 const S = {
   token:ls.get("bghRemoteToken") || "", note:"",
   connected:false, st:null, sid:"", offset:0,
   tab:ls.get("remoteTab") === "onscreen" ? "onscreen" : "scenes",
-  pvOn:ls.get("remoteView") === "1", pvImg:"", pvAt:0, level:0,
+  pvOn:ls.get("remoteView") === "1", pvImg:"", pvAt:0, level:0, slevel:0,
   pending:null, pendingT:null, stAt:0
 };
 const now = () => Date.now() + S.offset;   // the controller's clock
@@ -243,6 +412,7 @@ function connect(){
     if(S.pending && S.st.program !== (prev && prev.program)){ clearPending(); }
     render();
   });
+  es.addEventListener("slvl", e => { S.slevel = +e.data; const el = $("slvl"); if(el) el.style.width = S.slevel + "%"; });
   es.addEventListener("lvl", e => { S.level = +e.data; const el = $("lvl"); if(el) el.style.width = S.level + "%"; });
   es.addEventListener("frame", e => { const d = JSON.parse(e.data); S.pvImg = d.img; S.pvAt = d.at; const img = document.querySelector(".pv img"); if(img) img.src = S.pvImg; else if(document.querySelector(".pv")) render(); ageTick(); });
   es.addEventListener("unpaired", () => unpair("This phone was removed in the controller's Settings. Pair it again to use it."));
@@ -284,88 +454,87 @@ async function act(c, args, ask){
 function setPending(label){ clearPending(true); S.pending = label; S.pendingT = setTimeout(() => { if(S.pending === label){ clearPending(); toast(`OBS didn't switch to ${label}.`); } }, 4000); }
 function clearPending(quiet){ clearTimeout(S.pendingT); S.pending = null; if(!quiet) render(); }
 
-/* ---------------- drawing */
+/* ---------------- drawing: everything on one screen, no scrolling */
+// Camera scenes side by side: they move together, starting a row, where the first camera was
+function arrange(list){
+  const cams = list.filter(s => s.icon === "video");
+  if(cams.length < 2) return list;
+  const others = list.filter(s => s.icon !== "video");
+  let at = list.findIndex(s => s.icon === "video");
+  at = list.slice(0, at).filter(s => s.icon !== "video").length;
+  at -= at % 2;   // a row has two buttons: start the cameras at the beginning of one
+  return [...others.slice(0, at), ...cams, ...others.slice(at)];
+}
 function render(){
   const P = $("phone");
   if(!S.token){ P.className = "phone"; P.innerHTML = pairHTML(); wirePair(); return; }
   const st = S.st;
-  if(!st){ P.className = "phone"; P.innerHTML = `<header class="top"><div class="brand"><h1><b>BGH</b>Remote</h1><div class="conn lost"><i class="dot"></i><span>Connecting…</span></div></div></header>`; return; }
+  if(!st){ P.className = "phone"; P.innerHTML = `<header class="top"><div class="bar1 brand"><h1><b>BGH</b>Remote</h1><div class="conn lost"><i class="dot"></i><span>Connecting…</span></div></div></header>`; return; }
   const ok = S.connected && st.obs, it = st.item, ltUp = st.ltUp;
   P.className = "phone" + (ok ? "" : " off");
-  const live = st.live, remind = live && !st.rec;
+  const live = st.live, remind = live && !st.rec, a = st.audio, micOk = a.name && !a.missing, sg = st.sing && st.sing.on ? st.sing : null;
   P.innerHTML = `
   <header class="top">
-    <div class="brand"><h1><b>BGH</b>Remote</h1>
-      <div class="conn ${ok ? "" : "lost"}"><i class="dot"></i><span>${!S.connected ? "Reconnecting…" : !st.obs ? "Controller can't reach OBS" : "Connected · " + esc(st.collection)}</span></div></div>
+    <div class="bar1">
+      <div class="brand"><h1><b>BGH</b>Remote</h1></div>
+      <div class="conn ${ok ? "" : "lost"}"><i class="dot"></i><span>${!S.connected ? "Reconnecting…" : !st.obs ? "No OBS" : esc(st.collection)}</span></div>
+    </div>
     <div class="pills">
       <span class="pill ${live ? "live" : ""}"><i class="t"></i>${live ? "LIVE <span id='lt'>" + fmt(now() - st.liveT0) + "</span>" : "OFFLINE"}</span>
       ${live && st.viewers != null ? `<span class="pill" aria-label="${st.viewers} watching">${ic("eye")}<span>${esc(st.viewers)}</span></span>` : ""}
-      <span class="pill ${st.rec ? "rec" : remind ? "remind" : ""}"><i class="t"></i>${st.rec ? "REC <span id='rt'>" + fmt(now() - st.recT0) + "</span>" : "NOT RECORDING"}</span>
+      <span class="pill ${st.rec ? "rec" : remind ? "remind" : ""}"><i class="t"></i>${st.rec ? "REC <span id='rt'>" + fmt(now() - st.recT0) + "</span>" : "NOT REC"}</span>
       ${st.safe ? `<span class="pill safe">${ic("lock")}SAFE</span>` : ""}
     </div>
     <div class="tabs" role="tablist" aria-label="Remote">
       <button class="tab" role="tab" type="button" data-tab="scenes" aria-selected="${S.tab === "scenes"}">Scenes &amp; Mic</button>
       <button class="tab" role="tab" type="button" data-tab="onscreen" aria-selected="${S.tab === "onscreen"}">On Screen${(it || ltUp) && S.tab !== "onscreen" ? '<i class="tab-dot" aria-label="(something is on screen)"></i>' : ""}</button>
     </div>
+    <div class="mic-row${sg ? " two" : ""}">
+    <button class="mic-bar ctl" id="mute" type="button" aria-pressed="${!!a.muted}" ${micOk ? "" : "disabled"} aria-label="${micOk ? (a.muted ? "Muted. Tap to unmute" : "Mic on. Tap to mute") : "No microphone set up"}">
+      ${ic(a.muted || !micOk ? "micOff" : "mic")}<span class="meter"><i id="lvl" style="width:${a.muted ? 0 : S.level}%"></i></span><b>${!micOk ? "No mic" : sg ? (a.muted ? "Muted" : "Mic") : a.muted ? "Muted" : "Mic on"}</b>
+    </button>
+    ${sg ? `<button class="mic-bar sing ctl" id="singMute" type="button" aria-pressed="${!!sg.muted}" ${sg.missing ? "disabled" : ""} aria-label="${sg.missing ? "The singing mic isn't in OBS" : sg.muted ? "Singing mic muted. Tap to unmute" : "Singing mic on. Tap to mute"}">
+      ${ic("music")}<span class="meter"><i id="slvl" style="width:${sg.muted ? 0 : S.slevel}%"></i></span><b>${sg.missing ? "Missing" : sg.muted ? "Muted" : "Sing"}${sg.auto && !sg.muted ? '<span class="auto">AUTO</span>' : ""}</b>
+    </button>` : ""}
+    <button class="pv-tog" id="pvTog" type="button" aria-pressed="${S.pvOn}" aria-label="View program">${ic("eye")}<span>View Program</span></button>
+    </div>
   </header>
-  ${!S.connected ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the controller.</b> Check this phone is on the church Wi-Fi and the controller is open. It reconnects by itself; nothing on the stream has changed.</div></div>`
-    : !st.obs ? `<div class="banner">${ic("wifi")}<div><b>The controller can't reach OBS.</b> Check OBS is open on the computer. Nothing can be changed until it's back.</div></div>` : ""}
-
-  <section class="sec ctl pv-sec" aria-labelledby="hPv">
-    <label class="pv-row" for="pvSw"><span class="label" id="hPv">View program</span>
-      <span class="switch"><input type="checkbox" id="pvSw" role="switch" ${S.pvOn ? "checked" : ""}><i></i></span></label>
-    ${S.pvOn ? `<div class="pv">${S.pvImg ? `<img src="${S.pvImg}" alt="What's on Program: ${esc(st.program)}">` : ""}<span class="pv-tag">PROGRAM</span><span class="pv-age" id="pvAge"></span></div>` : ""}
-  </section>
-
-  ${S.tab === "scenes" ? `
-  <section class="sec ctl" aria-labelledby="hSc">
-    <div class="sec-h"><span class="label" id="hSc">Scenes</span>${st.safe ? `<span class="safe-note">${ic("lock")}Asks first</span>` : ""}</div>
-    <div class="scenes">${st.scenes.map(scBtn).join("") || `<p class="hint">No scenes in OBS yet.</p>`}</div>
-  </section>
-
-  <section class="sec ctl" aria-labelledby="hMic">
-    <span class="label" id="hMic">Microphone${st.audio.name ? " · " + esc(st.audio.name) : ""}</span>
-    ${st.audio.name && !st.audio.missing ? `
-    <div class="mic"><button class="btn mute" id="mute" type="button" aria-pressed="${st.audio.muted}">${ic(st.audio.muted ? "micOff" : "mic")}${st.audio.muted ? "Muted" : "Mute"}</button>
-      <div><div class="meter"><i id="lvl" style="width:${st.audio.muted ? 0 : S.level}%"></i></div><div class="meter-l">${st.audio.muted ? "Muted: the stream hears nothing" : "Sound going to the stream"}</div></div></div>`
-    : `<div class="only">${ic("info")}<span>No microphone is set up for ${esc(st.collection)}. Choose one on the controller in Settings → Scene collections.</span></div>`}
-  </section>` : ""}
-
-  ${S.tab !== "onscreen" ? "" : st.ltOn ? `
-  <section class="sec ctl" aria-labelledby="hOn">
-    <div class="sec-h"><span class="label" id="hOn">On screen</span>${it && it.kind === "hymn" ? `<span class="page">${it.i + 1} of ${it.n}</span>` : ""}</div>
-    ${it ? (it.kind === "hymn" ? hymnHTML(it) : verseHTML(it)) : `
-    <div class="row2"><button class="btn" id="hymn" type="button" ${ltUp ? "disabled" : ""}>${ic("music")}Hymn</button><button class="btn" id="bible" type="button" ${ltUp ? "disabled" : ""}>${ic("book")}Bible</button></div>
-    ${ltUp ? `<span class="hint">Hymn and Bible wait until the lower third is gone.</span>` : ""}`}
-  </section>
-
-  <section class="sec ctl" aria-labelledby="hLt">
-    <div class="sec-h"><span class="label" id="hLt">Lower thirds</span><span class="hint">${ltUp ? `Hides itself after ${st.ltDur} s` : st.lts.length ? `Tap to show for ${st.ltDur} s` : ""}</span></div>
-    ${st.lts.length ? `<div class="lts">${st.lts.map((l, i) => {
-      const up = !!ltUp && ltUp.name === l.name && ltUp.sub === l.sub;
-      const left = up && st.ltEnds ? Math.max(0, (st.ltEnds - now()) / 1000) : 0;
-      return `<button class="lt" type="button" data-lt="${i}" aria-pressed="${up}" style="--dur:${st.ltDur}s;--delay:${up && st.ltEnds ? -(st.ltDur - left) : 0}s" ${it ? "disabled" : ""}>${ic(l.host ? "mic" : l.note === "Testimony" ? "book" : "user")}<span class="nm">${esc(l.short)}${l.note ? `<small>${esc(l.note)}</small>` : ""}</span>${up && st.ltEnds ? '<i class="bar"></i>' : ""}</button>`;
-    }).join("")}</div>` : `<span class="hint">No speakers yet. Choose them on the controller in Go Live or Change speaker.</span>`}
-    ${it && st.lts.length ? `<span class="hint">Lower thirds wait until the ${it.kind === "hymn" ? "hymn" : "passage"} is done.</span>` : ""}
-  </section>` : `
-  <div class="only">${ic("info")}<span>Hymns, Bible and lower thirds are off for ${esc(st.collection)}, as on the controller. Turn them on in the controller's Settings → Scene collections.</span></div>`}
-
-  ${S.tab === "onscreen" && st.scenes.some(s => s.icon === "video") ? `
-  <section class="sec ctl" aria-labelledby="hCam">
-    <div class="sec-h"><span class="label" id="hCam">Cameras</span>${st.safe ? `<span class="safe-note">${ic("lock")}Asks first</span>` : ""}</div>
-    <div class="scenes cams">${st.scenes.filter(s => s.icon === "video").map(scBtn).join("")}</div>
-  </section>` : ""}
-
-  <div class="only">${ic("laptop")}<span>Go Live, Stop and Record stay on the controller, so a pocket tap can't start or end the stream.</span></div>`;
+  ${!S.connected ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the controller.</b> Check this phone is on the church Wi-Fi. It reconnects by itself.</div></div>`
+    : !st.obs ? `<div class="banner">${ic("wifi")}<div><b>The controller can't reach OBS.</b> Check OBS is open on the computer.</div></div>` : ""}
+  ${S.pvOn ? `<div class="pv${S.tab === "onscreen" ? " small" : ""}">${S.pvImg ? `<img src="${S.pvImg}" alt="What's on Program: ${esc(st.program)}">` : ""}<span class="pv-tag">PROGRAM</span><span class="pv-age" id="pvAge"></span></div>` : ""}
+  <div class="body ctl">${S.tab === "scenes" ? scenesHTML(st) : onScreenHTML(st)}</div>`;
   wire();
   ageTick();
+  // The verse numbers scroll inside their box: keep the verse on screen in view
+  const vn = document.querySelector(".vnums"), cur = vn && vn.querySelector('[aria-current="true"]');
+  if(cur && (cur.offsetTop < vn.scrollTop || cur.offsetTop + cur.offsetHeight > vn.scrollTop + vn.clientHeight)) vn.scrollTop = cur.offsetTop - vn.offsetTop - 4;
+}
+function scenesHTML(st){
+  const list = arrange(st.scenes);
+  return list.length ? `<div class="scenes" style="--rows:${Math.ceil(list.length / 2)}">${list.map(scBtn).join("")}</div>` : `<p class="hint">No scenes in OBS yet.</p>`;
+}
+function onScreenHTML(st){
+  const it = st.item, ltUp = st.ltUp, cams = arrange(st.scenes).filter(s => s.icon === "video");
+  const camRow = cams.length ? `<div class="scenes cams">${cams.map(scBtn).join("")}</div>` : "";
+  if(!st.ltOn) return `<div class="only grow">${ic("info")}<span>Hymns, Bible and lower thirds are off for ${esc(st.collection)}. Turn them on in the controller's Settings → Scene collections.</span></div>${camRow}`;
+  // A hymn or passage open: it takes the space; lower thirds come back when it's closed
+  if(it) return `${it.kind === "hymn" ? hymnHTML(it) : verseHTML(it)}${camRow}`;
+  const lts = st.lts.length ? `<div class="lts grow">${st.lts.map((l, i) => {
+      const up = !!ltUp && ltUp.name === l.name && ltUp.sub === l.sub;
+      const left = up && st.ltEnds ? Math.max(0, (st.ltEnds - now()) / 1000) : 0;
+      return `<button class="lt" type="button" data-lt="${i}" aria-pressed="${up}" style="--dur:${st.ltDur}s;--delay:${up && st.ltEnds ? -(st.ltDur - left) : 0}s">${ic(l.host ? "mic" : l.note === "Testimony" ? "book" : "user")}<span class="nm">${esc(l.short)}${l.note ? `<small>${esc(l.note)}</small>` : ""}</span>${up && st.ltEnds ? '<i class="bar"></i>' : ""}</button>`;
+    }).join("")}</div>` : `<p class="hint grow">No speakers yet. Choose them on the controller in Go Live or Change speaker.</p>`;
+  return `<div class="row2"><button class="btn" id="hymn" type="button" ${ltUp ? "disabled" : ""}>${ic("music")}Hymn</button><button class="btn" id="bible" type="button" ${ltUp ? "disabled" : ""}>${ic("book")}Bible</button></div>
+    ${ltUp ? `<span class="hint">Hymn and Bible wait until the lower third is gone.</span>` : ""}
+    <span class="label">Lower thirds</span>${lts}${camRow}`;
 }
 function scBtn(s){
   const st = S.st, ae = st.autoEnd;
   let sub = s.sub ? esc(s.sub) : "";
   if(s.ending && ae.on){
-    if(s.on && ae.kept) sub = "Staying live: Keep streaming was tapped";
-    else sub = `Turns stream off in <span class="end-cd">${s.on && ae.left != null ? secTxt(endLeft()) : durTxt(ae.sec)}</span>`;
+    if(s.on && ae.kept) sub = "Timer cancelled · staying live";
+    else if(s.on && ae.left != null) sub = `Off in <span class="end-cd">${secTxt(endLeft())}</span> · tap to cancel`;
+    else sub = `Turns stream off in ${durTxt(ae.sec)}`;
   }
   const mic = s.mic === "off" ? ic("micOff", "i sc-mic off") : s.mic === "on" ? ic("mic", "i sc-mic") : "";
   const pend = S.pending === s.label && !s.on;
@@ -374,13 +543,13 @@ function scBtn(s){
 // Seconds left before the stream ends by itself, counted on from the last update
 function endLeft(){ const ae = S.st.autoEnd; return Math.max(0, ae.left - Math.floor((Date.now() - S.stAt) / 1000)); }
 function hymnHTML(it){
-  const sub = it.intro ? "Hymn number on the stream · Next brings in the words" : `${esc(it.label)}${it.pages > 1 ? ` (part ${it.page} of ${it.pages})` : ""}`;
+  const sub = it.intro ? "Number on screen · Next brings in the words" : `${esc(it.label)}${it.pages > 1 ? ` (${it.page} of ${it.pages})` : ""} · ${it.i + 1} of ${it.n}`;
   return `<div class="now">
       <div class="now-h"><div><h2>${esc(it.title)}</h2><div class="sub">${sub}</div></div><span class="tag ${it.showing ? "" : "off"}">${it.showing ? "On screen" : "Hidden"}</span></div>
-      <div class="lines">${it.lines.map(esc).join("<br>")}${it.next ? `<div class="next"><b>Next</b>${esc(it.next.join(" / "))}</div>` : `<div class="next"><b>Last</b>Tap Done when it ends</div>`}</div>
-      <div class="nav"><button class="btn" id="back" type="button" ${it.i ? "" : "disabled"}>Back</button><button class="btn next-btn" id="next" type="button" ${it.next ? "" : "disabled"}>Next</button></div>
+      <div class="lines">${it.lines.map(esc).join("<br>")}${it.next ? `<button class="next" id="nextPv" type="button" aria-label="Show the next part"><b>Next</b>${esc(it.next.join(" / "))}</button>` : `<div class="next"><b>Last</b>Tap Done when it ends</div>`}</div>
       ${it.labels.length > 1 ? `<div class="verses">${it.labels.map(l => `<button class="vchip" type="button" data-v="${esc(l)}" aria-current="${!it.intro && l === it.label}">${esc(l.replace(/^Verse /, ""))}</button>`).join("")}</div>` : ""}
-      <button class="btn quiet" id="done" type="button">Done · take it off the screen</button>
+      <div class="nav"><button class="btn" id="back" type="button" ${it.i ? "" : "disabled"}>Back</button><button class="btn next-btn" id="next" type="button" ${it.next ? "" : "disabled"}>Next</button></div>
+      <button class="btn quiet" id="done" type="button">${ic("x")}Done · close the hymn</button>
     </div>`;
 }
 function verseHTML(it){
@@ -390,7 +559,7 @@ function verseHTML(it){
       ${it.started ? `<div class="lines">${esc(it.text)}</div>` : ""}
       <div class="verses vnums">${it.verses.map((v, i) => `<button class="vchip${seen.has(i) && i !== it.i ? " seen" : ""}" type="button" data-vi="${i}" aria-current="${it.started && i === it.i}" aria-label="Show verse ${v}">${v}</button>`).join("")}</div>
       <div class="nav"><button class="btn" id="back" type="button" ${it.started && it.i ? "" : "disabled"}>Back</button><button class="btn next-btn" id="next" type="button" ${!it.started || it.i < it.verses.length - 1 ? "" : "disabled"}>${it.started ? "Next" : "Start"}</button></div>
-      <button class="btn quiet" id="done" type="button">Done · take it off the screen</button>
+      <button class="btn quiet" id="done" type="button">${ic("x")}Done · close the passage</button>
     </div>`;
 }
 function ageTick(){ const a = $("pvAge"); if(a) a.textContent = S.pvAt ? Math.max(0, Math.round((now() - S.pvAt) / 1000)) + " s ago" : "Waiting for a picture…"; }
@@ -403,9 +572,10 @@ function wire(){
     if(to === S.tab) return;
     // Leaving On Screen with a hymn or passage still up acts as Done
     if(S.tab === "onscreen" && S.st && S.st.item){ cmd("done").then(j => { if(j.ok) toast("Taken off the screen"); else if(j.error) toast(j.error); }); }
-    S.tab = to; ls.set("remoteTab", to); render(); window.scrollTo(0, 0);
+    S.tab = to; ls.set("remoteTab", to); render();
   });
   on("next", () => cmd("step", {d:1}).then(j => !j.ok && j.error && toast(j.error)));
+  on("nextPv", () => cmd("step", {d:1}).then(j => !j.ok && j.error && toast(j.error)));   // tapping the next part shows it
   on("back", () => cmd("step", {d:-1}).then(j => !j.ok && j.error && toast(j.error)));
   on("done", () => cmd("done").then(j => j.ok ? toast("Taken off the screen") : j.error && toast(j.error)));
   document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => cmd("jump", {label:b.dataset.v}));
@@ -417,7 +587,16 @@ function wire(){
   });
   document.querySelectorAll("[data-sc]").forEach(b => b.onclick = async () => {
     const n = b.dataset.sc, s = S.st.scenes.find(x => x.label === n);
-    if(!s || s.on) return;
+    if(!s) return;
+    // Ending, live and counting down: tapping it again keeps Ending on Program but cancels the timer
+    if(s.on){
+      const ae = S.st.autoEnd;
+      if(s.ending && ae.on && ae.left != null && !ae.kept){
+        const j = await cmd("keep");
+        if(j.ok){ toast("Timer cancelled. The stream stays live."); ae.kept = true; ae.left = null; render(); } else if(j.error) toast(j.error);
+      }
+      return;
+    }
     if(S.st.safe){ if(!await confirmSheet(`Switch to ${n}?`, "Safe mode is on at the controller, so the phone asks before changing what's live.", "Switch")) return; }
     setPending(n); render();
     const j = await cmd("scene", {label:n, sure:true});
@@ -428,12 +607,14 @@ function wire(){
       clearPending();
     }
   });
-  on("mute", () => { const m = !S.st.audio.muted; act("mute", {muted:m}, m ? null : "Unmute the mic?"); });
-  const sw = $("pvSw"); if(sw) sw.onchange = () => {
-    S.pvOn = sw.checked; ls.set("remoteView", S.pvOn ? "1" : "0");
+  // The mic bar: tap to mute or unmute (unmuting asks first in Safe mode)
+  on("singMute", () => { const g = S.st.sing; if(!g || g.missing) return; act("sing-mute", {muted:!g.muted}); });
+  on("mute", () => { if(!S.st.audio.name || S.st.audio.missing) return; const m = !S.st.audio.muted; act("mute", {muted:m}, m ? null : "Unmute the mic?"); });
+  on("pvTog", () => {
+    S.pvOn = !S.pvOn; ls.set("remoteView", S.pvOn ? "1" : "0");
     if(!S.pvOn){ S.pvImg = ""; S.pvAt = 0; }
     sendView(); render();
-  };
+  });
 }
 function sendView(){ if(S.sid) cmd("view", {on:S.pvOn && !document.hidden}); }
 // Pictures only while this phone's screen is on
@@ -533,13 +714,33 @@ function openHymn(){
     setTimeout(() => $("hn").focus(), 50);
   });
 }
+/* The books of the Bible and how many chapters each has, for finding a chapter with buttons */
+const BOOKS = [["Genesis",50],["Exodus",40],["Leviticus",27],["Numbers",36],["Deuteronomy",34],["Joshua",24],["Judges",21],["Ruth",4],
+  ["1 Samuel",31],["2 Samuel",24],["1 Kings",22],["2 Kings",25],["1 Chronicles",29],["2 Chronicles",36],["Ezra",10],["Nehemiah",13],
+  ["Esther",10],["Job",42],["Psalms",150],["Proverbs",31],["Ecclesiastes",12],["Song of Solomon",8],["Isaiah",66],["Jeremiah",52],
+  ["Lamentations",5],["Ezekiel",48],["Daniel",12],["Hosea",14],["Joel",3],["Amos",9],["Obadiah",1],["Jonah",4],["Micah",7],["Nahum",3],
+  ["Habakkuk",3],["Zephaniah",3],["Haggai",2],["Zechariah",14],["Malachi",4],
+  ["Matthew",28],["Mark",16],["Luke",24],["John",21],["Acts",28],["Romans",16],["1 Corinthians",16],["2 Corinthians",13],["Galatians",6],
+  ["Ephesians",6],["Philippians",4],["Colossians",4],["1 Thessalonians",5],["2 Thessalonians",3],["1 Timothy",6],["2 Timothy",4],
+  ["Titus",3],["Philemon",1],["Hebrews",13],["James",5],["1 Peter",5],["2 Peter",3],["1 John",5],["2 John",1],["3 John",1],["Jude",1],["Revelation",22]];
+// Short names for the buttons (the full name is read out, and shown once a book is chosen)
+const ABBR = {"Genesis":"Gen","Exodus":"Exod","Leviticus":"Lev","Numbers":"Num","Deuteronomy":"Deut","Joshua":"Josh","Judges":"Judg","Ruth":"Ruth",
+  "1 Samuel":"1 Sam","2 Samuel":"2 Sam","1 Kings":"1 Kgs","2 Kings":"2 Kgs","1 Chronicles":"1 Chr","2 Chronicles":"2 Chr","Ezra":"Ezra","Nehemiah":"Neh",
+  "Esther":"Esth","Job":"Job","Psalms":"Ps","Proverbs":"Prov","Ecclesiastes":"Eccl","Song of Solomon":"Song","Isaiah":"Isa","Jeremiah":"Jer",
+  "Lamentations":"Lam","Ezekiel":"Ezek","Daniel":"Dan","Hosea":"Hos","Joel":"Joel","Amos":"Amos","Obadiah":"Obad","Jonah":"Jonah","Micah":"Mic",
+  "Nahum":"Nah","Habakkuk":"Hab","Zephaniah":"Zeph","Haggai":"Hag","Zechariah":"Zech","Malachi":"Mal",
+  "Matthew":"Matt","Mark":"Mark","Luke":"Luke","John":"John","Acts":"Acts","Romans":"Rom","1 Corinthians":"1 Cor","2 Corinthians":"2 Cor",
+  "Galatians":"Gal","Ephesians":"Eph","Philippians":"Phil","Colossians":"Col","1 Thessalonians":"1 Thess","2 Thessalonians":"2 Thess",
+  "1 Timothy":"1 Tim","2 Timothy":"2 Tim","Titus":"Titus","Philemon":"Phlm","Hebrews":"Heb","James":"Jas","1 Peter":"1 Pet","2 Peter":"2 Pet",
+  "1 John":"1 Jn","2 John":"2 Jn","3 John":"3 Jn","Jude":"Jude","Revelation":"Rev"};
 async function openBible(){
   const st = S.st;
   let tr = st.tr || "KJV", trs = [{abbr:tr, ok:true}], ok = false, t = null;
   const j = await cmd("bible-status"); if(j.ok && Array.isArray(j.data)) trs = j.data;
   if(!trs.some(x => x.abbr === tr && x.ok)) tr = (trs.find(x => x.ok) || {abbr:"KJV"}).abbr;
   sheet(`<h3>Bible</h3><div class="chips">${trs.map(x => `<button class="chip" type="button" data-t="${esc(x.abbr)}" aria-pressed="${x.abbr === tr}" ${x.ok ? "" : "disabled"}>${esc(x.abbr)}</button>`).join("")}</div>
-    <label class="label" for="br">Chapter or verse</label><input class="big-in ref-in" id="br" placeholder="John 3 or John 3:16" autocomplete="off" autocapitalize="words" enterkeyhint="go">
+    <div class="pick" id="pick"></div>
+    <label class="label" for="br">Or type a chapter or verse</label><input class="big-in ref-in" id="br" placeholder="John 3 or John 3:16" autocomplete="off" autocapitalize="words" enterkeyhint="go">
     <div class="found" id="bf">Type a book and chapter. Add a verse to start there.</div>
     <div class="row2"><button class="btn" id="bx" type="button">Cancel</button><button class="btn primary" id="bgo" type="button" disabled>Open</button></div>`,
   close => {
@@ -559,8 +760,29 @@ async function openBible(){
     document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tr = b.dataset.t; document.querySelectorAll("[data-t]").forEach(x => x.setAttribute("aria-pressed", x === b)); look(); });
     $("br").oninput = look; $("bx").onclick = close;
     $("br").addEventListener("keydown", e => { if(e.key === "Enter" && ok) $("bgo").click(); });
-    $("bgo").onclick = async () => { const ref = $("br").value.trim(); close(); await act("bible", {ref, tr}, `Open ${ref} on the controller?`); };
-    setTimeout(() => $("br").focus(), 50);
+    const open = async ref => { close(); await act("bible", {ref, tr}, `Open ${ref} on the controller?`); };
+    $("bgo").onclick = () => open($("br").value.trim());
+    // Or by buttons: Old or New Testament, then the book, then the chapter (a one-chapter book opens straight away)
+    let testament = "nt", book = null;
+    const drawPick = () => {
+      const el = $("pick"); if(!el) return;
+      const list = testament === "ot" ? BOOKS.slice(0, 39) : BOOKS.slice(39);
+      el.innerHTML = `<div class="seg" role="tablist" aria-label="Testament">
+          <button type="button" role="tab" data-tm="ot" aria-selected="${testament === "ot"}">Old Testament</button>
+          <button type="button" role="tab" data-tm="nt" aria-selected="${testament === "nt"}">New Testament</button></div>
+        ${book ? `<div class="pick-h"><button type="button" class="link" id="pkBack">${ic("back")}Books</button><b>${esc(book[0])}</b><span>Choose a chapter</span></div>
+          <div class="pick-grid nums">${Array.from({length:book[1]}, (_, i) => `<button type="button" data-ch="${i + 1}">${i + 1}</button>`).join("")}</div>`
+        : `<div class="pick-grid books">${list.map(b => `<button type="button" data-bk="${esc(b[0])}" aria-label="${esc(b[0])}">${esc(ABBR[b[0]] || b[0])}</button>`).join("")}</div>`}`;
+      el.querySelectorAll("[data-tm]").forEach(b => b.onclick = () => { testament = b.dataset.tm; book = null; drawPick(); });
+      el.querySelectorAll("[data-bk]").forEach(b => b.onclick = () => {
+        const bk = BOOKS.find(x => x[0] === b.dataset.bk);
+        if(bk[1] === 1) return open(bk[0]);
+        book = bk; drawPick(); $("pick").scrollIntoView({block:"start"});
+      });
+      el.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => open(`${book[0]} ${b.dataset.ch}`));
+      const back = $("pkBack"); if(back) back.onclick = () => { book = null; drawPick(); };
+    };
+    drawPick();
   });
 }
 
@@ -576,6 +798,18 @@ setInterval(() => {
   ageTick();
 }, 500);
 
+// #proto-start
+document.querySelectorAll("[data-pt]").forEach(b => b.onclick = () => {
+  const P = window.PROTO_CTL, st = P.st;
+  ({live(){ st.live = !st.live; st.liveT0 = Date.now(); st.viewers = st.live ? 12 : null; if(!st.live){ clearInterval(P.endTimer); st.autoEnd.left = null; } },
+    rec(){ st.rec = !st.rec; st.recT0 = Date.now(); }, safe(){ st.safe = !st.safe; },
+    autoend(){ st.autoEnd.on = !st.autoEnd.on; toast(st.autoEnd.on ? "End after Ending: on" : "End after Ending: off"); },
+    lt(){ st.ltOn = !st.ltOn; },
+    sing(){ st.sing.on = !st.sing.on; if(!st.sing.on){ st.sing.muted = true; st.sing.auto = false; } toast(st.sing.on ? "Singing mic option: on" : "Singing mic option: off (kept muted)"); },
+    unpair(){ try{ localStorage.removeItem("bghRemoteToken"); }catch(e){} S.token = ""; render(); }})[b.dataset.pt]();
+  P.push();
+});
+// #proto-end
 render();
 connect();
 
