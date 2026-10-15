@@ -394,6 +394,33 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .sl-mid b{font-size:18px;font-variant-numeric:tabular-nums}
 .sl-mid span{font-size:12px;color:var(--muted);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sl-open{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);min-height:56px;background:rgba(8,10,14,.85)}
+.ss-top{position:relative}
+.ss-top[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--fg)}
+.ss-dot{position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:var(--pgm);box-shadow:0 0 0 2px var(--panel)}
+.dialog.ss-dlg{width:min(640px,calc(100vw - 32px));max-width:640px;max-height:calc(100vh - 48px);overflow-y:auto}
+.ss-ed{display:flex;flex-direction:column;gap:14px}
+.ss-switch{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:56px;padding:8px 14px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:16px;text-align:left}
+.ss-switch small{display:block;font-weight:400;font-size:13px;color:var(--muted)}
+.ss-switch .knob{flex:none;width:68px;height:34px;border-radius:17px;background:var(--line-2);position:relative;transition:background .15s}
+.ss-switch .knob::before{content:"";position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;transition:left .15s}
+.ss-switch[aria-checked="true"] .knob{background:var(--accent)} .ss-switch[aria-checked="true"] .knob::before{left:37px}
+.ss-q{display:flex;flex-direction:column;gap:8px}
+.ss-shapes{display:flex;gap:16px;align-items:flex-end}
+.ss-shape{display:grid;place-items:center;height:96px;border-radius:8px;border:2px solid var(--line-2);background:var(--bg);font-family:var(--f-mono);font-size:20px;font-weight:700;color:var(--muted)}
+.ss-shape.r43{width:128px} .ss-shape.r169{width:171px}
+.ss-shape[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--fg);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.ss-srcs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ss-src{display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 14px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left;font-weight:600}
+.ss-src svg{width:24px;height:24px;flex:none;color:var(--muted)}
+.ss-src small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.ss-src[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)} .ss-src[aria-pressed="true"] svg{color:var(--accent)}
+.ss-feed{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--line-2);font-size:14px}
+.ss-feed i.d{width:10px;height:10px;border-radius:50%;background:var(--dim);flex:none}
+.ss-feed.live i.d{background:var(--pvw)} .ss-feed.none{border-color:var(--pgm);background:var(--pgm-soft)} .ss-feed.none i.d{background:var(--pgm)}
+.ss-steps{margin:0;padding-left:20px;font-size:14px;line-height:1.5;color:var(--muted)}
+.ss-steps b{color:var(--fg)}
+.ss-link{display:flex;gap:8px} .ss-link input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;font-size:15px;color:var(--fg);min-height:48px;box-sizing:border-box}
+.ss-link .btn{flex:none;min-width:110px}
 .sl-recent{display:flex;flex-direction:column;gap:6px}
 .sl-recent button{display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:48px;padding:6px 14px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left;font-weight:600}
 .sl-recent button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
@@ -1066,6 +1093,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <button class="upd-btn" id="updBtn" type="button" hidden title="A new version of the controller is ready"><i data-lucide="download"></i><span>UPDATE READY</span></button>
     <button class="safe-btn" id="safeBtn" type="button" aria-pressed="false" title="Safe mode stops accidental changes to the livestream"><i data-lucide="lock-open" class="safe-ico"></i><span class="safe-lbl">SAFE MODE</span><b class="safe-st">OFF</b></button>
     <button class="icon-btn ready-btn" id="readyBtn" type="button" aria-label="Ready check" title="Ready check"><i data-lucide="check-check"></i><span class="ready-dot" id="readyDot" hidden></span></button>
+    <button class="icon-btn ss-top" id="ssBtn" type="button" aria-pressed="false" aria-label="Slideshow" title="Slideshow"><i data-lucide="presentation"></i><span class="ss-dot" id="ssDot" hidden></span></button>
     <button class="icon-btn" id="phoneBtn" type="button" aria-label="Pair a phone remote" title="Phone remote"><i data-lucide="smartphone"></i></button>
     <button class="icon-btn" id="fsBtn" aria-label="Enter fullscreen"><i data-lucide="maximize"></i></button>
     <button class="icon-btn" id="settingsBtn" aria-label="Settings">
@@ -1714,6 +1742,14 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         <section class="set-page" id="page-slides" data-page="slides" role="tabpanel" aria-labelledby="tab-slides" tabindex="-1" hidden>
           <h3 class="page-h">Slideshow</h3>
           <div class="set-section">
+            <h4>Sources to switch</h4>
+            <div class="field"><label class="label" for="setSsProj">The projector's feed (NDI)</label><input id="setSsProj" data-now autocomplete="off" spellcheck="false">
+              <span class="path">Shown when the slideshow comes from the projector; hidden when it's played on this laptop.</span></div>
+            <div class="field"><label class="label" for="setSsLap">This laptop's slideshow</label><input id="setSsLap" data-now autocomplete="off" spellcheck="false">
+              <span class="path">Shown when the slideshow is played on this laptop; hidden when it comes from the projector. Sources with exactly these names are switched in every scene, in every scene collection.</span></div>
+          </div>
+          <div class="set-section">
+            <h4>Played on this laptop</h4>
             <div class="field"><label class="label" for="setSlLink">Google Slides link</label>
               <input id="setSlLink" data-now placeholder="https://docs.google.com/presentation/d/…" autocomplete="off" spellcheck="false">
               <span class="path" id="setSlMsg">In Google Slides, press Share and set General access to "Anyone with the link" (Viewer), then Copy link and paste it here.</span></div>
@@ -1785,6 +1821,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
           <p class="path">Prototype only. This page isn't in the real app.</p>
           <div class="field"><span class="label">Simulate changes made in OBS</span>
             <div class="sim-grid">
+              <button type="button" class="btn" data-sim="ndi">Stop / restart the projector's NDI feed</button>
               <button type="button" class="btn" data-sim="removeText">Delete the speakers text source</button>
               <button type="button" class="btn" data-sim="renameText">Rename the speakers text source</button>
               <button type="button" class="btn" data-sim="fromFile">Set speakers text to "Read from file"</button>
@@ -1868,6 +1905,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         <div class="d-form" id="glForm">
           <div class="field" id="glSvcField"><span class="label" id="glSvcLbl">Schedule</span><div class="svc-grid" id="glSvc"></div><span class="path" id="glSvcPath"></span><span class="path" id="glSvcHint">The schedule image in OBS switches to this service when you go live.</span></div>
           <div class="field" id="glDateField"><div class="field-top"><label class="label" for="glDate">Date</label><button class="link-btn" id="glToday">Today</button></div><input type="date" id="glDate"></div>
+          <div class="field ss-field" id="glSsField"><span class="label">Slideshow</span><div class="ss-ed" id="glSsEd"></div></div>
           <div class="field br-field" id="glBrField" hidden>
             <span class="label" id="glBrLbl">Chapter</span>
             <button class="spk-trigger" id="glBrBtn" aria-expanded="false" aria-controls="glBrPick" aria-labelledby="glBrLbl glBrVal"><span id="glBrVal"></span><i data-lucide="chevron-down"></i></button>
@@ -2035,6 +2073,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
 <div class="safe-banner" id="safeBanner" role="alert" hidden><i data-lucide="lock"></i><span><b>Safe mode is on.</b> To make changes, turn it off with the Safe mode button at the top.</span><button type="button" class="btn" id="safeOff">Turn off safe mode</button></div>
 <div class="top-banners">
 <div class="health-banner bat-banner" id="batBanner" role="alert" hidden><i data-lucide="battery-low"></i><div><b id="batBannerH">On battery</b><span id="batBannerTxt"></span></div><button type="button" class="btn" id="batOk">OK</button></div>
+<div class="health-banner" id="ndiBanner" role="alert" hidden><i data-lucide="cast"></i><div><b>No picture from the projector</b><span> The slideshow's live feed (NDI) has stopped. Check the projector laptop is on and its NDI output is running.</span></div><button type="button" class="btn" id="ndiOk">OK</button></div>
 <div class="health-banner" id="healthBanner" role="alert" hidden><i data-lucide="triangle-alert"></i><div><b>Stream trouble</b><span id="healthBannerTxt"></span></div><button type="button" class="btn" id="healthOk">OK</button></div>
 </div>
 <div class="end-banner" id="endBanner" role="alert" hidden><i data-lucide="timer"></i><span id="endBannerTxt"></span><button type="button" class="btn" id="endKeep">Keep streaming</button></div>
@@ -2084,6 +2123,13 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <div class="ready-head"><h2 id="sumH">The livestream has ended</h2><span class="ready-sum" id="sumWhen"></span></div>
     <dl class="sum-list" id="sumList"></dl>
     <div class="apply-row"><button type="button" class="btn" id="sumCopy"><i data-lucide="copy"></i> Copy summary</button><button type="button" class="btn primary" id="sumClose">Done</button></div>
+  </div>
+</div>
+<div class="overlay" id="ssOverlay" hidden>
+  <div class="dialog ss-dlg" role="dialog" aria-modal="true" aria-labelledby="ssH">
+    <div class="ready-head"><h2 id="ssH">Slideshow</h2></div>
+    <div class="ss-ed" id="ssPanelEd"></div>
+    <div class="apply-row"><button type="button" class="btn primary" id="ssDone">Done</button></div>
   </div>
 </div>
 <div class="overlay" id="phOverlay" hidden>
@@ -2233,9 +2279,11 @@ class MockOBS {
         const ins = this.inputsByColl[s.collection] || {}, cam = this.cam || "ok";
         const items = /^cam/i.test(d.sceneName) && ins.Video && cam !== "missing" ? [{sceneItemId:1, sourceName:"Video", inputKind:"dshow_input", sceneItemEnabled:cam !== "hidden", isGroup:false}] : [];
         if(ins["Lower Third"]) items.push({sceneItemId:2, sourceName:"Lower Third", inputKind:"church_lower_third", sceneItemEnabled:true, isGroup:false});
+        if(isSlideScene(d.sceneName)){ this.ssItems ||= {}; [["Projector", 11, "ndi_source"], ["Presentation", 12, "window_capture"]].forEach(([n, id, k]) =>
+          items.push({sceneItemId:id, sourceName:n, inputKind:k, sceneItemEnabled:this.ssItems[d.sceneName + id] ?? true, isGroup:false})); }
         return {sceneItems:items};
       }
-      case "SetSceneItemEnabled": if(this.cam === "hidden" && d.sceneItemEnabled) this.cam = "ok"; return {};
+      case "SetSceneItemEnabled": if(this.cam === "hidden" && d.sceneItemEnabled) this.cam = "ok"; (this.ssItems ||= {})[d.sceneName + d.sceneItemId] = d.sceneItemEnabled; return {};
       case "GetSourceScreenshot": {
         const cam = this.cam || "ok";
         if(cam === "unplugged") throw new Error("Failed to render screenshot.");
@@ -2584,7 +2632,7 @@ function buildButtons(names){
       if(n === names.find(x => g.includes(x))) BUTTONS.push({label:"Waiting", scene:g[0], group:g, icon:"hourglass", waiting:true});
       return;
     }
-    BUTTONS.push({label:n, scene:n, group:[n], icon:iconFor(n), bapCam:isBapCam(n)});
+    BUTTONS.push({label:n, scene:n, group:[n], icon:iconFor(n), bapCam:isBapCam(n), slide:isSlideScene(n)});
   });
   $("scenes").innerHTML = "";
   sceneEls = BUTTONS.map(b => {
@@ -2618,6 +2666,11 @@ const fmt = ms => { const s = Math.floor(ms/1000); return [s/3600, s/60%60, s%60
    to the second one (Camera 1), gets a 1200 ms Fade through OBS's Transition Override on the second camera for that
    one switch. Any other switch disarms it. Everything else stays as OBS and the Transition Table decide. */
 const FADE_MS = 1200;
+const isSlideScene = n => /\b(slide ?shows?|slides|presentation|powerpoint)\b/i.test(String(n || ""));
+/* Slideshow for this service (the top bar's slideshow button, or Go Live): on or off, 4:3 or 16:9, and whether it comes
+   from the projector (NDI) or is played on this laptop. Forgotten when the livestream ends. */
+const ss = {on:false, ratio:"", src:"", feed:{state:"", fps:0}};
+ui.ssNames = (() => { try{ return {projector:"Projector", laptop:"Presentation", ...JSON.parse(localStorage.getItem("ssNames") || "{}")}; }catch(e){ return {projector:"Projector", laptop:"Presentation"}; } })();
 const isBreakScene = n => /\b(live soon|we'?ll be right back|be right back|brb)\b/i.test(String(n || ""));
 function fadeCfgOf(c, scenes = []){
   const f = (c && c.fadeIn) || {};
@@ -2702,9 +2755,18 @@ function bapCamShown(b){
   if(!$("qcOverlay").hidden && isBaptismSvc(qc.svc)) return true;
   return isBaptismSvc(noExt(base(ui.schedule || "")));
 }
-const sceneShown = b => !b.bapCam || bapCamShown(b);
+/* Slideshow scenes: hidden unless the slideshow is on for this service, and then only the chosen shape
+   ("Slideshow 4:3" or "Slideshow 16:9"; a slideshow scene without a shape in its name shows for either).
+   A scene that's on Program stays visible. */
+function slideShown(b){
+  if(b.group.includes(ui.program) || (ui.studio && b.group.includes(ui.preview))) return true;
+  if(!ss.on) return false;
+  const m = b.scene.match(/(4\s*[:x×]\s*3|16\s*[:x×]\s*9)/i);
+  return !m || !ss.ratio || m[1].replace(/\s|x|×/gi, ":").replace(/:+/, ":") === ss.ratio;
+}
+const sceneShown = b => (!b.bapCam || bapCamShown(b)) && (!b.slide || slideShown(b));
 function renderBapCam(){
-  BUTTONS.forEach((b, i) => { if(b.bapCam){ const h = !sceneShown(b); if(sceneEls[i] && sceneEls[i].hidden !== h) sceneEls[i].hidden = h; } });
+  BUTTONS.forEach((b, i) => { if(b.bapCam || b.slide){ const h = !sceneShown(b); if(sceneEls[i] && sceneEls[i].hidden !== h) sceneEls[i].hidden = h; } });
 }
 setInterval(renderBapCam, 300);
 function renderScenes(){
@@ -3355,7 +3417,7 @@ $("glHere").addEventListener("click", async () => {
     b.addEventListener("click", () => { gl.svc = n; if(isSsSvc(n) && gl.sel.length > 1){ gl.sel = gl.sel.slice(0, 1); renderSpkTrigger(); } $("glSvc").querySelectorAll(".svc").forEach(x => x.setAttribute("aria-pressed", x === b)); glRender(); });
     $("glSvc").appendChild(b);
   });
-  glRender(); glShow("glDetails");
+  glRender(); glShow("glDetails"); ssEditor($("glSsEd"));
 });
 /* The Chapter field (Go Live and Change Speaker): a button showing the chapter that opens a picker below it:
    Old or New Testament → book → chapter. A one-chapter book (Jude, Philemon…) is chosen with the book. */
@@ -4745,7 +4807,7 @@ $("otNote").addEventListener("keydown", e => { if(e.key === "Enter" || e.key ===
 // A presentation clicker or the keyboard: → / Page Down = next, ← / Page Up = back (when nothing else is open)
 document.addEventListener("keydown", e => {
   // No hymn or passage open, a Slideshow scene on Program and the slideshow open: the clicker changes slides
-  if(!ot.item && sl.open && isSlideScene(ui.program) && !e.target.closest("input,textarea,select") && !document.querySelector(".overlay:not([hidden]), .spk-pop:not([hidden])")){
+  if(!ot.item && sl.open && ss.src === "laptop" && isSlideScene(ui.program) && !e.target.closest("input,textarea,select") && !document.querySelector(".overlay:not([hidden]), .spk-pop:not([hidden])")){
     if(e.key === "ArrowRight" || e.key === "PageDown"){ e.preventDefault(); slStep(1); }
     if(e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); slStep(-1); }
     return;
@@ -6623,6 +6685,7 @@ document.querySelectorAll("[data-sim]").forEach(b => b.addEventListener("click",
     if(!obs.renameScene("Camera 2","Pulpit Camera") && !obs.renameScene("Pulpit Camera","Camera 2")) toast("This scene collection has no Camera 2 scene");
     return;
   }
+  if(k === "ndi"){ SL_PROTO.feedOff = !SL_PROTO.feedOff; return toast(SL_PROTO.feedOff ? "Projector feed stopped (pretend)" : "Projector feed back (pretend)"); }
   if(k === "addScene"){ if((COLLECTIONS[obs.s.collection] || []).includes("Baptism")) return toast("Baptism already exists"); obs.addScene("Baptism"); return; }
   if(k === "removeScene"){ if(!obs.removeScene("Black")) toast("This scene collection has no Black scene"); return; }
   if(k === "signIn"){ obs.ytSignedIn = !obs.ytSignedIn; setTimeout(refreshSetStatus, 0); return toast(obs.ytSignedIn ? "Simulated: OBS signed in to YouTube" : "Simulated: OBS not signed in to YouTube"); }
@@ -7450,7 +7513,6 @@ obs.on("CurrentProgramSceneChanged", d => {
    on the chosen monitor, and moves it with Back / Next: along the bottom of the Program picture while a Slideshow
    scene is on, from a presentation clicker, and from the phone. Recent links are kept so last week's is one tap.
    Desktop app: window.bgh.slides (open / step / state); the prototype pretends. */
-const isSlideScene = n => /\b(slide ?shows?|slides|presentation|powerpoint)\b/i.test(String(n || ""));
 const sl = {open:false, title:"", n:0, total:0, busy:false,
   cfg:(() => { try{ return JSON.parse(localStorage.getItem("slides") || "null") || {link:"", recent:[], screen:""}; }catch(e){ return {link:"", recent:[], screen:""}; } })()};
 const slSave = () => { try{ localStorage.setItem("slides", JSON.stringify(sl.cfg)); }catch(e){} };
@@ -7477,7 +7539,7 @@ async function slStep(d){
   renderSlides(); phSend && phSend();
 }
 function renderSlides(){
-  const on = isSlideScene(ui.program);
+  const on = isSlideScene(ui.program) && ss.on && ss.src === "laptop";
   $("slBar").hidden = !on || !sl.open;
   $("slOpen").hidden = !on || sl.open;
   $("slOpenTxt").textContent = sl.busy ? "Opening…" : slId(sl.cfg.link) ? "Open the slideshow" : "Choose a slideshow in Settings";
@@ -7492,8 +7554,103 @@ $("slNext").addEventListener("click", () => slStep(1));
 $("slOpen").addEventListener("click", () => sl.busy || slOpen());
 $("slMid").addEventListener("click", () => toast(`${sl.title}: slide ${sl.n}${sl.total ? " of " + sl.total : ""}. Change it in Settings → Slideshow.`));
 setInterval(renderSlides, 500);
+/* The Slideshow choices: one editor, drawn in the top bar's Slideshow panel and in Go Live (they change the same
+   thing, straight away). On → shape (4:3 / 16:9, drawn to scale) → where it comes from. */
+function ssEditor(el){
+  const lap = ss.src === "laptop", proj = ss.src === "projector", linkOk = !!slId(sl.cfg.link);
+  el.innerHTML = `
+    <button type="button" class="ss-switch" role="switch" aria-checked="${ss.on}" data-ss="on"><span>Slideshow in this service<small>${ss.on ? "The Slideshow scene button shows. Forgotten when the livestream ends." : "Off: the Slideshow scene buttons are hidden."}</small></span><i class="knob"></i></button>
+    ${!ss.on ? "" : `
+    <div class="ss-q"><span class="label">Size</span><div class="ss-shapes">
+      <button type="button" class="ss-shape r43" data-ratio="4:3" aria-pressed="${ss.ratio === "4:3"}" aria-label="4:3">4:3</button>
+      <button type="button" class="ss-shape r169" data-ratio="16:9" aria-pressed="${ss.ratio === "16:9"}" aria-label="16:9">16:9</button></div></div>
+    <div class="ss-q"><span class="label">Where it comes from</span><div class="ss-srcs">
+      <button type="button" class="ss-src" data-src="projector" aria-pressed="${proj}"><i data-lucide="cast"></i><span>From the projector<small>Its live feed (NDI)</small></span></button>
+      <button type="button" class="ss-src" data-src="laptop" aria-pressed="${lap}"><i data-lucide="laptop"></i><span>Played on this laptop<small>Google Slides</small></span></button></div></div>
+    ${proj ? `<div class="ss-feed ${ss.feed.state}" aria-live="polite"><i class="d"></i><span>${ss.feed.state === "live" ? `<b>Projector feed: live</b> · ${ss.feed.fps} fps from "${esc(ui.ssNames.projector)}"`
+      : ss.feed.state === "none" ? `<b>No picture from the projector.</b> Check the projector laptop is on, its NDI output is running, and it's on the church network.` : "Checking the projector's feed…"}</span></div>` : ""}
+    ${lap ? `<div class="ss-q"><label class="label" for="${el.id}Link">Google Slides link</label>
+      <ol class="ss-steps"><li>In Google Slides, press <b>Share</b>.</li><li>Under General access choose <b>Anyone with the link</b> (Viewer).</li><li>Press <b>Copy link</b>, then paste it here.</li></ol>
+      <div class="ss-link"><input id="${el.id}Link" value="${esc(sl.cfg.link || "")}" placeholder="https://docs.google.com/presentation/d/…" autocomplete="off" spellcheck="false"><button type="button" class="btn primary" data-ss="open"${linkOk ? "" : " disabled"}>${sl.open ? "Open again" : "Open"}</button></div>
+      <span class="path${sl.cfg.link && !linkOk ? " warn-txt" : ""}">${sl.cfg.link && !linkOk ? "That isn't a Google Slides link. It starts https://docs.google.com/presentation/d/" : sl.open ? `Open: ${esc(sl.title)}, slide ${sl.n} of ${sl.total}.` : "Opens full screen on the slides monitor, ready to present."}</span>
+      ${(sl.cfg.recent || []).length ? `<div class="sl-recent">${sl.cfg.recent.map((x, i) => `<button type="button" data-rec="${i}" aria-pressed="${slId(x.link) === slId(sl.cfg.link)}"><span>${esc(x.title || "Slideshow")}</span><small>${esc(x.when || "")}</small></button>`).join("")}</div>` : ""}</div>` : ""}`}`;
+  el.querySelectorAll("[data-ss=on]").forEach(b => b.onclick = () => ssSet({on:!ss.on}));
+  el.querySelectorAll("[data-ratio]").forEach(b => b.onclick = () => ssSet({ratio:b.dataset.ratio}));
+  el.querySelectorAll("[data-src]").forEach(b => b.onclick = () => ssSet({src:b.dataset.src}));
+  el.querySelectorAll("[data-rec]").forEach(b => b.onclick = () => { sl.cfg.link = sl.cfg.recent[+b.dataset.rec].link; slSave(); ssRender(); });
+  const li = el.querySelector("input"); if(li) li.onchange = () => { slSetLink(li.value.trim()); ssRender(); };
+  el.querySelectorAll("[data-ss=open]").forEach(b => b.onclick = () => slOpen().then(ssRender));
+  if(window.lucide) lucide.createIcons();
+}
+function ssRender(){
+  $("ssBtn").setAttribute("aria-pressed", ss.on);
+  $("ssBtn").title = ss.on ? `Slideshow on · ${ss.ratio || "size?"} · ${ss.src === "projector" ? "from the projector" : ss.src === "laptop" ? "on this laptop" : "source?"}` : "Slideshow";
+  $("ssDot").hidden = !(ss.on && ss.src === "projector" && ss.feed.state === "none");
+  if(!$("ssOverlay").hidden) ssEditor($("ssPanelEd"));
+  if(!$("glOverlay").hidden) ssEditor($("glSsEd"));
+  renderBapCam(); renderSlides();
+}
+async function ssSet(ch){
+  const was = {...ss};
+  Object.assign(ss, ch);
+  if(ch.on === false){ ss.ratio = ""; ss.src = ""; }
+  ssRender();
+  if(ch.src && ch.src !== was.src) await ssApplySources();
+  if(ss.on && ss.ratio && !BUTTONS.some(b => b.slide && slideShown(b) && !b.group.includes(ui.program))) toast(`There's no Slideshow ${ss.ratio} scene in ${ui.collection}.`);
+}
+/* Sources: in every scene of the loaded collection, the chosen kind is shown and the other hidden (their eye in OBS) */
+async function ssApplySources(){
+  const show = ss.src === "projector" ? ui.ssNames.projector : ui.ssNames.laptop, hide = ss.src === "projector" ? ui.ssNames.laptop : ui.ssNames.projector;
+  let shown = 0, hidden = 0;
+  try{
+    const scenes = (await obs.call("GetSceneList")).scenes || [];
+    for(const sc of scenes){
+      const walk = async (items, group) => {
+        for(const it of items){
+          if(it.isGroup){ try{ await walk((await obs.call("GetGroupSceneItemList", {sceneName:it.sourceName})).sceneItems || [], it.sourceName); }catch(e){} continue; }
+          const on = it.sourceName === show ? true : it.sourceName === hide ? false : null;
+          if(on === null) continue;
+          if(it.sceneItemEnabled !== on) await obs.call("SetSceneItemEnabled", {sceneName:group || sc.sceneName, sceneItemId:it.sceneItemId, sceneItemEnabled:on});
+          on ? shown++ : hidden++;
+        }
+      };
+      await walk((await obs.call("GetSceneItemList", {sceneName:sc.sceneName})).sceneItems || []);
+    }
+  }catch(e){ return toast(`Couldn't switch the slideshow sources in OBS: ${e.message}`); }
+  if(!shown) toast(`No source called "${show}" was found in ${ui.collection}. Check the names in Settings → Slideshow.`);
+  else toast(`Showing "${show}"${hidden ? `, hid "${hide}"` : ""} in the slideshow scenes.`);
+}
+$("ssBtn").addEventListener("click", () => { $("ssOverlay").hidden = false; ssEditor($("ssPanelEd")); });
+$("ndiOk").addEventListener("click", () => { $("ndiBanner").hidden = true; });
+$("ssDone").addEventListener("click", () => { $("ssOverlay").hidden = true; });
+// Forgotten when the livestream ends
+obs.on("StreamStateChanged", d => { if(!d.outputActive && ss.on){ ssSet({on:false}); } });
+/* The projector's feed: the OBS plug-in counts the frames actually arriving from the NDI source (a still slide still
+   arrives as frames; a stopped feed doesn't, even if OBS keeps showing the last picture). Every 2 seconds while it's
+   in use; a banner if it stops while a Slideshow scene is on Program. */
+async function ssFeedPoll(){
+  if(!(ss.on && ss.src === "projector")){ if(ss.feed.state){ ss.feed = {state:"", fps:0}; $("ndiBanner").hidden = true; } return; }
+  let r = null;
+  // #proto-start
+  r = SL_PROTO.feedOff ? {frames:0} : {frames:30};
+  // #proto-end
+  // #real try{ r = await vcall("GetSourceFrames", {sourceName:ui.ssNames.projector}); }catch(e){ r = null; }
+  const state = !r ? "" : r.frames > 0 ? "live" : "none", changed = state !== ss.feed.state;
+  ss.feed = {state, fps:r ? r.frames : 0};
+  const warn = state === "none" && isSlideScene(ui.program);
+  if(warn && $("ndiBanner").hidden) $("ndiBanner").hidden = false;
+  if(!warn) $("ndiBanner").hidden = true;
+  if(changed) ssRender();
+}
+setInterval(ssFeedPoll, 2000);
+function slSetLink(v){
+  const id = slId(v); sl.cfg.link = v;
+  if(id){ const rec = (sl.cfg.recent || []).filter(x => slId(x.link) !== id); rec.unshift({link:v, title:(sl.cfg.recent.find(x => slId(x.link) === id) || {}).title || "New slideshow", when:new Date().toLocaleDateString([], {month:"short", day:"numeric"})}); sl.cfg.recent = rec.slice(0, 5); }
+  slSave();
+}
 // Settings → Slideshow
 function renderSlSet(){
+  $("setSsProj").value = ui.ssNames.projector; $("setSsLap").value = ui.ssNames.laptop;
   $("setSlLink").value = sl.cfg.link || "";
   const scr = $("setSlScreen"); scr.innerHTML = "";
   ["Monitor 2 (1920 × 1080)", "Monitor 1 (1920 × 1080, the touchscreen)", "Monitor 3 (1280 × 720)"].forEach((n, i) => { const o = document.createElement("option"); o.value = String(i + 1); o.textContent = n; scr.appendChild(o); });
@@ -7513,6 +7670,10 @@ $("setSlLink").addEventListener("change", () => {
   slSave(); renderSlSet();
 });
 $("setSlScreen").addEventListener("change", () => { sl.cfg.screen = $("setSlScreen").value; slSave(); });
+["setSsProj", "setSsLap"].forEach(id => $(id).addEventListener("change", () => {
+  const v = $(id).value.trim(); if(!v){ $(id).value = id === "setSsProj" ? ui.ssNames.projector : ui.ssNames.laptop; return; }
+  ui.ssNames[id === "setSsProj" ? "projector" : "laptop"] = v; try{ localStorage.setItem("ssNames", JSON.stringify(ui.ssNames)); }catch(e){}
+}));
 // #proto-start  sample recent slideshows so the list shows
 if(!sl.cfg.recent.length) sl.cfg.recent = [
   {link:"https://docs.google.com/presentation/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit", title:"Sunday Announcements", when:"Oct 11"},
@@ -7986,7 +8147,7 @@ function drawScene(c, name, t, clear = true){
     case "Slideshow 4:3": { c.fillStyle = "#000"; c.fillRect(0,0,W,H); const sw = H*4/3, x = (W-sw)/2;
       bg2(c,x,0,sw,H); txt(c,"Psalm 46:1",W/2,H*.3,40,{col:"#d9c38f",sp:2});
       txt(c,"God is our refuge and strength,",W/2,H*.48,50,{w:600}); txt(c,"a very present help in trouble.",W/2,H*.58,50,{w:600});
-      txt(c,sl.open ? `Slide ${sl.n} of ${sl.total}` : "The slideshow isn't open yet",W/2,H*.88,22,{w:500,f:BODY,col:"rgba(255,255,255,.5)"}); break; }
+      txt(c,ss.src === "projector" ? (SL_PROTO.feedOff ? "Projector feed stopped (last picture)" : "From the projector (NDI)") : sl.open ? `Slide ${sl.n} of ${sl.total} · this laptop` : "The slideshow isn't open yet",W/2,H*.88,22,{w:500,f:BODY,col:"rgba(255,255,255,.5)"}); break; }
     case "Slideshow 16:9": bg(c,W,H,"#173227","#08110d");
       txt(c,"Announcements",W*.08,H*.2,72,{al:"left"});
       ["Fellowship lunch after service · Fellowship Hall","Youth group meets Wednesday at 7 PM","Volunteer sign-up for the fall food drive"].forEach((s,i) => {
