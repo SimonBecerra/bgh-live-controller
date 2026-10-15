@@ -1752,6 +1752,8 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <span class="path">Shown when the slideshow is played on this laptop; hidden when it comes from the projector. Sources with exactly these names are switched in every scene, in every scene collection.</span></div>
             <div class="field"><label class="label" for="setSsVid">The camera beside the slideshow</label><input id="setSsVid" data-now autocomplete="off" spellcheck="false">
               <span class="path">In the Slideshow scenes, the slideshow is sized to this source's height and lined up with its top and bottom, keeping the gap between them as it is set up in OBS. A Slideshow scene without it keeps the slideshow's size.</span></div>
+            <div class="field"><label class="label" for="setSsTpl">Slideshow layout copied from</label><input id="setSsTpl" data-now autocomplete="off" spellcheck="false">
+              <span class="path">The scene collection where "Projector" and "Presentation" are set up in the Slideshow 4:3 and 16:9 scenes. In other collections, the controller puts the same position, size and crop on them when they're added, or when the collection is loaded and they're still where OBS put them. A source placed on purpose is never moved.</span></div>
           </div>
           <div class="set-section">
             <h4>Played on this laptop</h4>
@@ -2075,7 +2077,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
 <div class="safe-banner" id="safeBanner" role="alert" hidden><i data-lucide="lock"></i><span><b>Safe mode is on.</b> To make changes, turn it off with the Safe mode button at the top.</span><button type="button" class="btn" id="safeOff">Turn off safe mode</button></div>
 <div class="top-banners">
 <div class="health-banner bat-banner" id="batBanner" role="alert" hidden><i data-lucide="battery-low"></i><div><b id="batBannerH">On battery</b><span id="batBannerTxt"></span></div><button type="button" class="btn" id="batOk">OK</button></div>
-<div class="health-banner" id="ndiBanner" role="alert" hidden><i data-lucide="cast"></i><div><b>No picture from the projector</b><span> The slideshow's live feed (NDI) has stopped. Check the projector laptop is on and its NDI output is running.</span></div><button type="button" class="btn" id="ndiOk">OK</button></div>
+<div class="health-banner" id="ndiBanner" role="alert" hidden><i data-lucide="projector"></i><div><b>No picture from the projector</b><span> The slideshow's live feed (NDI) has stopped. Check the projector laptop is on and its NDI output is running.</span></div><button type="button" class="btn" id="ndiOk">OK</button></div>
 <div class="health-banner" id="healthBanner" role="alert" hidden><i data-lucide="triangle-alert"></i><div><b>Stream trouble</b><span id="healthBannerTxt"></span></div><button type="button" class="btn" id="healthOk">OK</button></div>
 </div>
 <div class="end-banner" id="endBanner" role="alert" hidden><i data-lucide="timer"></i><span id="endBannerTxt"></span><button type="button" class="btn" id="endKeep">Keep streaming</button></div>
@@ -2677,7 +2679,7 @@ const isSlideScene = n => /\b(slide ?shows?|slides|presentation|powerpoint)\b/i.
 /* Slideshow for this service (the top bar's slideshow button, or Go Live): on or off, 4:3 or 16:9, and whether it comes
    from the projector (NDI) or is played on this laptop. Forgotten when the livestream ends. */
 const ss = {on:false, ratio:"", src:"", feed:{state:"", fps:0}};
-ui.ssNames = (() => { const d = {projector:"Projector", laptop:"Presentation", video:"Video"}; try{ return {...d, ...JSON.parse(localStorage.getItem("ssNames") || "{}")}; }catch(e){ return d; } })();
+ui.ssNames = (() => { const d = {projector:"Projector", laptop:"Presentation", video:"Video", tpl:"BGH Classic"}; try{ return {...d, ...JSON.parse(localStorage.getItem("ssNames") || "{}")}; }catch(e){ return d; } })();
 const isBreakScene = n => /\b(live soon|we'?ll be right back|be right back|brb)\b/i.test(String(n || ""));
 function fadeCfgOf(c, scenes = []){
   const f = (c && c.fadeIn) || {};
@@ -7677,7 +7679,7 @@ function ssEditor(el){
       <button type="button" class="ss-shape r43 on43" data-ratio="169on43" aria-pressed="${ss.ratio === "169on43"}" aria-label="16:9 on 4:3: a 16:9 slideshow across the top of a 4:3 one"><i></i><span>16:9 on 4:3</span></button></div>
       ${ss.ratio === "169on43" ? `<span class="path">The top 16:9 part of the 4:3 slideshow is shown in the 16:9 Slideshow scene, in the same place as a 16:9 slideshow.</span>` : ""}</div>
     <div class="ss-q"><span class="label">Where it comes from</span><div class="ss-srcs">
-      <button type="button" class="ss-src" data-src="projector" aria-pressed="${proj}"><i data-lucide="cast"></i><span>From the projector<small>Its live feed (NDI)</small></span></button>
+      <button type="button" class="ss-src" data-src="projector" aria-pressed="${proj}"><i data-lucide="projector"></i><span>From the projector<small>Its live feed (NDI)</small></span></button>
       <button type="button" class="ss-src" data-src="laptop" aria-pressed="${lap}"><i data-lucide="laptop"></i><span>Played on this laptop<small>Google Slides</small></span></button></div></div>
     ${proj ? `<div class="ss-feed ${ss.feed.state}" aria-live="polite"><i class="d"></i><span>${ss.feed.state === "live" ? `<b>Projector feed: live</b> · ${ss.feed.fps} fps`
       : ss.feed.state === "none" ? `<b>No picture from the projector.</b> Check the projector laptop is on, its NDI output is running, and it's on the church network.`
@@ -7917,7 +7919,8 @@ async function ssApplySources(vis = true, off = false){
   if(ssBusy){ ssAgain = [vis, off]; return ssBusy; }
   ssBusy = ssApplyNow(vis, off);
   try{ await ssBusy; } finally { ssBusy = null; }
-  if(ssAgain){ const a = ssAgain; ssAgain = null; await ssApplySources(...a); }
+  if(ssAgain){ const a = ssAgain; ssAgain = null; return ssApplySources(...a); }
+  ssTplCapture();
 }
 async function ssApplyNow(vis = true, off = false){
   const show = ss.src === "projector" ? ui.ssNames.projector : ui.ssNames.laptop, hide = ss.src === "projector" ? ui.ssNames.laptop : ui.ssNames.projector;
@@ -7967,6 +7970,97 @@ async function ssApplyNow(vis = true, off = false){
   const cropTxt = ss.ratio ? (ss.ratio === "169on43" ? " The top 16:9 part fills the 16:9 slideshow's place." : ss.src === "projector" && ss.ratio === "16:9" ? " Cropped the black bars off the top and bottom." : ss.src === "laptop" && ss.ratio === "4:3" ? " Cropped the black bars off the sides." : " No cropping needed.") : "";
   toast(vis ? `Showing "${show}"${hidden ? `, hid "${hide}"` : ""} in the slideshow scenes.${cropTxt}` : cropTxt.trim() || `${ss.ratio}: no crop needed.`);
 }
+/* The layout template. The Slideshow scenes' "Projector" and "Presentation" sources are set up once, in one scene
+   collection (Settings → Slideshow, "BGH Classic"). The controller keeps a copy of their position, size, crop,
+   alignment and bounds there (and of the picture inside the Projector scene), for each shape: one for "Slideshow 4:3",
+   one for "Slideshow 16:9". In any other collection the same layout is put on them:
+   - when one is added to a Slideshow scene (while the controller is connected);
+   - when a collection is loaded, on those still where OBS puts a new source (top-left corner, full size, no crop):
+     a source placed on purpose is never moved.
+   The copy is renewed whenever the controller sees the set-up collection, so a change made there carries over. */
+const TPL_KEYS = ["positionX", "positionY", "scaleX", "scaleY", "alignment", "rotation", "boundsType", "boundsAlignment", "boundsWidth", "boundsHeight", "cropTop", "cropBottom", "cropLeft", "cropRight"];
+const ssTplLoad = () => { try{ return JSON.parse(localStorage.getItem("ssTpl") || "{}"); }catch(e){ return {}; } };
+const ssTplSave = t => { try{ localStorage.setItem("ssTpl", JSON.stringify(t)); }catch(e){} };
+const ssTplFrom = () => ui.ssNames.tpl || "BGH Classic";
+const tplPick = t => { const o = {}; TPL_KEYS.forEach(k => { if(t[k] !== undefined && t[k] !== null) o[k] = t[k]; });
+  if(!(o.boundsWidth >= 1)) delete o.boundsWidth; if(!(o.boundsHeight >= 1)) delete o.boundsHeight; return o; };
+// Where OBS puts a source when it's added: top-left corner, full size, no crop, no bounds
+const tfIsNew = t => Math.abs(t.positionX || 0) < 0.5 && Math.abs(t.positionY || 0) < 0.5 && Math.abs((t.scaleX ?? 1) - 1) < 0.001 && Math.abs((t.scaleY ?? 1) - 1) < 0.001
+  && !t.cropTop && !t.cropBottom && !t.cropLeft && !t.cropRight && !t.rotation && (!t.boundsType || t.boundsType === "OBS_BOUNDS_NONE");
+const ssKindOf = name => name === ui.ssNames.projector ? "projector" : name === ui.ssNames.laptop ? "laptop" : "";
+const tfGet = async (sceneName, id) => (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:id})).sceneItemTransform || {};
+const ssCollNow = async () => { try{ return (await obs.call("GetSceneCollectionList")).currentSceneCollectionName; }catch(e){ return ""; } };
+let ssCollMoving = false;   // a scene collection is loading: OBS re-adds every source then, so that isn't someone adding one
+// In the set-up collection: keep a copy of the layout
+async function ssTplCapture(){
+  if(ssCollMoving || ui.collection !== ssTplFrom()) return;
+  const from = ssTplFrom(), got = {};
+  try{
+    if(await ssCollNow() !== from) return;
+    const scenes = ((await obs.call("GetSceneList")).scenes || []).map(s => s.sceneName).filter(n => isSlideScene(n) && slideRatioOf(n));
+    for(const sceneName of scenes){
+      const r = slideRatioOf(sceneName);
+      for(const it of (await obs.call("GetSceneItemList", {sceneName})).sceneItems || []){
+        const kind = ssKindOf(it.sourceName); if(!kind || (got[r] && got[r][kind])) continue;
+        // As set up: if "16:9 on 4:3" has moved it, its saved place
+        const t = {...(await tfGet(sceneName, it.sceneItemId)), ...(ssOrigLoad()[ssOrigKey(sceneName, it.sceneItemId)] || {})};
+        if(tfIsNew(t)) continue;
+        const e = {tf:tplPick(t)};
+        if(it.sourceType === "OBS_SOURCE_TYPE_SCENE"){ const p = await ssPicInside(it.sourceName); if(p){ const pt = await tfGet(it.sourceName, p.sceneItemId); if(!tfIsNew(pt)) e.inner = tplPick(pt); } }
+        (got[r] ||= {})[kind] = e;
+      }
+    }
+    if(await ssCollNow() !== from) return;   // the collection changed while reading: keep the copy as it was
+  }catch(e){ return; }
+  if(!Object.keys(got).length) return;
+  const t = ssTplLoad();
+  for(const r of Object.keys(got)) t[r] = {...(t[r] || {}), ...got[r]};
+  t.from = from; ssTplSave(t);
+}
+// Puts the template on one source in a Slideshow scene (and on the picture inside the Projector scene, if that's still
+// where OBS put it). force: just added, so placed whatever its transform says
+async function ssTplApplyItem(sceneName, it, force){
+  const r = slideRatioOf(sceneName), kind = ssKindOf(it.sourceName), tpl = ssTplLoad();
+  const e = r && kind && tpl[r] && tpl[r][kind];
+  if(!e || !isSlideScene(sceneName)) return false;
+  let did = false;
+  if(force || tfIsNew(await tfGet(sceneName, it.sceneItemId))){
+    await obs.call("SetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId, sceneItemTransform:e.tf}); did = true;
+  }
+  if(e.inner && it.sourceType === "OBS_SOURCE_TYPE_SCENE"){
+    try{ const p = await ssPicInside(it.sourceName);
+      if(p && tfIsNew(await tfGet(it.sourceName, p.sceneItemId))){ await obs.call("SetSceneItemTransform", {sceneName:it.sourceName, sceneItemId:p.sceneItemId, sceneItemTransform:e.inner}); did = true; } }catch(err){}
+  }
+  return did;
+}
+// A collection was loaded (or the controller connected): capture it if it's the set-up one, otherwise fill in the
+// slideshow sources not set up yet
+async function ssTplSync(){
+  if(ui.collection === ssTplFrom()) return ssTplCapture();
+  const tpl = ssTplLoad(); if(!tpl["4:3"] && !tpl["16:9"]) return;
+  const done = [];
+  try{
+    const scenes = ((await obs.call("GetSceneList")).scenes || []).map(s => s.sceneName).filter(n => isSlideScene(n) && slideRatioOf(n));
+    for(const sceneName of scenes)
+      for(const it of (await obs.call("GetSceneItemList", {sceneName})).sceneItems || [])
+        if(ssKindOf(it.sourceName) && await ssTplApplyItem(sceneName, it, false)) done.push(`"${it.sourceName}" in ${sceneName}`);
+  }catch(e){ return; }
+  if(!done.length) return;
+  toast(done.length === 1 ? `Set up ${done[0]} like in ${tpl.from || ssTplFrom()}.` : `Set up ${done.length} slideshow sources like in ${tpl.from || ssTplFrom()}.`);
+  if(ss.on && ss.ratio) ssApplySources(false);
+}
+obs.on("CurrentSceneCollectionChanging", () => { ssCollMoving = true; });
+obs.on("SceneItemCreated", async d => {
+  if(ssCollMoving || !ssKindOf(d.sourceName) || !isSlideScene(d.sceneName) || !slideRatioOf(d.sceneName)) return;
+  try{
+    const items = (await obs.call("GetSceneItemList", {sceneName:d.sceneName})).sceneItems || [];
+    const it = items.find(x => x.sceneItemId === d.sceneItemId) || {sceneItemId:d.sceneItemId, sourceName:d.sourceName};
+    if(!await ssTplApplyItem(d.sceneName, it, true)) return;
+    toast(`Set up "${d.sourceName}" in ${d.sceneName} like in ${ssTplLoad().from || ssTplFrom()}.`);
+    if(ss.on && ss.ratio) ssApplySources(false); else if(ui.collection === ssTplFrom()) ssTplCapture();
+  }catch(e){}
+});
+setInterval(() => { if(ui.collection === ssTplFrom()) ssTplCapture(); }, 30000);
 $("ssBtn").addEventListener("click", () => { $("ssOverlay").hidden = false; ssEditor($("ssPanelEd")); });
 $("ndiOk").addEventListener("click", () => { $("ndiBanner").hidden = true; });
 $("ssDone").addEventListener("click", () => { $("ssOverlay").hidden = true; });
@@ -8006,7 +8100,7 @@ obs.on("StreamStateChanged", d => { if(!d.outputActive) slAutoDone = false; });
 function slSetLink(v){ sl.cfg.link = v; slSave(); }
 // Settings → Slideshow
 function renderSlSet(){
-  $("setSsProj").value = ui.ssNames.projector; $("setSsLap").value = ui.ssNames.laptop; $("setSsVid").value = ui.ssNames.video;
+  $("setSsProj").value = ui.ssNames.projector; $("setSsLap").value = ui.ssNames.laptop; $("setSsVid").value = ui.ssNames.video; $("setSsTpl").value = ui.ssNames.tpl;
   const scr = $("setSlScreen"); scr.innerHTML = "";
   // One monitor (the church laptop): the slideshow opens behind the controller, at 1920 × 1080, where OBS still captures it
   const mons = SL_SCREENS();
@@ -8015,7 +8109,7 @@ function renderSlSet(){
   scr.value = sl.cfg.screen && [...scr.options].some(o => o.value === sl.cfg.screen) ? sl.cfg.screen : mons.length > 1 ? scr.options[1].value : "behind";
 }
 $("setSlScreen").addEventListener("change", () => { sl.cfg.screen = $("setSlScreen").value; slSave(); });
-[["setSsProj", "projector"], ["setSsLap", "laptop"], ["setSsVid", "video"]].forEach(([id, k]) => $(id).addEventListener("change", () => {
+[["setSsProj", "projector"], ["setSsLap", "laptop"], ["setSsVid", "video"], ["setSsTpl", "tpl"]].forEach(([id, k]) => $(id).addEventListener("change", () => {
   const v = $(id).value.trim(); if(!v){ $(id).value = ui.ssNames[k]; return; }
   ui.ssNames[k] = v; try{ localStorage.setItem("ssNames", JSON.stringify(ui.ssNames)); }catch(e){}
 }));
@@ -8098,6 +8192,7 @@ obs.on("CurrentSceneCollectionChanged", async d => {
   await loadAudio();
   ot.showing = false; ui.lt.showing = "";
   await otSync();
+  setTimeout(() => { ssCollMoving = false; ssTplSync(); }, 1500);   // once OBS has finished loading it
 });
 obs.on("InputMuteStateChanged", d => { if(d.inputName !== srcAudio()) return; ui.muted = d.inputMuted; renderMute(); if(!ui.muted) lastSoundAt = Date.now(); });
 let lastSoundAt = Date.now();
@@ -8564,6 +8659,7 @@ async function syncAll(){
   await loadAudio();
   await otSync();
   syncStartTitle();
+  ssCollMoving = false; ssTplSync();
 }
 /* ---------------- Phone remote ----------------
    Desktop app: main.js runs a small web server on the church network (phone.js). Phones see what this page
