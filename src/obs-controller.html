@@ -7598,7 +7598,8 @@ async function slOpen(){
   if(window.bgh && window.bgh.slides){
     toast("Opening the slideshow…");
     const r = await window.bgh.slides.open({id, screen:sl.cfg.screen || "behind"}).catch(e => ({ok:false, error:e.message}));
-    if(r.ok){ Object.assign(sl, {open:true, n:r.n || 1, total:r.total || 0, title:r.title || ""}); await slPointCapture(r); slShot(); }
+    if(r.ok){ Object.assign(sl, {open:true, n:r.n || 1, total:r.total || 0, title:r.title || ""}); await slPointCapture(r); slShot();
+      if(ss.ratio === "169on43"){ await sleep(1200); await ssApplySources(false); } }   // its window has a size now
     else toast(`Couldn't open the slideshow: ${r.error}`);
   }
   sl.busy = false; renderSlides(); phSend && phSend();
@@ -7774,14 +7775,24 @@ const ssOrigKey = (scene, id) => `${ui.collection}|${scene}|${id}`;
 const ssOrigAll = () => Object.keys(ssOrigLoad()).filter(k => k.startsWith(ui.collection + "|"));
 const TF_KEYS = ["positionX", "positionY", "scaleX", "scaleY", "cropTop", "cropBottom", "cropLeft", "cropRight"];
 const tfPick = t => Object.fromEntries(TF_KEYS.map(k => [k, t[k] || (k.startsWith("scale") ? 1 : 0)]));
-// Where a source shows on the canvas (left, top, width, height), from its transform
+// Where a source shows on the canvas (left, top, width, height), from its transform. A source in a "Fit" bounds box
+// is fitted into the box (evenly scaled) and placed in it by the box's own alignment.
 function tfRect(t){
-  const w = Math.max(0, (t.sourceWidth || 0) - (t.cropLeft || 0) - (t.cropRight || 0)) * (t.scaleX ?? 1);
-  const h = Math.max(0, (t.sourceHeight || 0) - (t.cropTop || 0) - (t.cropBottom || 0)) * (t.scaleY ?? 1);
+  const w0 = Math.max(0, (t.sourceWidth || 0) - (t.cropLeft || 0) - (t.cropRight || 0)), h0 = Math.max(0, (t.sourceHeight || 0) - (t.cropTop || 0) - (t.cropBottom || 0));
+  const fit = t.boundsType === "OBS_BOUNDS_SCALE_INNER" && t.boundsWidth > 1 && t.boundsHeight > 1;
+  const bw = fit ? t.boundsWidth : w0 * (t.scaleX ?? 1), bh = fit ? t.boundsHeight : h0 * (t.scaleY ?? 1);
   const al = t.alignment ?? 5;
-  const x = (t.positionX || 0) - (al & 1 ? 0 : al & 2 ? w : w / 2), y = (t.positionY || 0) - (al & 4 ? 0 : al & 8 ? h : h / 2);
-  return {x, y, w, h};
+  const bx = (t.positionX || 0) - (al & 1 ? 0 : al & 2 ? bw : bw / 2), by = (t.positionY || 0) - (al & 4 ? 0 : al & 8 ? bh : bh / 2);
+  if(!fit) return {x:bx, y:by, w:bw, h:bh};
+  const k = w0 && h0 ? Math.min(bw / w0, bh / h0) : 0, w = w0 * k, h = h0 * k, ba = t.boundsAlignment ?? 0;
+  return {x:bx + (ba & 1 ? 0 : ba & 2 ? bw - w : (bw - w) / 2), y:by + (ba & 4 ? 0 : ba & 8 ? bh - h : (bh - h) / 2), w, h};
 }
+const rectOk = b => !!b && b.w > 2 && b.h > 2;
+// The place a 16:9 slideshow has in each 16:9 Slideshow scene, remembered whenever the laptop source has a picture: in
+// projector mode the laptop's window isn't open, so its source has no size to measure then
+const ssBoxKey = scene => `ssBox|${ui.collection}|${scene}`;
+const ssBoxGet = scene => { try{ return JSON.parse(localStorage.getItem(ssBoxKey(scene)) || "null"); }catch(e){ return null; } };
+const ssBoxSet = (scene, b) => { if(rectOk(b)) try{ localStorage.setItem(ssBoxKey(scene), JSON.stringify(b)); }catch(e){} };
 const tfPos = (rect, al = 5) => ({positionX:rect.x + (al & 1 ? 0 : al & 2 ? rect.w : rect.w / 2), positionY:rect.y + (al & 4 ? 0 : al & 8 ? rect.h : rect.h / 2)});
 // Puts back a source's saved position, size and crop (if the controller moved it); true when it did
 async function ssRestore(scene, id){
@@ -7804,24 +7815,31 @@ async function ssPlaceOn43(sceneName, items, report){
     const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
     return tfRect({...t, ...(o || {})}); };
   const lap = items.find(it => it.sourceName === ui.ssNames.laptop);
-  const lapBox = lap ? await boxOf(lap) : null;
+  let lapBox = lap ? await boxOf(lap) : null;
+  if(rectOk(lapBox)) ssBoxSet(sceneName, lapBox); else lapBox = ssBoxGet(sceneName);
   for(const it of items){
     const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
+    // No picture yet (the laptop's slideshow window isn't open, or no NDI feed): nothing to measure, so it's left as it is
+    // and placed when it has a picture
+    if(!(t.sourceWidth > 2 && t.sourceHeight > 2)){ report.waiting.push(it.sourceName); continue; }
     const fit = t.boundsType === "OBS_BOUNDS_SCALE_INNER";
     if(t.boundsType && t.boundsType !== "OBS_BOUNDS_NONE" && !fit){ report.bounded.push(`${it.sourceName} in ${sceneName}`); continue; }
     if(t.rotation){ report.rotated.push(`${it.sourceName} in ${sceneName}`); continue; }
     await ssRemember(sceneName, it.sceneItemId, t);
     const orig = {...t, ...ssOrigLoad()[ssOrigKey(sceneName, it.sceneItemId)]};
-    const box = lapBox || tfRect(orig);
+    const own = tfRect(orig), box = rectOk(lapBox) ? lapBox : own;
+    if(!rectOk(box)){ report.waiting.push(it.sourceName); continue; }
     let pic = null;
     if(it.sourceType === "OBS_SOURCE_TYPE_SCENE"){   // the Projector scene: where its picture is inside it
       const p = await ssPicInside(it.sourceName);
       if(p){ const pt = (await obs.call("GetSceneItemTransform", {sceneName:it.sourceName, sceneItemId:p.sceneItemId})).sceneItemTransform || {}; pic = tfRect(pt); }
+      if(!rectOk(pic)){ report.waiting.push(it.sourceName); continue; }
     }
     const st = ssStrip(t, pic), W = t.sourceWidth || 0, H = t.sourceHeight || 0;
     const crop = {cropLeft:Math.round(st.x), cropTop:Math.round(st.y), cropRight:Math.max(0, Math.round(W - st.x - st.w)), cropBottom:Math.max(0, Math.round(H - st.y - st.h))};
     if(fit){ await obs.call("SetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId, sceneItemTransform:crop}); report.cropped++; continue; }   // OBS fits it into its box
-    const sc = st.w ? box.w / st.w : 1, rect = {x:box.x, y:box.y, w:st.w * sc, h:st.h * sc};
+    if(!(st.w > 2 && st.h > 2) || crop.cropLeft + crop.cropRight >= W || crop.cropTop + crop.cropBottom >= H){ report.waiting.push(it.sourceName); continue; }
+    const sc = box.w / st.w, rect = {x:box.x, y:box.y, w:st.w * sc, h:st.h * sc};
     await obs.call("SetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId, sceneItemTransform:{...crop, scaleX:sc, scaleY:sc, ...tfPos(rect, t.alignment ?? 5)}});
     report.cropped++;
   }
@@ -7829,7 +7847,7 @@ async function ssPlaceOn43(sceneName, items, report){
 async function ssApplySources(vis = true, off = false){
   const show = ss.src === "projector" ? ui.ssNames.projector : ui.ssNames.laptop, hide = ss.src === "projector" ? ui.ssNames.laptop : ui.ssNames.projector;
   let shown = 0, hidden = 0;
-  const report = {cropped:0, bounded:[], rotated:[], inner:{}};
+  const report = {cropped:0, bounded:[], rotated:[], inner:{}, waiting:[]};
   const on43 = !off && ss.ratio === "169on43";
   try{
     const scenes = (await obs.call("GetSceneList")).scenes || [];
@@ -7855,6 +7873,9 @@ async function ssApplySources(vis = true, off = false){
           }
           await ssRestore(scene, it.sceneItemId);   // back from "16:9 on 4:3": the saved place first, then the usual crop
           if(it.sourceType !== "OBS_SOURCE_TYPE_SCENE") await ssCropItem(scene, it, kind, report);
+          if(kind === "laptop" && isSlideScene(sc.sceneName) && slideRatioOf(sc.sceneName) === "16:9" && ss.ratio === "16:9"){
+            try{ ssBoxSet(scene, tfRect((await obs.call("GetSceneItemTransform", {sceneName:scene, sceneItemId:it.sceneItemId})).sceneItemTransform || {})); }catch(e){}
+          }
         }
       };
       await walk((await obs.call("GetSceneItemList", {sceneName:sc.sceneName})).sceneItems || []);
@@ -7865,6 +7886,7 @@ async function ssApplySources(vis = true, off = false){
   if(!shown) return toast(`No source called "${show}" was found in ${ui.collection}. Check the names in Settings → Slideshow.`);
   if(report.bounded.length) return toast(`Not changed: ${report.bounded[0]} has a Bounds setting that could stretch it. In OBS, open its Edit Transform and set Bounds to Automatic (or Fit).`);
   if(report.rotated.length) return toast(`Not cropped: ${report.rotated[0]} is rotated.`);
+  if(on43 && report.waiting.includes(show)) return toast(`"${show}" has no picture yet, so it wasn't moved. It's placed as soon as it has one.`);
   const cropTxt = ss.ratio ? (ss.ratio === "169on43" ? " The top 16:9 part fills the 16:9 slideshow's place." : ss.src === "projector" && ss.ratio === "16:9" ? " Cropped the black bars off the top and bottom." : ss.src === "laptop" && ss.ratio === "4:3" ? " Cropped the black bars off the sides." : " No cropping needed.") : "";
   toast(vis ? `Showing "${show}"${hidden ? `, hid "${hide}"` : ""} in the slideshow scenes.${cropTxt}` : cropTxt.trim() || `${ss.ratio}: no crop needed.`);
 }
@@ -7887,6 +7909,7 @@ async function ssFeedPoll(){
   // · checking (just started counting) · missing (no such source, or no feed inside it) · old (the plug-in needs updating)
   const state = !r ? "" : r.ok === false ? (r.code === "PLUGIN_MISSING" ? "old" : "missing") : r.started || r.fps < 0 ? "checking" : r.fps > 0 ? "live" : r.showing ? "none" : "idle";
   const changed = state !== ss.feed.state;
+  if(changed && state === "live" && ss.ratio === "169on43") ssApplySources(false);   // the projector's picture has arrived: place it
   ss.feed = {state, fps:r && r.fps > 0 ? r.fps : 0};
   const warn = state === "none" && isSlideScene(ui.program);
   if(warn && $("ndiBanner").hidden) $("ndiBanner").hidden = false;
