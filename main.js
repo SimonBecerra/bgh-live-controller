@@ -322,11 +322,12 @@ ipcMain.handle("close-answer", (e, choice) => finishClose(String(choice)));
  * Windows' administrator permission:
  *   C:\ProgramData\obs-studio\plugins\church-controller\bin\64bit\church-controller.dll
  *   C:\ProgramData\obs-studio\plugins\church-controller\data\...   (designs, fonts, version.txt)
- * GitHub publishes every new build of the plug-in as the "plugin-latest" release of SimonBecerra/church-controller
+ * GitHub publishes every new build of the plug-in as the "plugin-latest" release of SimonBecerra/bgh-live-downloads
+ * (public, installers only; the code repositories can stay private)
  * (church-controller-windows.zip and version.txt). An older copy put in OBS's own Program Files folder by hand is
  * removed the first time (OBS would load both), which needs Windows' permission once.
  */
-const PLUGIN_URL = (process.env.BGH_PLUGIN_URL || "https://github.com/SimonBecerra/church-controller/releases/download/plugin-latest/").replace(/\/?$/, "/");
+const PLUGIN_URL = (process.env.BGH_PLUGIN_URL || "https://github.com/SimonBecerra/bgh-live-downloads/releases/download/plugin-latest/").replace(/\/?$/, "/");
 const pluginDir = () => path.join(process.env.ProgramData || "C:\\ProgramData", "obs-studio", "plugins", "church-controller");
 const readTrim = f => { try { return fs.readFileSync(f, "utf8").trim(); } catch (e) { return ""; } };
 // The copy put in by hand: OBS's own folders, next to obs64.exe

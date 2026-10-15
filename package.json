@@ -74,7 +74,7 @@
       {
         "provider": "github",
         "owner": "SimonBecerra",
-        "repo": "bgh-live-controller",
+        "repo": "bgh-live-downloads",
         "releaseType": "release"
       }
     ]

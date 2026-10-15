@@ -1,7 +1,8 @@
 # Builds the Windows installer every time something is committed.
 # The installer appears under Actions → the newest run → Artifacts.
-# On main, a new version number is also published as a GitHub release, which is where the controller
-# looks for updates: it downloads them by itself and shows "Update ready".
+# On main, a new version number is also published as a GitHub release, here and in the public
+# SimonBecerra/bgh-live-downloads repository, which is where the controller looks for updates: it
+# downloads them by itself and shows "Update ready".
 name: Build installer
 on:
   push:
@@ -43,4 +44,22 @@ jobs:
           $files = @(Get-ChildItem dist/*.exe, dist/*.exe.blockmap, dist/latest.yml | ForEach-Object { $_.FullName })
           if ($files.Count -lt 3) { Write-Error "The installer, its blockmap or latest.yml is missing"; exit 1 }
           gh release create $tag @files --title "BGH LIVE Controller $version" --notes "Installed automatically: the controller downloads this update and shows Update ready."
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      # Where the controller looks for updates: the public SimonBecerra/bgh-live-downloads repository (installers
+      # only), so this repository can stay private. Needs the secret RELEASES_TOKEN: a fine-grained token with
+      # Contents: Read and write on bgh-live-downloads only.
+      - name: Publish the update to bgh-live-downloads
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          if (-not $env:GH_TOKEN) { Write-Host "::warning::The RELEASES_TOKEN secret isn't set, so this update wasn't published to bgh-live-downloads"; exit 0 }
+          $repo = "SimonBecerra/bgh-live-downloads"
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = "v$version"
+          gh release view $tag -R $repo 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) { Write-Host "Version $version is already in $repo."; exit 0 }
+          $files = @(Get-ChildItem dist/*.exe, dist/*.exe.blockmap, dist/latest.yml | ForEach-Object { $_.FullName })
+          gh release create $tag @files -R $repo --title "BGH LIVE Controller $version" --notes "Installed automatically: the controller downloads this update and shows Update ready."
           if ($LASTEXITCODE -ne 0) { exit 1 }
