@@ -373,7 +373,12 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .health-chip.warn{border-color:var(--warn);color:var(--fg)} .health-chip.warn .hdot{background:var(--warn)}
 .health-chip.bad{border-color:var(--pgm);background:var(--pgm-soft);color:var(--fg)} .health-chip.bad .hdot{background:var(--pgm);animation:pulse 1s ease-in-out infinite}
 /* Stream trouble: a banner at the top, under the Ending one if that's up too */
-.health-banner{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:25;display:flex;align-items:center;gap:12px;width:max-content;max-width:min(760px,calc(100% - 32px));padding:10px 12px 10px 16px;border-radius:12px;background:var(--panel);border:2px solid var(--pgm);box-shadow:0 10px 28px rgba(0,0,0,.45);font-size:15px;line-height:1.35}
+.top-banners{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:25;display:flex;flex-direction:column;align-items:center;gap:8px;width:max-content;max-width:min(760px,calc(100% - 32px));pointer-events:none}
+.top-banners > *{pointer-events:auto}
+.health-banner[hidden]{display:none}
+.bat-banner{border-color:var(--warn)} .bat-banner svg{color:var(--warn)}
+.bat-banner.low{border-color:var(--pgm)} .bat-banner.low svg{color:var(--pgm)}
+.health-banner{display:flex;align-items:center;gap:12px;width:max-content;max-width:min(760px,calc(100% - 32px));padding:10px 12px 10px 16px;border-radius:12px;background:var(--panel);border:2px solid var(--pgm);box-shadow:0 10px 28px rgba(0,0,0,.45);font-size:15px;line-height:1.35}
 .health-banner svg{width:22px;height:22px;color:var(--pgm);flex:none}
 .health-banner b{display:block;font-size:16px}
 .health-banner .btn{flex:none;min-height:44px}
@@ -390,7 +395,7 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .sum-h{display:inline-flex;align-items:flex-start;gap:8px}
 .sum-h i{width:9px;height:9px;border-radius:50%;background:var(--pvw);flex:none;margin-top:.5em}
 .sum-h.warn i{background:var(--warn)}
-body:has(#endBanner:not([hidden])) .health-banner{top:calc(84px + env(safe-area-inset-top,0px))}
+body:has(#endBanner:not([hidden])) .top-banners{top:calc(84px + env(safe-area-inset-top,0px))}
 .mon.pgm .tag{background:var(--pgm);color:#fff}
 .mon.pvw .tag{background:var(--pvw);color:#06210f}
 .screen{background:#000;border-radius:8px;border:2px solid var(--line-2);overflow:hidden;max-width:100%}
@@ -1985,7 +1990,10 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
   </div>
 </div>
 <div class="safe-banner" id="safeBanner" role="alert" hidden><i data-lucide="lock"></i><span><b>Safe mode is on.</b> To make changes, turn it off with the Safe mode button at the top.</span><button type="button" class="btn" id="safeOff">Turn off safe mode</button></div>
+<div class="top-banners">
+<div class="health-banner bat-banner" id="batBanner" role="alert" hidden><i data-lucide="battery-low"></i><div><b id="batBannerH">On battery</b><span id="batBannerTxt"></span></div><button type="button" class="btn" id="batOk">OK</button></div>
 <div class="health-banner" id="healthBanner" role="alert" hidden><i data-lucide="triangle-alert"></i><div><b>Stream trouble</b><span id="healthBannerTxt"></span></div><button type="button" class="btn" id="healthOk">OK</button></div>
+</div>
 <div class="end-banner" id="endBanner" role="alert" hidden><i data-lucide="timer"></i><span id="endBannerTxt"></span><button type="button" class="btn" id="endKeep">Keep streaming</button></div>
 <div class="screen-banner" id="screenBanner" role="status" hidden><i data-lucide="monitor-off"></i><span id="screenBannerTxt"></span></div>
 <div class="touch-test" id="touchTest" hidden>
@@ -2959,6 +2967,30 @@ function formatName(raw){
   }).join(" ");
 }
 const nameKey = n => n.trim().replace(/\s+/g," ").toLowerCase();
+/* A name that's probably someone already saved: "JR Andujar" for J.R. Andujar, "Dan Rudge" for Daniel Rudge,
+   "Robert Lugo" for Roberto Lugo, "Andy Bodden" for Andres Bodden, "Simon Becera" for Simon Becerra. Adding still works: it only asks first. */
+const nameParts = n => { const w = String(n).toLowerCase().replace(/[.'’,]/g, "").replace(/-/g, " ").split(/\s+/).filter(Boolean);
+  while(w.length > 2 && SUFFIX.test(w[w.length - 1])) w.pop(); return w; };
+function editDist(a, b){
+  const d = Array.from({length:a.length + 1}, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for(let j = 1; j <= b.length; j++) d[0][j] = j;
+  for(let i = 1; i <= a.length; i++) for(let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function similarName(a, b){
+  const A = nameParts(a), B = nameParts(b);
+  if(!A.length || !B.length) return false;
+  if(A.join("") === B.join("")) return true;   // only spaces, dots or capitals differ
+  if(A.length < 2 || B.length < 2) return false;
+  const [fa, la] = [A[0], A[A.length - 1]], [fb, lb] = [B[0], B[B.length - 1]];
+  const shared = (x, y) => { let i = 0; while(i < x.length && x[i] === y[i]) i++; return i; };
+  if(la === lb && (fa.startsWith(fb) || fb.startsWith(fa) || editDist(fa, fb) <= 1 || shared(fa, fb) >= 3)) return true;   // Dan / Daniel, Robert / Roberto, Andy / Andres
+  if(fa === fb && editDist(la, lb) <= (Math.min(la.length, lb.length) >= 6 ? 2 : 1)) return true;    // a typo in the last name
+  return false;
+}
+const similarSpeaker = (name, list = allSpeakers()) => list.find(x => nameKey(x.name) !== nameKey(name) && similarName(x.name, name));
+const askSimilar = (name, s) => confirmDlg(`Did you mean ${s.name}?`,
+  `"${name}" looks a lot like ${s.name}, who's already saved. Use ${s.name}, or add ${name} as someone new?`, `Use ${s.name}`, "primary", "Cancel", `Add ${name}`);
 // Alphabetical by last name, then first name. Suffixes like Jr., Sr., II and III are skipped
 // ("Martin Luther King Jr." sorts under King); "J.R. Andujar" sorts under Andujar.
 const SUFFIX = /^(jr|sr|ii|iii|iv|v)\.?$/i;
@@ -3064,6 +3096,7 @@ function brTitle(){
 // Lower thirds: a Bible Reading gives a button only to the person leading it (and the host, if one is chosen)
 const glLtNames = () => brActive() ? [speakerName(brLeadId())].filter(Boolean) : selNames(gl.sel);
 ui.brProg = false;   // this livestream is a Bible Reading (a host can be chosen); forgotten when it ends
+ui.brReading = null; // its chapter {book, chapter}: the Bible button (controller and phone) opens it straight away
 const isBaptismTitle = t => /^\s*the baptisms? of\b/i.test(String(t || ""));
 // "Lucas Becerra", "Lucas Becerra and Carolina Lugo", "A, B, and C" (Oxford comma)
 const andList = a => a.length < 3 ? a.join(" and ") : `${a.slice(0, -1).join(", ")}, and ${a[a.length - 1]}`;
@@ -3176,12 +3209,23 @@ async function glApplySpeakers(sel){
 $("spkAddBtn").addEventListener("click", () => { $("spkAddRow").hidden = false; $("spkAddErr").hidden = true; $("spkAddIn").value = ""; $("spkAddIn").focus(); });
 $("spkAddCancel").addEventListener("click", () => { $("spkAddRow").hidden = true; });
 $("spkAddIn").addEventListener("keydown", e => { if(e.key === "Enter") $("spkAddApply").click(); });
-$("spkAddApply").addEventListener("click", () => {
+$("spkAddApply").addEventListener("click", async () => {
   const name = formatName($("spkAddIn").value);
   const err = msg => { $("spkAddErr").textContent = msg; $("spkAddErr").hidden = false; };
   if(!name) return err("Type a name first.");
   const dup = allSpeakers().find(x => nameKey(x.name) === nameKey(name));
   if(dup) return err(`${dup.name} is already in your speakers.`);
+  const near = similarSpeaker(name);
+  if(near){
+    const v = await askSimilar(name, near);
+    if(v === false) return;
+    if(v === true){   // the one already saved
+      $("spkAddRow").hidden = true;
+      if(spkSingle) spkDraft = [near.id];
+      else if(!spkDraft.includes(near.id)){ if(spkDraft.length < spkMax()) spkDraft.push(near.id); else toast(`The maximum of ${spkMax()} is reached, so ${near.name} wasn't selected.`); }
+      return renderSpk();
+    }
+  }
   const s = {id:newId(), name};
   ui.speakers.visiting.push(s); saveSpeakers();
   $("spkAddRow").hidden = true;
@@ -3425,7 +3469,7 @@ $("glBcRefresh").addEventListener("click", loadBroadcasts);
 function useGlHymnBook(){ if(gl.hymnBook && gl.hymnBook !== ui.ot.book && bookById(gl.hymnBook)){ ui.ot.book = gl.hymnBook; saveOt(); } }
 // What goes in the speakers text in OBS: "The Baptism of Lucas Becerra" for a baptism, otherwise the speakers
 const glSpeakersText = () => ssProgActive() ? SS_TEXT : brActive() ? brChapterOf(gl.br) : bapActive() && bapNames().length ? bapHeading() : formatNames(selNames(gl.sel));
-function applySsProg(){ ui.ssProg = ssProgActive(); ui.brProg = brActive(); renderOt(); }
+function applySsProg(){ ui.ssProg = ssProgActive(); ui.brProg = brActive(); ui.brReading = ui.brProg && brChapterOf(gl.br) ? {book:gl.br.book, chapter:gl.br.chapter || 1} : null; renderOt(); }
 // Testimony readers become lower third buttons: name, and "FATHER OF LUCAS BECERRA" under it (always shown)
 function applyBapReaders(){
   ui.bapReaders = bapActive() ? bapReadersOf(gl.bap) : [];
@@ -3733,7 +3777,8 @@ $("qcApply").addEventListener("click", async () => {
   forgetQcBap();   // used now; the names aren't kept
   if(change.lt) setLtPicked(change.lt);
   if(change.bap){ ui.bapReaders = change.bap; renderOt(); if(Object.keys(change).length === 1) return toast("Testimony lower thirds updated"); }
-  if(change.brProg != null){ ui.brProg = change.brProg; renderOt(); delete change.brProg; if(!Object.keys(change).length) return toast(ui.brProg ? "Bible Reading on" : "Bible Reading off"); }
+  if(isBrSvc(qc.svc) && brChapterOf(qc.br)) ui.brReading = {book:qc.br.book, chapter:qc.br.chapter || 1};
+  if(change.brProg != null){ ui.brProg = change.brProg; if(!ui.brProg) ui.brReading = null; renderOt(); delete change.brProg; if(!Object.keys(change).length) return toast(ui.brProg ? "Bible Reading on" : "Bible Reading off"); }
   if(change.prog != null){ ui.ssProg = change.prog; renderOt(); delete change.prog; if(!Object.keys(change).length) return toast(ui.ssProg ? "Sunday School Program on" : "Sunday School Program off"); }
   if(change.host){ applyHost(change.host, isSsSvc(qc.svc) || isBrSvc(qc.svc) || ui.ssProg || ui.brProg); if(Object.keys(change).length === 1) return toast(change.host.on ? "Host lower third updated" : "Host lower third switched off"); }
   try{
@@ -4299,12 +4344,13 @@ function otJump(label){
   if(ot.showing || ot.item.kind === "hymn") otSend(); else renderOt();
 }
 // Done: the singing (or reading) is over. Take it off the stream and clear the panel.
-async function otDone(){
+async function otDone(quiet){
   if(!ot.item) return;
   const title = ot.item.title;
   if(ot.showing) await otHide();
   ot.item = null; renderOt();
-  toast(`Done: ${title}`);
+  if(!$("bbOverlay").hidden && bb.mode === "read"){ bb.mode = "pick"; $("bbOverlay").hidden = true; }
+  if(!quiet) toast(`Done: ${title}`);
 }
 // Puts a new hymn or passage in the panel; whatever was on screen comes down first
 async function otLoad(item, start, show){
@@ -4357,7 +4403,7 @@ function renderOt(){
     const isHymn = it.kind === "hymn";
     $("otNow").classList.toggle("hymn", isHymn);
     // Hymns: "Start" until the first words have gone up, then "Next" from then on
-    if(s && !s.intro) it.started = true;
+    if(isHymn && s && !s.intro) it.started = true;   // a passage starts only when a verse is tapped (or Next)
     const nextLbl = isHymn && !it.started ? "Start" : "Next";
     $("otNext").innerHTML = isHymn ? `<span class="ot-next-lbl">${nextLbl}</span><i data-lucide="${nextLbl === "Start" ? "play" : "chevron-right"}"></i>` : `<i data-lucide="chevron-right"></i>`;
     $("otNext").setAttribute("aria-label", nextLbl);
@@ -4644,7 +4690,13 @@ function closeOtMenus(except){
   if(closed) renderOt();
 }
 $("otHymnBtn").addEventListener("click", () => { if(!otBusy("hymn")) openHymn(); });
-$("otBibleBtn").addEventListener("click", () => { if(!otBusy("bible")) openBible(); });
+$("otBibleBtn").addEventListener("click", async () => {
+  if(otBusy("bible")) return;
+  // A Bible Reading: straight to its chapter, ready for the first verse (Change picks another passage)
+  const rd = ui.brProg && !ot.item ? ui.brReading : null;
+  await openBible();
+  if(rd && BIBLE_BOOKS[rd.book]) await bbOpenChapter(BIBLE_BOOKS[rd.book], rd.chapter);
+});
 $("otNote").addEventListener("click", () => settingsGoTo("ontext"));
 $("otNote").addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); settingsGoTo("ontext"); } });
 // A presentation clicker or the keyboard: → / Page Down = next, ← / Page Up = back (when nothing else is open)
@@ -5318,6 +5370,31 @@ function showSummary(t0){
 }
 $("sumClose").addEventListener("click", () => { $("sumOverlay").hidden = true; });
 $("sumCopy").addEventListener("click", () => copyText(sumText, $("sumList")));
+/* On battery: if the laptop's charger comes out, a banner says so (and the phone shows it), with the charge left.
+   OK hides it until the battery gets low (20%), when it comes back once. Plugging in takes it away.
+   A computer without a battery never shows it. */
+const bat = {on:false, pct:100, dismissed:false, lowShown:false};
+function batUpdate(b){
+  const was = bat.on;
+  bat.on = !!b && b.charging === false; bat.pct = b ? Math.round((b.level ?? 1) * 100) : 100;
+  if(!bat.on){ bat.dismissed = false; bat.lowShown = false; $("batBanner").hidden = true; if(was) toast("The charger is connected again."); return; }
+  const low = bat.pct <= 20;
+  if(low && !bat.lowShown){ bat.lowShown = true; bat.dismissed = false; }
+  $("batBanner").classList.toggle("low", low);
+  $("batBannerH").textContent = low ? `Battery low: ${bat.pct}%` : `On battery: ${bat.pct}%`;
+  $("batBannerTxt").textContent = low ? " Plug in the laptop's charger now, or the livestream and recording will stop when it runs out."
+    : " The laptop's charger isn't connected. Plug it in so the battery doesn't run out during the service.";
+  if(!bat.dismissed && $("batBanner").hidden){ $("batBanner").hidden = false; if(window.lucide) lucide.createIcons(); }
+}
+$("batOk").addEventListener("click", () => { bat.dismissed = true; $("batBanner").hidden = true; });
+(async () => {
+  try{
+    if(!navigator.getBattery) return;
+    const b = await navigator.getBattery();
+    const upd = () => batUpdate({charging:b.charging, level:b.level});
+    b.addEventListener("chargingchange", upd); b.addEventListener("levelchange", upd); upd();
+  }catch(e){}
+})();
 $("healthOk").addEventListener("click", () => { hs.dismissed = true; $("healthBanner").hidden = true; });
 
 /* OBS's own frame rate and CPU, every 2 seconds: shown on the chip when not live (if OBS falls behind),
@@ -6991,12 +7068,14 @@ $("setTeachAdd").addEventListener("click", () => {
 ["setTeachFirst", "setTeachLast", "setTeachCoFirst", "setTeachCoLast", "setTeachSub"].forEach(id => $(id).addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); $("setTeachAdd").click(); } }));
 $("setHomeLbl").addEventListener("input", e => { $("setHomeHdr").textContent = e.target.value.trim() || "Barrington Speakers"; });
 // Add a speaker in Settings (home or visiting): same capitalization and duplicate check as Go Live
-function setAddSpeaker(list, inputId, errId){
+async function setAddSpeaker(list, inputId, errId){
   const name = formatName($(inputId).value);
   const err = msg => { $(errId).textContent = msg; $(errId).hidden = !msg; };
   if(!name) return err("Type a name first.");
   const dup = [...workSpk.home, ...workSpk.visiting].find(x => nameKey(x.name) === nameKey(name));
   if(dup) return err(`${dup.name} is already saved.`);
+  const near = similarSpeaker(name, [...workSpk.home, ...workSpk.visiting]);
+  if(near){ const v = await askSimilar(name, near); if(v === false) return; if(v === true){ $(inputId).value = ""; return err(`${near.name} is already saved.`); } }
   workSpk[list].push({id:newId(), name}); $(inputId).value = ""; err(""); renderSetSpk();
 }
 $("setHomeAdd").addEventListener("click", () => setAddSpeaker("home", "setHomeNew", "setHomeErr"));
@@ -7314,9 +7393,20 @@ obs.on("CurrentProgramSceneChanged", d => {
   autoMute(prev, d.sceneName);
   fadeTrack(prev, d.sceneName);
   rotationGuard(prev, d.sceneName);
+  clearForBreak(prev, d.sceneName);
   if(ui.autoEndSkip && ui.autoEndSkip !== d.sceneName) ui.autoEndSkip = null;   // "Keep streaming" lasts until Ending is left
   if(!ui.autoEndSkip) checkAutoEnd(d.sceneName);
 });
+/* Going to Ending, the Waiting slides, Live Soon or We'll Be Right Back takes a hymn, Bible passage or lower third
+   off the screen (as Done would), so nothing is left over the closing or waiting slides. However Program changes. */
+const isBreakTo = n => { const wb = BUTTONS.find(b => b.waiting); return !!n && (isEnding(n) || isBreakScene(n) || (!!wb && wb.group.includes(n))); };
+async function clearForBreak(prev, next){
+  if(!next || prev === next || isBreakTo(prev) || !isBreakTo(next)) return;
+  const what = [];
+  if(ot.item){ what.push(ot.item.kind === "hymn" ? "the hymn" : "the Bible passage"); await otDone(true); }
+  else if(ui.lt.showing){ what.push(`${ui.lt.showing}'s lower third`); try{ const r = await vcall("ShowLowerThird", {name:ui.lt.showing, toggle:true, subtitle:ui.lt.subtitle || ""}); if(r && r.ok !== false) ltApply(r); }catch(e){} }
+  if(what.length) toast(`Took ${what[0]} off the screen for ${next}.`);
+}
 /* Rotation guard. The Waiting button's slides take turns through the Advanced Scene Switcher. If its timer fires
    just as Program leaves the waiting slides (Live Soon picked, say), it can put a waiting slide straight back.
    When Program goes waiting slide → another scene → a waiting slide within 2.5 seconds, and nobody here asked for
@@ -7408,7 +7498,7 @@ obs.on("StreamStateChanged", d => {
   ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive();
   if(startedHere) comeBackAfterGoingLive();
   if(d.outputActive) startOnTitle().then(scene => autoMuteAtStart(scene));
-  else{ cancelAutoEnd(); if(ui.hostId || ui.bapReaders.length || ui.ssProg || ui.brProg){ ui.hostId = ""; ui.bapReaders = []; ui.ssProg = false; ui.brProg = false; renderOt(); } }   // the host, testimony readers and Sunday School Program are for this livestream only
+  else{ cancelAutoEnd(); if(ui.hostId || ui.bapReaders.length || ui.ssProg || ui.brProg){ ui.hostId = ""; ui.bapReaders = []; ui.ssProg = false; ui.brProg = false; ui.brReading = null; renderOt(); } }   // the host, testimony readers and Sunday School Program are for this livestream only
 });
 /* "Start the livestream on the title slide": the collection's Waiting title slide (or a scene called
    Title Slide) is on Program before the stream starts, so viewers never see what was there before.
@@ -7906,7 +7996,9 @@ function phState(){
     ltEnds:phLtEnds(), ltDur:ui.lt.duration || 8,
     books:ui.hymnBooks.map(b => ({id:b.id, name:b.name, short:b.short || ""})), book:ui.ot.book || "",
     tr:ot.trSession || ui.ot.bbTr || "KJV",
-    health:ui.stream.active ? {level:hs.level || "", text:hs.text || "", alert:hs.alert || null} : null
+    health:ui.stream.active ? {level:hs.level || "", text:hs.text || "", alert:hs.alert || null} : null,
+    reading:ui.brProg && ui.brReading ? brChapterOf(ui.brReading) : "",
+    battery:bat.on ? {pct:bat.pct, low:bat.pct <= 20} : null
   };
 }
 function phSend(){ if(PH && PH.clients && phApi) phApi.state(phState()); }

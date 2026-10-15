@@ -69,6 +69,9 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 /* Banner when the controller can't be reached */
 .banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r);background:var(--warn-soft);border:1px solid var(--warn);color:var(--fg);font-size:14px;line-height:1.4}
 .banner svg.i{color:var(--warn);margin-top:1px}
+.reading-btn{width:100%;min-height:60px;justify-content:flex-start;text-align:left}
+.reading-btn span{display:flex;flex-direction:column;gap:2px}
+.reading-btn small{font-size:12px;font-weight:500;opacity:.85}
 .banner.bad{background:var(--pgm-soft);border-color:var(--pgm)} .banner.bad svg.i{color:var(--pgm)}
 
 /* Sections */
@@ -253,6 +256,8 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
   <button class="btn" type="button" data-pt="safe">Safe mode on / off</button>
   <button class="btn" type="button" data-pt="autoend">End stream after Ending on / off</button>
   <button class="btn" type="button" data-pt="lt">Lower thirds on / off for this collection</button>
+  <button class="btn" type="button" data-pt="reading">Bible Reading (John 3) on / off</button>
+  <button class="btn" type="button" data-pt="battery">Laptop on battery / plugged in</button>
   <button class="btn" type="button" data-pt="unpair">Start again at pairing</button>
 </aside></div>
 <div id="sheetRoot"></div>
@@ -491,6 +496,7 @@ function render(){
   ${!S.connected ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the controller.</b> Check this phone is on the church Wi-Fi. It reconnects by itself.</div></div>`
     : !st.obs ? `<div class="banner">${ic("wifi")}<div><b>The controller can't reach OBS.</b> Check OBS is open on the computer.</div></div>`
     : st.health && st.health.alert ? `<div class="banner bad">${ic("wifi")}<div><b>Stream trouble.</b> ${esc(st.health.alert)}</div></div>` : ""}
+  ${S.connected && st.battery ? `<div class="banner${st.battery.low ? " bad" : ""}">${ic("info")}<div><b>The laptop is on battery (${st.battery.pct}%).</b> Plug in its charger.</div></div>` : ""}
   ${S.pvOn ? `<div class="pv${S.tab === "onscreen" ? " small" : ""}">${S.pvImg ? `<img src="${S.pvImg}" alt="What's on Program: ${esc(st.program)}">` : ""}<span class="pv-tag">PROGRAM</span><span class="pv-age" id="pvAge"></span></div>` : ""}
   <div class="body ctl">${S.tab === "scenes" ? scenesHTML(st) : onScreenHTML(st)}</div>`;
   wire();
@@ -728,6 +734,7 @@ async function openBible(){
   const j = await cmd("bible-status"); if(j.ok && Array.isArray(j.data)) trs = j.data;
   if(!trs.some(x => x.abbr === tr && x.ok)) tr = (trs.find(x => x.ok) || {abbr:"KJV"}).abbr;
   sheet(`<h3>Bible</h3><div class="chips">${trs.map(x => `<button class="chip" type="button" data-t="${esc(x.abbr)}" aria-pressed="${x.abbr === tr}" ${x.ok ? "" : "disabled"}>${esc(x.abbr)}</button>`).join("")}</div>
+    ${st.reading ? `<button class="btn primary reading-btn" id="bread" type="button">${ic("book")}<span>Open ${esc(st.reading)}<small>Today's Bible Reading</small></span></button>` : ""}
     <div class="pick" id="pick"></div>
     <label class="label" for="br">Or type a chapter or verse</label><input class="big-in ref-in" id="br" placeholder="John 3 or John 3:16" autocomplete="off" autocapitalize="words" enterkeyhint="go">
     <div class="found" id="bf">Type a book and chapter. Add a verse to start there.</div>
@@ -751,6 +758,7 @@ async function openBible(){
     $("br").addEventListener("keydown", e => { if(e.key === "Enter" && ok) $("bgo").click(); });
     const open = async ref => { close(); await act("bible", {ref, tr}, `Open ${ref} on the controller?`); };
     $("bgo").onclick = () => open($("br").value.trim());
+    if($("bread")) $("bread").onclick = () => open(st.reading);
     // Or by buttons: Old or New Testament, then the book, then the chapter (a one-chapter book opens straight away)
     let testament = "nt", book = null;
     const drawPick = () => {
@@ -794,6 +802,8 @@ document.querySelectorAll("[data-pt]").forEach(b => b.onclick = () => {
     rec(){ st.rec = !st.rec; st.recT0 = Date.now(); }, safe(){ st.safe = !st.safe; },
     autoend(){ st.autoEnd.on = !st.autoEnd.on; toast(st.autoEnd.on ? "End after Ending: on" : "End after Ending: off"); },
     lt(){ st.ltOn = !st.ltOn; },
+    reading(){ st.reading = st.reading ? "" : "John 3"; },
+    battery(){ st.battery = st.battery ? null : {pct:64, low:false}; },
     unpair(){ try{ localStorage.removeItem("bghRemoteToken"); }catch(e){} S.token = ""; render(); }})[b.dataset.pt]();
   P.push();
 });
