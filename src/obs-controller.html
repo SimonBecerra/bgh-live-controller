@@ -78,6 +78,29 @@ body{font-feature-settings:"cv11" 1}
 .top{grid-area:top;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px}
 /* One row on laptop screens too: the connection line goes under the name instead of pushing buttons down */
 @media (min-width:900px){.top{flex-wrap:nowrap}.top > *{flex:none}.top > .brand{flex:1 1 0;min-width:0}}
+/* When the bar gets narrow (a smaller window, or LIVE, REC, viewers and Update all showing), the words that can go,
+   go, in steps, so nothing overlaps and every button stays on screen */
+.top{container:topbar / inline-size}
+.top > .brand{overflow:hidden}
+@container topbar (max-width:1180px){
+  .brand-rest{display:none}
+  .safe-btn .safe-lbl{display:none} .safe-btn{padding:0 10px;gap:6px}
+}
+@container topbar (max-width:1020px){
+  .x-long{display:none}
+  #connText{display:none}
+  .upd-btn span{display:none} .upd-btn{padding:0 10px}
+  .stat{padding:0 10px}
+}
+@container topbar (max-width:880px){
+  .icon-btn{width:36px}
+  .disk-note span{display:none}
+}
+@container topbar (max-width:760px){
+  .brand h1{display:none}
+  .stat:has(.tm:not(:empty)) .lbl{display:none}
+  .safe-btn .safe-st{padding:2px 6px}
+}
 .brand{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;margin-right:auto;min-width:0}
 .brand-name{display:flex;align-items:center;gap:10px}
 .brand-icon{width:32px;height:32px;flex:none;display:block}
@@ -344,10 +367,30 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .mon-head{display:flex;align-items:center;gap:10px;min-width:0;min-height:26px}
 .mon-head .tag{font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:3px 8px;border-radius:5px}
 .mon-head .scene{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cpu-chip{margin-left:auto;align-self:center;flex:none;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:12px;white-space:nowrap}
-.cpu-chip svg{width:14px;height:14px}
-.cpu-chip.warn{border-color:var(--warn);color:var(--fg)} .cpu-chip.warn svg{color:var(--warn)}
-.cpu-chip.bad{border-color:var(--pgm);background:var(--pgm-soft);color:var(--fg)} .cpu-chip.bad svg{color:var(--pgm)}
+.health-chip{margin-left:auto;align-self:center;flex:none;display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:12px;white-space:nowrap;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+.health-chip .hdot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+.health-chip.good .hdot{background:var(--pvw)}
+.health-chip.warn{border-color:var(--warn);color:var(--fg)} .health-chip.warn .hdot{background:var(--warn)}
+.health-chip.bad{border-color:var(--pgm);background:var(--pgm-soft);color:var(--fg)} .health-chip.bad .hdot{background:var(--pgm);animation:pulse 1s ease-in-out infinite}
+/* Stream trouble: a banner at the top, under the Ending one if that's up too */
+.health-banner{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:25;display:flex;align-items:center;gap:12px;width:max-content;max-width:min(760px,calc(100% - 32px));padding:10px 12px 10px 16px;border-radius:12px;background:var(--panel);border:2px solid var(--pgm);box-shadow:0 10px 28px rgba(0,0,0,.45);font-size:15px;line-height:1.35}
+.health-banner svg{width:22px;height:22px;color:var(--pgm);flex:none}
+.health-banner b{display:block;font-size:16px}
+.health-banner .btn{flex:none;min-height:44px}
+.sum-dlg{width:min(620px,100%);max-width:620px}
+.sum-dlg .ready-head{flex-direction:column;align-items:flex-start;gap:2px}
+.sum-list{margin:0;display:flex;flex-direction:column;gap:2px}
+.sum-list > div{display:grid;grid-template-columns:140px minmax(0,1fr);gap:12px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line)}
+.sum-list > div:last-child{border-bottom:0}
+.sum-list dt{font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sum-list dd{margin:0;font-size:16px;line-height:1.4;overflow-wrap:anywhere}
+.sum-list a{color:var(--accent)}
+.sum-list .btn.sm{min-height:34px;padding:0 12px;font-size:13px;margin-left:8px;vertical-align:middle}
+.sum-sub{color:var(--muted);font-size:14px}
+.sum-h{display:inline-flex;align-items:flex-start;gap:8px}
+.sum-h i{width:9px;height:9px;border-radius:50%;background:var(--pvw);flex:none;margin-top:.5em}
+.sum-h.warn i{background:var(--warn)}
+body:has(#endBanner:not([hidden])) .health-banner{top:calc(84px + env(safe-area-inset-top,0px))}
 .mon.pgm .tag{background:var(--pgm);color:#fff}
 .mon.pvw .tag{background:var(--pvw);color:#06210f}
 .screen{background:#000;border-radius:8px;border:2px solid var(--line-2);overflow:hidden;max-width:100%}
@@ -628,11 +671,6 @@ textarea:disabled,select:disabled{opacity:.5}
 .lt-chip .lt-txt{display:flex;flex-direction:column;min-width:0}
 .lt-chip small{font-size:12px;font-weight:500;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spk-rm.arm{background:var(--pgm);border-color:var(--pgm);color:#fff}
-.health{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--muted)}
-.hdot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
-.health.good .hdot{background:var(--pvw)}
-.health.warn{border-color:var(--warn);color:var(--fg)} .health.warn .hdot{background:var(--warn)}
-.health.bad{border-color:var(--pgm);background:var(--pgm-soft);color:var(--fg)} .health.bad .hdot{background:var(--pgm);animation:pulse 1s ease-in-out infinite}
 .silent-note{margin:0;font-size:13px;line-height:1.4;font-weight:600;color:var(--warn);border-left:3px solid var(--warn);padding:2px 0 2px 10px}
 .aud-panel.alert{border-color:var(--warn);box-shadow:inset 0 0 0 1px var(--warn)}
 .conn .dot.off{background:var(--pgm);box-shadow:0 0 0 3px var(--pgm-soft)}
@@ -986,9 +1024,8 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         <div class="vp-spark" aria-hidden="true"><svg id="vpSpark" viewBox="0 0 200 40" preserveAspectRatio="none"><path class="vp-area"/><path class="vp-line"/></svg></div>
         <p class="vp-note" id="vpNote"></p>
       </div></span></span>
-    <span class="health" id="health" hidden role="status" aria-live="polite"><span class="hdot"></span><span class="mono" id="healthTxt"></span></span>
     <span class="disk-note" id="diskNote" role="status" hidden><i data-lucide="hard-drive"></i><span id="diskTxt"></span></span>
-    <span class="stat" id="statRec" role="status"><span class="tally"></span><span class="lbl">NOT RECORDING</span><span class="tm mono" id="recTime"></span></span>
+    <span class="stat" id="statRec" role="status"><span class="tally"></span><span class="lbl">NOT REC<span class="x-long">ORDING</span></span><span class="tm mono" id="recTime"></span></span>
     <button class="upd-btn" id="updBtn" type="button" hidden title="A new version of the controller is ready"><i data-lucide="download"></i><span>UPDATE READY</span></button>
     <button class="safe-btn" id="safeBtn" type="button" aria-pressed="false" title="Safe mode stops accidental changes to the livestream"><i data-lucide="lock-open" class="safe-ico"></i><span class="safe-lbl">SAFE MODE</span><b class="safe-st">OFF</b></button>
     <button class="icon-btn ready-btn" id="readyBtn" type="button" aria-label="Ready check" title="Ready check"><i data-lucide="check-check"></i><span class="ready-dot" id="readyDot" hidden></span></button>
@@ -1011,7 +1048,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         </div>
         <div class="mon pgm">
           <div class="mon-head"><span class="tag">PROGRAM</span><span class="scene" id="pgmName">—</span>
-            <button type="button" class="cpu-chip mono" id="cpuChip" aria-label="OBS performance"><i data-lucide="cpu"></i><span id="cpuTxt">CPU —</span></button></div>
+            <button type="button" class="health-chip mono" id="healthChip" aria-label="Stream health"><span class="hdot"></span><span id="healthChipTxt">OBS —</span></button></div>
           <div class="screen"><canvas id="cvPgm" width="1280" height="720"></canvas></div>
         </div>
       </div>
@@ -1568,7 +1605,8 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <h4>Always on</h4>
             <ul class="info-list">
               <li><b>Low disk space</b> when you start recording, and while recording.</li>
-              <li><b>Stream health</b> next to the LIVE pill: dropped frames and an overloaded computer.</li>
+              <li><b>Stream health</b> above the Program screen: upload speed and frames lost. If the stream stays in trouble for a few seconds, a banner says so here and on the phone.</li>
+              <li><b>After the service</b>, a summary: how long you were live, the most watching, any stream trouble, and the video's link.</li>
               <li><b>Lost connection</b> to OBS, with automatic reconnecting.</li>
             </ul>
           </div>
@@ -1917,6 +1955,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
   </div>
 </div>
 <div class="safe-banner" id="safeBanner" role="alert" hidden><i data-lucide="lock"></i><span><b>Safe mode is on.</b> To make changes, turn it off with the Safe mode button at the top.</span><button type="button" class="btn" id="safeOff">Turn off safe mode</button></div>
+<div class="health-banner" id="healthBanner" role="alert" hidden><i data-lucide="triangle-alert"></i><div><b>Stream trouble</b><span id="healthBannerTxt"></span></div><button type="button" class="btn" id="healthOk">OK</button></div>
 <div class="end-banner" id="endBanner" role="alert" hidden><i data-lucide="timer"></i><span id="endBannerTxt"></span><button type="button" class="btn" id="endKeep">Keep streaming</button></div>
 <div class="screen-banner" id="screenBanner" role="status" hidden><i data-lucide="monitor-off"></i><span id="screenBannerTxt"></span></div>
 <div class="touch-test" id="touchTest" hidden>
@@ -1957,6 +1996,13 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <div class="ready-head"><h2 id="readyH">Ready check</h2><span class="ready-sum" id="readySum" aria-live="polite"></span></div>
     <div class="ready-list" id="readyList"></div>
     <div class="apply-row"><button type="button" class="btn" id="readyAgain"><i data-lucide="refresh-cw"></i> Check again</button><button type="button" class="btn primary" id="readyClose">Done</button></div>
+  </div>
+</div>
+<div class="overlay" id="sumOverlay" hidden>
+  <div class="dialog sum-dlg" role="dialog" aria-modal="true" aria-labelledby="sumH">
+    <div class="ready-head"><h2 id="sumH">The livestream has ended</h2><span class="ready-sum" id="sumWhen"></span></div>
+    <dl class="sum-list" id="sumList"></dl>
+    <div class="apply-row"><button type="button" class="btn" id="sumCopy"><i data-lucide="copy"></i> Copy summary</button><button type="button" class="btn primary" id="sumClose">Done</button></div>
   </div>
 </div>
 <div class="overlay" id="phOverlay" hidden>
@@ -2415,6 +2461,15 @@ class MockOBS {
 const obs = new MockOBS();
 // #proto-end
 // #real const obs = new ObsConnection();   // desktop app: obs-websocket-js wrapper with the same call/on/off
+// Remember the Program switches the controller (or the phone) asks for, so a switch nobody here asked for can be told apart
+let ownSwitch = null;   // {scene, t}
+{ const call = obs.call.bind(obs);
+  obs.call = (type, data) => {
+    if(type === "SetCurrentProgramScene" && data) ownSwitch = {scene:data.sceneName, t:Date.now()};
+    else if(type === "TriggerStudioModeTransition") ownSwitch = {scene:ui.preview, t:Date.now()};
+    return call(type, data);
+  };
+}
 if(window.bgh) document.querySelectorAll("[data-proto]").forEach(el => el.remove());
 // Desktop app: always maximized on the chosen monitor, so the window/fullscreen choice isn't needed
 if(window.bgh) document.querySelectorAll("[data-desktop-hide]").forEach(el => el.hidden = true);
@@ -2630,7 +2685,7 @@ function renderRecRemind(){
 function renderOutputs(){
   $("statRec").classList.toggle("on", ui.rec.active);
   $("statLive").classList.toggle("on", ui.stream.active);
-  $("statRec").querySelector(".lbl").textContent = ui.rec.active ? "REC" : "NOT RECORDING";
+  $("statRec").querySelector(".lbl").innerHTML = ui.rec.active ? "REC" : 'NOT REC<span class="x-long">ORDING</span>';
   $("statLive").querySelector(".lbl").textContent = ui.stream.active ? "LIVE" : "OFFLINE";
   $("sqLive").classList.toggle("live", ui.stream.active);
   $("sqLive").classList.toggle("pending", !!ui.streamPending && !ui.stream.active);
@@ -3345,7 +3400,7 @@ async function goExisting(){
   try{
     // The plug-in finds the row by title; the index only breaks ties between identical titles
     await vendorJob("StartYouTubeBroadcast", {mode:"existing", broadcastTitle:b.title, broadcastIndex:b.index}, "BroadcastResult", 120000);
-    ui.streamMsg = null; renderOutputs();
+    ui.streamMsg = null; renderOutputs(); ui.liveTitle = b.title;
     toast(`Live on YouTube · ${b.title}`);
   }catch(e){ settleGoLive(e, {title:b.title, desc:""}); }
 }
@@ -3402,7 +3457,7 @@ $("glGo").addEventListener("click", async () => {
   try{
     await vendorJob("StartYouTubeBroadcast",
       {mode:"new", title:details.title, description:details.desc, privacyStatus:gl.vis.toLowerCase(), rememberSettings:true}, "BroadcastResult", 120000);
-    ui.streamMsg = null; renderOutputs();
+    ui.streamMsg = null; renderOutputs(); ui.liveTitle = details.title;
     toast(`Live on YouTube · ${gl.vis}`);
     gl.sel = [];  // selection stays with this setup only until the stream starts
   }catch(e){ settleGoLive(e, details); }
@@ -5023,37 +5078,105 @@ function checkSilence(){
 }
 setInterval(checkSilence, 1000);
 
-/* Stream health: upload speed and dropped frames over the last ~10 seconds, from OBS's GetStreamStatus */
+/* Stream health, on the chip above the Program screen (it took the place of the CPU display).
+   While live: upload speed and frames lost over the last ~10 seconds, from OBS's GetStreamStatus (lost on the way
+   to YouTube) and GetStats (this computer falling behind). Not live: whether OBS keeps up with its frame rate,
+   which matters for recordings too. Tap the chip for the details, CPU included.
+   If the stream stays in trouble (red) for 4 seconds, or is reconnecting, a banner says so on the controller and
+   the phone; it goes when the stream has been healthy again for 10 seconds. */
 let healthSamples = [];
+const hs = {level:"", text:"", cause:"", badSince:0, goodSince:0, alert:null, dismissed:false,
+  run:null};   // run: this livestream's record for the summary at the end
+function hsReset(){ hs.run = {badMs:0, reconnects:0, wasReconnecting:false, lastT:0, frames0:null, skipped0:null, frames:0, skipped:0, lagWorst:0, alerts:0}; }
+hsReset();
 async function pollHealth(){
-  if(!ui.stream.active || ui.connected === false){ $("health").hidden = true; healthSamples = []; return; }
+  if(!ui.stream.active || ui.connected === false){ healthSamples = []; hs.level = ""; hsAlert(null); renderHealthChip(); return; }
   let st, pf; try{ st = await obs.call("GetStreamStatus"); pf = await obs.call("GetStats"); }catch(e){ return; }
   if(!st.outputActive) return;
-  healthSamples.push({t:Date.now(), bytes:st.outputBytes, frames:st.outputTotalFrames, skipped:st.outputSkippedFrames,
+  const now = Date.now();
+  healthSamples.push({t:now, bytes:st.outputBytes, frames:st.outputTotalFrames, skipped:st.outputSkippedFrames,
     enc:pf.outputSkippedFrames || 0, encT:pf.outputTotalFrames || 0, ren:pf.renderSkippedFrames || 0, renT:pf.renderTotalFrames || 0, cpu:pf.cpuUsage});
-  healthSamples = healthSamples.filter(x => Date.now() - x.t <= 10500);
+  healthSamples = healthSamples.filter(x => now - x.t <= 10500);
   const a = healthSamples[0], b = healthSamples[healthSamples.length - 1];
+  const r = hs.run;
+  if(r.frames0 === null){ r.frames0 = st.outputTotalFrames || 0; r.skipped0 = st.outputSkippedFrames || 0; }
+  r.frames = (st.outputTotalFrames || 0) - r.frames0; r.skipped = (st.outputSkippedFrames || 0) - r.skipped0;
+  if(st.outputReconnecting && !r.wasReconnecting) r.reconnects++;
+  r.wasReconnecting = !!st.outputReconnecting;
   const dt = (b.t - a.t) / 1000;
-  if(dt < 1){ $("healthTxt").textContent = "Checking…"; $("health").className = "health"; $("health").hidden = false; return; }
-  const mbps = (b.bytes - a.bytes) * 8 / 1e6 / dt;
+  if(dt < 1 && !st.outputReconnecting){ hs.level = "checking"; hs.text = "Checking…"; renderHealthChip(); return; }
+  const mbps = dt >= 1 ? (b.bytes - a.bytes) * 8 / 1e6 / dt : 0;
   const pct = (x, t) => t > 0 ? x / t * 100 : 0;
-  const dropPct = pct(b.skipped - a.skipped, b.frames - a.frames);                         // internet
+  const dropPct = pct(b.skipped - a.skipped, b.frames - a.frames);                                   // the internet
   const lagPct = Math.max(pct(b.enc - a.enc, b.encT - a.encT), pct(b.ren - a.ren, b.renT - a.renT)); // this computer
+  r.lagWorst = Math.max(r.lagWorst, lagPct);
   const worst = Math.max(dropPct, lagPct);
   const level = st.outputReconnecting || worst >= 5 || st.outputCongestion >= .6 ? "bad"
               : worst >= 1 || st.outputCongestion >= .3 ? "warn" : "good";
-  $("health").className = "health " + level; $("health").hidden = false;
-  const lagTxt = lagPct >= 1 ? ` · computer overloaded (${lagPct.toFixed(1)}% skipped)` : "";
-  $("healthTxt").textContent = st.outputReconnecting ? "Reconnecting to YouTube…" : `${mbps.toFixed(1)} Mbps · ${dropPct.toFixed(1)}% dropped${lagTxt}`;
-  const cause = lagPct >= 1 && dropPct < 1 ? "this computer can't keep up (close other programs, or lower OBS's output settings)"
-              : dropPct >= 1 && lagPct < 1 ? "the internet connection is struggling" : "the internet and this computer are both struggling";
-  $("health").title = level === "good" ? "Stream is healthy" : `Frames are being lost: ${cause}`;
+  if(level === "bad" && hs.level === "bad" && r.lastT) r.badMs += now - r.lastT;
+  r.lastT = now;
+  hs.level = level;
+  hs.text = st.outputReconnecting ? "Reconnecting to YouTube…"
+    : `${mbps.toFixed(1)} Mbps · ${dropPct.toFixed(1)}% dropped` + (lagPct >= 1 ? ` · computer behind ${lagPct.toFixed(1)}%` : "");
+  hs.cause = st.outputReconnecting ? "The connection to YouTube dropped and OBS is reconnecting. Check the internet connection."
+    : lagPct >= 1 && dropPct < 1 ? "This computer can't keep up: close other programs, or lower OBS's output settings."
+    : dropPct >= 1 && lagPct < 1 ? "The internet connection is struggling: frames are being lost on the way to YouTube."
+    : "The internet connection and this computer are both struggling.";
+  hs.detail = st.outputReconnecting ? "" : `${worst.toFixed(1)}% of frames lost in the last 10 seconds.`;
+  // The banner: red for 4 seconds (or reconnecting) brings it up; healthy for 10 seconds takes it away
+  if(level === "bad"){ hs.goodSince = 0; if(!hs.badSince) hs.badSince = now; }
+  else if(level === "good"){ hs.badSince = 0; if(!hs.goodSince) hs.goodSince = now; }
+  else { hs.badSince = 0; hs.goodSince = 0; }
+  if(level === "bad" && (st.outputReconnecting ? now - hs.badSince >= 2000 : now - hs.badSince >= 4000)) hsAlert(hs.cause + (hs.detail ? " " + hs.detail : ""));
+  else if(hs.alert && level === "good" && now - hs.goodSince >= 10000){ hsAlert(null); toast("The livestream is healthy again."); }
+  renderHealthChip();
 }
 setInterval(pollHealth, 2000);
+function hsAlert(msg){
+  const was = hs.alert;
+  hs.alert = msg;
+  if(!msg){ hs.dismissed = false; $("healthBanner").hidden = true; return; }
+  if(!was && hs.run) hs.run.alerts++;
+  $("healthBannerTxt").textContent = msg;
+  if(!hs.dismissed && $("healthBanner").hidden){ $("healthBanner").hidden = false; if(window.lucide) lucide.createIcons(); }
+}
+/* After the service: when the livestream ends (after at least a minute), a summary with how long it ran, the most
+   watching at once, any stream trouble, and the video's link (known when the viewer count is on). */
+let sumText = "";
+function showSummary(t0){
+  const end = Date.now(), ms = t0 ? end - t0 : 0;
+  if(ms < 60000) return;
+  const r = hs.run || {}, at = t => new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+  const mins = m => m < 1 ? "less than a minute" : m < 2 ? "about a minute" : `about ${Math.round(m)} minutes`;
+  const dropPct = r.frames > 0 ? r.skipped / r.frames * 100 : 0;
+  const trouble = [];
+  if(r.badMs >= 4000) trouble.push(`In trouble for ${mins(r.badMs / 60000)}`);
+  if(r.reconnects) trouble.push(`reconnected to YouTube ${r.reconnects === 1 ? "once" : r.reconnects + " times"}`);
+  if(dropPct >= 0.1) trouble.push(`${dropPct.toFixed(1)}% of frames dropped overall`);
+  if(r.lagWorst >= 1) trouble.push("the computer fell behind at times");
+  const health = trouble.length ? trouble.join(" · ") : "Healthy the whole time";
+  const url = vw.videoId ? `https://youtu.be/${vw.videoId}` : "";
+  const rows = [
+    ["Live for", `${fmt(ms)} <span class="sum-sub">${at(t0)} – ${at(end)}</span>`, `${fmt(ms)} (${at(t0)} – ${at(end)})`],
+    ...(ui.liveTitle ? [["Title", esc(ui.liveTitle), ui.liveTitle]] : []),
+    ["Most watching", vw.cfg.on ? (vw.peak ? `<b class="mono">${vw.peak.toLocaleString()}</b> at once` : "No count from YouTube") : `<span class="sum-sub">Turn on the viewer count in Settings → Going live to see this.</span>`,
+      vw.cfg.on && vw.peak ? `${vw.peak.toLocaleString()} at once` : ""],
+    ["Stream", `<span class="sum-h ${trouble.length ? "warn" : "good"}"><i></i>${esc(health)}</span>`, health],
+    ["Video", url ? `<a href="${url}" target="_blank" rel="noopener" class="mono">${url}</a> <button type="button" class="btn sm" id="sumCopyUrl">Copy link</button>`
+      : `<span class="sum-sub">${vw.cfg.on ? "YouTube didn't say which video it was." : "The link shows here when the viewer count is on (Settings → Going live)."}</span>`, url]
+  ];
+  $("sumWhen").textContent = new Date(end).toLocaleDateString([], {weekday:"long", month:"long", day:"numeric"});
+  $("sumList").innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  sumText = [`Livestream · ${$("sumWhen").textContent}`, ...rows.filter(x => x[2]).map(([k, , t]) => `${k}: ${t}`)].join("\n");
+  const cu = $("sumCopyUrl"); if(cu) cu.onclick = () => copyText(url, cu.previousElementSibling);
+  $("sumOverlay").hidden = false; if(window.lucide) lucide.createIcons();
+}
+$("sumClose").addEventListener("click", () => { $("sumOverlay").hidden = true; });
+$("sumCopy").addEventListener("click", () => copyText(sumText, $("sumList")));
+$("healthOk").addEventListener("click", () => { hs.dismissed = true; $("healthBanner").hidden = true; });
 
-/* CPU use and frame rate, above the Program screen: OBS and the controller, each as a share of the whole processor.
-   obs-websocket GetStats: cpuUsage is OBS's share (%), activeFps is what OBS is actually rendering. The desktop app
-   reports the controller's own share and the whole computer's. Averaged over the last 3 readings. */
+/* OBS's own frame rate and CPU, every 2 seconds: shown on the chip when not live (if OBS falls behind),
+   and in the chip's details. The desktop app reports the controller's own share and the whole computer's. */
 let appCpuSamples = [];
 async function pollAppCpu(){
   let r = null;
@@ -5069,8 +5192,8 @@ async function pollAppCpu(){
 let cpuSamples = [], targetFps = null;
 async function pollCpu(){
   const me = await pollAppCpu();
-  const meTxt = me && me.app != null ? ` · Controller ${Math.round(me.app)}%` : "";
-  if(ui.connected === false){ cpuSamples = []; $("cpuChip").className = "cpu-chip mono"; $("cpuTxt").textContent = "OBS —" + meTxt; ui.cpuInfo = null; ui.appCpu = me; return; }
+  ui.appCpu = me;
+  if(ui.connected === false){ cpuSamples = []; ui.cpuInfo = null; renderHealthChip(); return; }
   let st; try{ st = await obs.call("GetStats"); }catch(e){ return; }
   if(targetFps === null){ try{ const v = await obs.call("GetVideoSettings"); targetFps = v.fpsNumerator / v.fpsDenominator; }catch(e){ targetFps = 30; } }
   cpuSamples = [...cpuSamples, st].slice(-3);
@@ -5078,21 +5201,33 @@ async function pollCpu(){
   const cpu = avg("cpuUsage"), fps = avg("activeFps"), mem = avg("memoryUsage"), render = avg("averageFrameRenderTime");
   const slow = fps < targetFps * 0.95;
   const level = cpu >= 90 || fps < targetFps * 0.85 ? "bad" : cpu >= 75 || slow ? "warn" : "";
-  $("cpuChip").className = "cpu-chip mono " + level;
-  $("cpuTxt").textContent = `OBS ${Math.round(cpu)}%` + meTxt + (slow ? ` · ${fps.toFixed(0)}/${Math.round(targetFps)} fps` : "");
-  $("cpuChip").setAttribute("aria-label", `CPU: OBS ${Math.round(cpu)}%${me && me.app != null ? `, controller ${Math.round(me.app)}%` : ""}. Tap for details.`);
-  ui.cpuInfo = {cpu, fps, mem, render, level}; ui.appCpu = me;
+  ui.cpuInfo = {cpu, fps, mem, render, level, slow};
+  renderHealthChip();
 }
 setInterval(pollCpu, 2000); pollCpu();
 obs.on("ConnectionClosed", () => { targetFps = null; });
-$("cpuChip").addEventListener("click", () => {
-  const c = ui.cpuInfo; if(!c) return toast("Not connected to OBS");
-  const note = c.level === "bad" ? " The computer is struggling: close other programs, or lower OBS's output settings."
-             : c.level === "warn" ? " Running high. Close other programs if it stays there." : "";
-  const a = ui.appCpu;
-  toast(`OBS: ${Math.round(c.cpu)}% CPU · ${c.fps.toFixed(1)} of ${Math.round(targetFps || 30)} fps · ${Math.round(c.mem)} MB memory · ${c.render.toFixed(1)} ms per frame.` +
-    (a && a.app != null ? ` Controller: ${Math.round(a.app)}% CPU · ${Math.round(a.appMem)} MB memory.` : "") +
-    (a && a.system != null ? ` Whole computer: ${Math.round(a.system)}% CPU.` : "") + note);
+function renderHealthChip(){
+  const chip = $("healthChip"), txt = $("healthChipTxt");
+  let cls = "", t;
+  if(ui.connected === false || !ui.everConnected) t = "OBS —";
+  else if(ui.stream.active){ cls = hs.level === "checking" ? "" : hs.level; t = hs.text || "Checking…"; }
+  else {
+    const c = ui.cpuInfo;
+    if(c && c.slow){ cls = c.level || "warn"; t = `Not live · OBS behind: ${c.fps.toFixed(0)}/${Math.round(targetFps || 30)} fps`; }
+    else t = "Not live";
+  }
+  chip.className = "health-chip mono " + cls;
+  if(txt.textContent !== t) txt.textContent = t;
+  chip.setAttribute("aria-label", `Stream health: ${t}. Tap for details.`);
+}
+$("healthChip").addEventListener("click", () => {
+  const c = ui.cpuInfo, a = ui.appCpu;
+  if(!c && ui.connected === false) return toast("Not connected to OBS");
+  const head = ui.stream.active ? (hs.level === "good" ? "The livestream is healthy. " : hs.level === "warn" || hs.level === "bad" ? hs.cause + " " : "")
+    : "Not live. While live, this shows the upload speed and any frames lost. ";
+  toast(head + (c ? `OBS: ${Math.round(c.cpu)}% CPU · ${c.fps.toFixed(1)} of ${Math.round(targetFps || 30)} fps · ${Math.round(c.mem)} MB memory.` : "") +
+    (a && a.app != null ? ` Controller: ${Math.round(a.app)}% CPU.` : "") +
+    (a && a.system != null ? ` Whole computer: ${Math.round(a.system)}% CPU.` : ""));
 });
 
 /* Open with OBS / close with OBS (the desktop app and the companion plug-in do the actual launching and closing) */
@@ -5346,9 +5481,9 @@ if(window.bgh && window.bgh.setCloseObs) window.bgh.setCloseObs(ui.closeObs);
 /* Ready check (the ✓✓ button at the top). Checks what usually goes wrong before a service and says how to fix it:
    OBS connected, Camera 1 showing a live picture, the mic picking up sound, OBS signed in to YouTube, disk space.
    A quick check runs every 20 seconds; a red dot on the button means something needs attention.
-   Camera 1: the controller takes two tiny pictures of the camera source a moment apart. A live camera always
-   changes a little between them; the same picture twice means the camera is asleep or off, or the capture card
-   is showing its "no signal" screen. No picture at all means OBS isn't getting video from the capture card. */
+   Camera 1: the controller takes two tiny pictures of the camera source a moment apart. The same picture twice
+   that is also almost one flat color means the camera is asleep or off, or the capture card is showing its
+   "no signal" screen. (A live camera on a still room can repeat a detailed picture exactly, and that's fine.) No picture at all means OBS isn't getting video from the capture card. */
 const rd = {checks:[], busy:false, prev:null, timer:null};
 const CAM_KIND = /dshow_input|av_capture_input|macos-avcapture|v4l2_input|decklink-input|ndi_source/i;
 const camGood = (() => { try{ return JSON.parse(localStorage.getItem("readyCamDev") || "{}"); }catch(e){ return {}; } })();
@@ -5400,9 +5535,11 @@ async function checkCamera(){
   }
   const f = frameStats(b), moving = frameDiff(a, b) > 0.3;
   if(f.mean < 10 && f.std < 6) return {id:"cam", state:"bad", title:"Camera 1", text:`The picture from "${name}" is black.`, steps:CAM_STEPS.black, acts:[reactivate, openProps]};
-  if(!moving) return {id:"cam", state:"bad", title:"Camera 1", text:`The picture from "${name}" isn't moving: the camera is asleep or off, or the capture card is showing its "no signal" screen.`, steps:CAM_STEPS.still, acts:[reactivate, openProps]};
+  // A live camera on a still room can send the very same picture twice, so stillness alone isn't a problem.
+  // Only a still picture that is also almost one flat color is a "no signal" screen (the same rule as color matching).
+  if(!moving && f.std < 8) return {id:"cam", state:"bad", title:"Camera 1", text:`The picture from "${name}" is one flat color and isn't changing: the camera is asleep or off, or the capture card is showing its "no signal" screen.`, steps:CAM_STEPS.still, acts:[reactivate, openProps]};
   if(dev && camGood[key] !== dev){ camGood[key] = dev; try{ localStorage.setItem("readyCamDev", JSON.stringify(camGood)); }catch(e){} }
-  return {id:"cam", state:"ok", title:"Camera 1", text:`Live picture from "${name}" (${devName(dev)}).`};
+  return {id:"cam", state:"ok", title:"Camera 1", text:`${moving ? "Live picture" : "A picture (nothing moving right now)"} from "${name}" (${devName(dev)}).`};
 }
 function checkMic(){
   const src = srcAudio(), quiet = Math.floor((Date.now() - lastSoundAt) / 1000);
@@ -5631,7 +5768,7 @@ obs.on("ConnectionClosed", async () => {
   }
   $("connBanner").hidden = false; document.body.classList.add("offline");
   document.querySelector(".conn .dot").classList.add("off"); $("connText").textContent = "Not connected to OBS";
-  $("health").hidden = true; renderMeter([-90,-90]);
+  renderHealthChip(); renderMeter([-90,-90]);
   for(let attempt = 1; ; attempt++){
     $("connBannerTxt").textContent = attempt === 1 ? "Reconnecting…" : `Reconnecting… (try ${attempt})`;
     // Connect, then read everything from OBS. While OBS is still starting, its WebSocket server is already up
@@ -7031,9 +7168,32 @@ obs.on("CurrentProgramSceneChanged", d => {
   renderScenes();
   autoMute(prev, d.sceneName);
   fadeTrack(prev, d.sceneName);
+  rotationGuard(prev, d.sceneName);
   if(ui.autoEndSkip && ui.autoEndSkip !== d.sceneName) ui.autoEndSkip = null;   // "Keep streaming" lasts until Ending is left
   if(!ui.autoEndSkip) checkAutoEnd(d.sceneName);
 });
+/* Rotation guard. The Waiting button's slides take turns through the Advanced Scene Switcher. If its timer fires
+   just as Program leaves the waiting slides (Live Soon picked, say), it can put a waiting slide straight back.
+   When Program goes waiting slide → another scene → a waiting slide within 2.5 seconds, and nobody here asked for
+   that last switch, the controller puts the scene back once and says what happened. If it happens again within
+   20 seconds it doesn't fight: it only says so. */
+const rot = {at:0, from:"", lastFix:0};
+function rotationGuard(prev, next){
+  const now = Date.now(), wb = BUTTONS.find(b => b.waiting), wait = wb ? wb.group : [];
+  const left = rot.from && wait.includes(rot.from) && !wait.includes(prev);   // `prev` was entered from a waiting slide
+  const quick = now - rot.at < 2500, back = wait.includes(next);
+  const asked = ownSwitch && ownSwitch.scene === next && now - ownSwitch.t < 3000;
+  rot.from = prev; rot.at = now;
+  if(!left || !quick || !back || asked || !prev || wait.length < 2) return;
+  if(now - rot.lastFix < 20000){
+    toast(`Program went back to ${next} just after ${prev}. The Advanced Scene Switcher's rotation is probably still running; check its macro in OBS.`);
+    return;
+  }
+  rot.lastFix = now;
+  obs.call("SetCurrentProgramScene", {sceneName:prev}).then(() => {
+    toast(`The Advanced Scene Switcher switched to ${next} just as ${prev} came on, so the controller put ${prev} back.`);
+  }).catch(() => {});
+}
 /* Automatic mute (Settings → Scene collections → Audio). Works however Program changes: a scene button,
    CUT, OBS itself, or the Advanced Scene Switcher. Only changes the mic when it isn't already that way. */
 function autoMute(prev, next){
@@ -7097,6 +7257,9 @@ obs.on("InputVolumeMeters", d => {
 obs.on("RecordStateChanged", d => { ui.rec = {active:d.outputActive,t0:d.t0}; renderOutputs(); lockIfWentLive(); diskSamples = []; if(d.outputActive) setTimeout(checkDiskWhileRec, 5000); else $("diskNote").hidden = true; });
 obs.on("StreamStateChanged", d => {
   const startedHere = d.outputActive && !!ui.streamPending;   // Go Live from the controller (either way)
+  const was = ui.stream;
+  if(was.active && !d.outputActive) showSummary(was.t0);   // before the viewer count and health record start over
+  if(d.outputActive && !was.active){ hsReset(); if(!startedHere) ui.liveTitle = ""; }
   ui.stream = {active:d.outputActive,t0:d.t0}; renderOutputs(); lastSoundAt = Date.now(); healthSamples = []; pollHealth(); lockIfWentLive();
   if(startedHere) comeBackAfterGoingLive();
   if(d.outputActive) startOnTitle().then(scene => autoMuteAtStart(scene));
@@ -7266,7 +7429,6 @@ document.addEventListener("keydown", e => { if(e.key === "Escape") vwClose(); })
 setInterval(() => {
   const t0 = ui.stream.active ? ui.stream.t0 : null;
   if(t0 !== vw.t0){
-    if(vw.t0 && !t0 && vw.peak) toast(`The livestream ended. Most watching at once: ${vw.peak.toLocaleString()}.`);
     vw.t0 = t0; vw.now = null; vw.peak = 0; vw.hist = []; vw.state = ""; vw.videoId = null; vw.next = 0;
   }
   vwPoll(); vwRender();   // also keeps "Updated … ago" current
@@ -7598,7 +7760,8 @@ function phState(){
     ltUp:ui.lt.showing ? {name:ui.lt.showing, sub:ui.lt.subtitle || ""} : null,
     ltEnds:phLtEnds(), ltDur:ui.lt.duration || 8,
     books:ui.hymnBooks.map(b => ({id:b.id, name:b.name, short:b.short || ""})), book:ui.ot.book || "",
-    tr:ot.trSession || ui.ot.bbTr || "KJV"
+    tr:ot.trSession || ui.ot.bbTr || "KJV",
+    health:ui.stream.active ? {level:hs.level || "", text:hs.text || "", alert:hs.alert || null} : null
   };
 }
 function phSend(){ if(PH && PH.clients && phApi) phApi.state(phState()); }

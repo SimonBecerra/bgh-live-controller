@@ -69,6 +69,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 /* Banner when the controller can't be reached */
 .banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r);background:var(--warn-soft);border:1px solid var(--warn);color:var(--fg);font-size:14px;line-height:1.4}
 .banner svg.i{color:var(--warn);margin-top:1px}
+.banner.bad{background:var(--pgm-soft);border-color:var(--pgm)} .banner.bad svg.i{color:var(--pgm)}
 
 /* Sections */
 .sec{display:flex;flex-direction:column;gap:10px}
@@ -488,7 +489,8 @@ function render(){
     </div>
   </header>
   ${!S.connected ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the controller.</b> Check this phone is on the church Wi-Fi. It reconnects by itself.</div></div>`
-    : !st.obs ? `<div class="banner">${ic("wifi")}<div><b>The controller can't reach OBS.</b> Check OBS is open on the computer.</div></div>` : ""}
+    : !st.obs ? `<div class="banner">${ic("wifi")}<div><b>The controller can't reach OBS.</b> Check OBS is open on the computer.</div></div>`
+    : st.health && st.health.alert ? `<div class="banner bad">${ic("wifi")}<div><b>Stream trouble.</b> ${esc(st.health.alert)}</div></div>` : ""}
   ${S.pvOn ? `<div class="pv${S.tab === "onscreen" ? " small" : ""}">${S.pvImg ? `<img src="${S.pvImg}" alt="What's on Program: ${esc(st.program)}">` : ""}<span class="pv-tag">PROGRAM</span><span class="pv-age" id="pvAge"></span></div>` : ""}
   <div class="body ctl">${S.tab === "scenes" ? scenesHTML(st) : onScreenHTML(st)}</div>`;
   wire();
