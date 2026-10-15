@@ -106,6 +106,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .hint{font-size:12px;color:var(--muted)}
+.hint.warn{color:var(--warn, #f5b041)}
 .off .ctl{opacity:.4;pointer-events:none}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 16px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:16px}
@@ -740,7 +741,8 @@ function openSlides(){
       <span class="label">Where it comes from</span><div class="ss-srcs"><button class="btn" type="button" data-src="projector" aria-pressed="${g.src === "projector"}">${ic("projector")}Projector</button><button class="btn" type="button" data-src="laptop" aria-pressed="${g.src === "laptop"}">${ic("laptop")}This laptop</button></div>
       ${g.src === "projector" ? `<div class="ss-feed ${g.feed || ""}">${g.feed === "live" ? "Projector feed: live" : g.feed === "none" ? "No picture from the projector. Check its laptop and NDI output." : "Checking the projector's feed…"}</div>` : ""}
       ${g.src === "laptop" ? (g.open ? `<p class="hint">Open: ${esc(g.title || "the slideshow")}.</p>` : g.link ? `<p class="hint">The slideshow opens by itself on the laptop.</p>` : `<p class="hint">Paste the Google Slides link on the controller (the Slideshow button at the top).</p>`) : ""}`}
-      <button class="btn" id="ssClose" type="button">Done</button>`;
+      ${g.on && !(g.ratio && g.src) ? `<p class="hint warn">Choose a size and where it comes from.</p>` : ""}
+      <button class="btn" id="ssClose" type="button"${g.on && !(g.ratio && g.src) ? " disabled" : ""}>Done</button>`;
     $("ssOn").onclick = () => cmd("ss", {on:!g.on});
     document.querySelectorAll("#ssSheet [data-ratio]").forEach(b => b.onclick = () => cmd("ss", {ratio:b.dataset.ratio}));
     document.querySelectorAll("#ssSheet [data-src]").forEach(b => b.onclick = () => cmd("ss", {src:b.dataset.src}));
