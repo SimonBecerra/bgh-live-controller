@@ -2279,12 +2279,13 @@ class MockOBS {
         const ins = this.inputsByColl[s.collection] || {}, cam = this.cam || "ok";
         const items = /^cam/i.test(d.sceneName) && ins.Video && cam !== "missing" ? [{sceneItemId:1, sourceName:"Video", inputKind:"dshow_input", sceneItemEnabled:cam !== "hidden", isGroup:false}] : [];
         if(ins["Lower Third"]) items.push({sceneItemId:2, sourceName:"Lower Third", inputKind:"church_lower_third", sceneItemEnabled:true, isGroup:false});
-        if(isSlideScene(d.sceneName)){ this.ssItems ||= {}; [["Projector", 11, "ndi_source"], ["Presentation", 12, "window_capture"]].forEach(([n, id, k]) =>
-          items.push({sceneItemId:id, sourceName:n, inputKind:k, sceneItemEnabled:this.ssItems[d.sceneName + id] ?? true, isGroup:false})); }
+        if(isSlideScene(d.sceneName)){ this.ssItems ||= {}; [["Projector", 11, null], ["Presentation", 12, "window_capture"]].forEach(([n, id, k]) =>
+          items.push({sceneItemId:id, sourceName:n, inputKind:k, sourceType:k ? "OBS_SOURCE_TYPE_INPUT" : "OBS_SOURCE_TYPE_SCENE", sceneItemEnabled:this.ssItems[d.sceneName + id] ?? true, isGroup:false})); }
+        if(d.sceneName === "Projector") items.push({sceneItemId:21, sourceName:"Projector NDI", inputKind:"ndi_source", sourceType:"OBS_SOURCE_TYPE_INPUT", sceneItemEnabled:true, isGroup:false});
         return {sceneItems:items};
       }
       case "GetSceneItemTransform": { this.ssTf ||= {}; const k = d.sceneName + d.sceneItemId;
-        const base = d.sceneItemId === 11 ? {sourceWidth:1440, sourceHeight:1080, positionX:240, positionY:0} : {sourceWidth:1920, sourceHeight:1080, positionX:0, positionY:0};
+        const base = d.sceneItemId === 21 ? {sourceWidth:1440, sourceHeight:1080, positionX:240, positionY:0} : d.sceneItemId === 11 ? {sourceWidth:1920, sourceHeight:1080, positionX:0, positionY:0} : {sourceWidth:1920, sourceHeight:1080, positionX:0, positionY:0};
         return {sceneItemTransform:{alignment:5, scaleX:1, scaleY:1, rotation:0, boundsType:"OBS_BOUNDS_NONE", cropTop:0, cropBottom:0, cropLeft:0, cropRight:0, ...base, ...(this.ssTf[k] || {})}}; }
       case "SetSceneItemTransform": { this.ssTf ||= {}; const k = d.sceneName + d.sceneItemId; this.ssTf[k] = {...(this.ssTf[k] || {}), ...d.sceneItemTransform}; return {}; }
       case "SetSceneItemEnabled": if(this.cam === "hidden" && d.sceneItemEnabled) this.cam = "ok"; (this.ssItems ||= {})[d.sceneName + d.sceneItemId] = d.sceneItemEnabled; return {};
@@ -7509,6 +7510,7 @@ obs.on("CurrentProgramSceneChanged", d => {
   autoMute(prev, d.sceneName);
   fadeTrack(prev, d.sceneName);
   rotationGuard(prev, d.sceneName);
+  if(isSlideScene(d.sceneName)) slAutoOpen();
   clearForBreak(prev, d.sceneName);
   if(ui.autoEndSkip && ui.autoEndSkip !== d.sceneName) ui.autoEndSkip = null;   // "Keep streaming" lasts until Ending is left
   if(!ui.autoEndSkip) checkAutoEnd(d.sceneName);
@@ -7523,7 +7525,9 @@ const slSave = () => { try{ localStorage.setItem("slides", JSON.stringify(sl.cfg
 const slId = link => (String(link || "").match(/docs\.google\.com\/presentation\/d\/([\w-]{20,})/) || [])[1] || "";
 // #proto-start
 const SL_PROTO = {total:12, titles:{}};
+const SL_SCREENS = () => [{id:"1", name:"Laptop screen", w:1920, h:1080, primary:true}];   // the church laptop: one monitor
 // #proto-end
+// #real const SL_SCREENS = () => (window.bgh && window.bgh.screensNow ? window.bgh.screensNow() : []);
 async function slOpen(){
   const id = slId(sl.cfg.link);
   if(!id){ toast("Choose the slideshow first: Settings → Slideshow."); return settingsGoTo("slides", "setSlLink"); }
@@ -7533,6 +7537,13 @@ async function slOpen(){
   // #proto-end
   // #real try{ Object.assign(sl, await window.bgh.slides.open({id, screen:sl.cfg.screen})); }catch(e){ toast(`Couldn't open the slideshow: ${e.message}`); }
   sl.busy = false; renderSlides();
+}
+async function slClose(){
+  // #proto-start
+  Object.assign(sl, {open:false, n:0, total:0});
+  // #proto-end
+  // #real try{ await window.bgh.slides.close(); }catch(e){} Object.assign(sl, {open:false, n:0, total:0});
+  renderSlides(); ssRender();
 }
 async function slStep(d){
   if(!sl.open) return;
@@ -7581,8 +7592,9 @@ function ssEditor(el){
   el.querySelectorAll("[data-ss=on]").forEach(b => b.onclick = () => ssSet({on:!ss.on}));
   el.querySelectorAll("[data-ratio]").forEach(b => b.onclick = () => ssSet({ratio:b.dataset.ratio}));
   el.querySelectorAll("[data-src]").forEach(b => b.onclick = () => ssSet({src:b.dataset.src}));
-  el.querySelectorAll("[data-rec]").forEach(b => b.onclick = () => { sl.cfg.link = sl.cfg.recent[+b.dataset.rec].link; slSave(); ssRender(); });
-  const li = el.querySelector("input"); if(li) li.onchange = () => { slSetLink(li.value.trim()); ssRender(); };
+  el.querySelectorAll("[data-rec]").forEach(b => b.onclick = () => { const was = slId(sl.cfg.link); sl.cfg.link = sl.cfg.recent[+b.dataset.rec].link; slSave(); ssRender();
+    if(sl.open && slId(sl.cfg.link) !== was) slOpen().then(ssRender); else slAutoOpen(); });
+  const li = el.querySelector("input"); if(li) li.onchange = () => { slSetLink(li.value.trim()); ssRender(); slAutoOpen(); };
   el.querySelectorAll("[data-ss=open]").forEach(b => b.onclick = () => slOpen().then(ssRender));
   if(window.lucide) lucide.createIcons();
 }
@@ -7600,6 +7612,8 @@ async function ssSet(ch){
   if(ch.on === false){ ss.ratio = ""; ss.src = ""; }
   ssRender();
   if((ch.src && ch.src !== was.src) || (ch.ratio && ch.ratio !== was.ratio && ss.src)) await ssApplySources(!!ch.src && ch.src !== was.src);
+  if(ch.on === false && sl.open) slClose();
+  slAutoOpen();
   if(ss.on && ss.ratio && !BUTTONS.some(b => b.slide && slideShown(b) && !b.group.includes(ui.program))) toast(`There's no Slideshow ${ss.ratio} scene in ${ui.collection}.`);
 }
 /* Sources: in every scene of the loaded collection, the chosen kind is shown and the other hidden (their eye in OBS),
@@ -7634,10 +7648,17 @@ async function ssCropItem(sceneName, it, kind, report){
   await obs.call("SetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId, sceneItemTransform:nt});
   report.cropped++;
 }
+// Inside a scene used as a source: the picture is its first visible video source (the NDI receiver, for the projector)
+const NDI_KIND = /ndi/i;
+async function ssCropInside(sceneName, kind, report){
+  const items = ((await obs.call("GetSceneItemList", {sceneName})).sceneItems || []).filter(x => !x.isGroup && x.sceneItemEnabled);
+  const pic = items.find(x => NDI_KIND.test(x.inputKind || "")) || items.find(x => x.inputKind && !/text|audio|wasapi|color/i.test(x.inputKind));
+  if(pic) await ssCropItem(sceneName, pic, kind, report);
+}
 async function ssApplySources(vis = true){
   const show = ss.src === "projector" ? ui.ssNames.projector : ui.ssNames.laptop, hide = ss.src === "projector" ? ui.ssNames.laptop : ui.ssNames.projector;
   let shown = 0, hidden = 0;
-  const report = {cropped:0, bounded:[], rotated:[]};
+  const report = {cropped:0, bounded:[], rotated:[], inner:{}};
   try{
     const scenes = (await obs.call("GetSceneList")).scenes || [];
     for(const sc of scenes){
@@ -7648,7 +7669,10 @@ async function ssApplySources(vis = true){
           if(on === null) continue;
           if(it.sceneItemEnabled !== on) await obs.call("SetSceneItemEnabled", {sceneName:group || sc.sceneName, sceneItemId:it.sceneItemId, sceneItemEnabled:on});
           on ? shown++ : hidden++;
-          await ssCropItem(group || sc.sceneName, it, it.sourceName === ui.ssNames.projector ? "projector" : "laptop", report);
+          const kind = it.sourceName === ui.ssNames.projector ? "projector" : "laptop";
+          // A scene (like "Projector" holding the NDI source): its size is the whole canvas, so the picture inside is cropped instead
+          if(it.sourceType === "OBS_SOURCE_TYPE_SCENE"){ if(!report.inner[it.sourceName]){ report.inner[it.sourceName] = true; await ssCropInside(it.sourceName, kind, report); } }
+          else await ssCropItem(group || sc.sceneName, it, kind, report);
         }
       };
       await walk((await obs.call("GetSceneItemList", {sceneName:sc.sceneName})).sceneItems || []);
@@ -7664,7 +7688,7 @@ $("ssBtn").addEventListener("click", () => { $("ssOverlay").hidden = false; ssEd
 $("ndiOk").addEventListener("click", () => { $("ndiBanner").hidden = true; });
 $("ssDone").addEventListener("click", () => { $("ssOverlay").hidden = true; });
 // Forgotten when the livestream ends
-obs.on("StreamStateChanged", d => { if(!d.outputActive && ss.on){ ssSet({on:false}); } });
+obs.on("StreamStateChanged", d => { if(!d.outputActive){ if(sl.open) slClose(); if(ss.on) ssSet({on:false}); } });
 /* The projector's feed: the OBS plug-in counts the frames actually arriving from the NDI source (a still slide still
    arrives as frames; a stopped feed doesn't, even if OBS keeps showing the last picture). Every 2 seconds while it's
    in use; a banner if it stops while a Slideshow scene is on Program. */
@@ -7674,7 +7698,7 @@ async function ssFeedPoll(){
   // #proto-start
   r = SL_PROTO.feedOff ? {frames:0} : {frames:30};
   // #proto-end
-  // #real try{ r = await vcall("GetSourceFrames", {sourceName:ui.ssNames.projector}); }catch(e){ r = null; }
+  // #real try{ r = await vcall("GetSourceFrames", {sourceName:ui.ssNames.projector, deep:true}); }catch(e){ r = null; }   // the plug-in looks inside a scene for its NDI source
   const state = !r ? "" : r.frames > 0 ? "live" : "none", changed = state !== ss.feed.state;
   ss.feed = {state, fps:r ? r.frames : 0};
   const warn = state === "none" && isSlideScene(ui.program);
@@ -7683,6 +7707,15 @@ async function ssFeedPoll(){
   if(changed) ssRender();
 }
 setInterval(ssFeedPoll, 2000);
+/* Played on this laptop: the slideshow opens by itself, as soon as there's a link (so it's ready before the Slideshow
+   scene is used), or the first time a Slideshow scene comes on if it isn't open yet. Opened once per service: if it's
+   closed by hand, it isn't reopened behind your back (the Open button and the Program picture's button still work). */
+let slAutoDone = false;
+function slAutoOpen(){
+  if(!ss.on || ss.src !== "laptop" || sl.open || sl.busy || slAutoDone || !slId(sl.cfg.link)) return;
+  slAutoDone = true; slOpen().then(ssRender);
+}
+obs.on("StreamStateChanged", d => { if(!d.outputActive) slAutoDone = false; });
 function slSetLink(v){
   const id = slId(v); sl.cfg.link = v;
   if(id){ const rec = (sl.cfg.recent || []).filter(x => slId(x.link) !== id); rec.unshift({link:v, title:(sl.cfg.recent.find(x => slId(x.link) === id) || {}).title || "New slideshow", when:new Date().toLocaleDateString([], {month:"short", day:"numeric"})}); sl.cfg.recent = rec.slice(0, 5); }
@@ -7693,8 +7726,11 @@ function renderSlSet(){
   $("setSsProj").value = ui.ssNames.projector; $("setSsLap").value = ui.ssNames.laptop;
   $("setSlLink").value = sl.cfg.link || "";
   const scr = $("setSlScreen"); scr.innerHTML = "";
-  ["Monitor 2 (1920 × 1080)", "Monitor 1 (1920 × 1080, the touchscreen)", "Monitor 3 (1280 × 720)"].forEach((n, i) => { const o = document.createElement("option"); o.value = String(i + 1); o.textContent = n; scr.appendChild(o); });
-  scr.value = sl.cfg.screen || "1";
+  // One monitor (the church laptop): the slideshow opens behind the controller, at 1920 × 1080, where OBS still captures it
+  const mons = SL_SCREENS();
+  [["behind", "Behind the controller (one monitor)"], ...mons.filter(m => !m.primary).map(m => [m.id, `${m.name} (${m.w} × ${m.h})`])]
+    .forEach(([v, n]) => { const o = document.createElement("option"); o.value = v; o.textContent = n; scr.appendChild(o); });
+  scr.value = sl.cfg.screen && [...scr.options].some(o => o.value === sl.cfg.screen) ? sl.cfg.screen : mons.length > 1 ? scr.options[1].value : "behind";
   const rec = sl.cfg.recent || [];
   $("setSlRecentField").hidden = !rec.length;
   $("setSlRecent").innerHTML = rec.map((x, i) => `<button type="button" data-sl="${i}" aria-pressed="${slId(x.link) === slId(sl.cfg.link)}"><span>${esc(x.title || "Slideshow")}</span><small>${esc(x.when || "")}</small></button>`).join("");
