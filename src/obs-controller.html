@@ -7742,6 +7742,9 @@ async function ssCropItem(sceneName, it, kind, report, ratio){
   const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
   if(t.boundsType && t.boundsType !== "OBS_BOUNDS_NONE"){ report.bounded.push(`${it.sourceName} in ${sceneName}`); return; }
   if(t.rotation){ report.rotated.push(`${it.sourceName} in ${sceneName}`); return; }
+  // No picture right now (an NDI source that isn't receiving, or the laptop's window not open): its size reads 0, and
+  // working from that would take its crop off. It's left exactly as it is and done when its picture arrives.
+  if(!(t.sourceWidth > 2 && t.sourceHeight > 2)){ (report.waiting ||= []).push(it.sourceName); return; }
   const c = ssCropFor(kind, t.sourceWidth, t.sourceHeight, ratio);
   const d = k => c[k] - (t[k] || 0);
   if(!d("cropTop") && !d("cropBottom") && !d("cropLeft") && !d("cropRight")) return;
@@ -7844,7 +7847,15 @@ async function ssPlaceOn43(sceneName, items, report){
     report.cropped++;
   }
 }
+// One at a time: a change made while one is running is done straight after it (the latest choice wins)
+let ssBusy = null, ssAgain = null;
 async function ssApplySources(vis = true, off = false){
+  if(ssBusy){ ssAgain = [vis, off]; return ssBusy; }
+  ssBusy = ssApplyNow(vis, off);
+  try{ await ssBusy; } finally { ssBusy = null; }
+  if(ssAgain){ const a = ssAgain; ssAgain = null; await ssApplySources(...a); }
+}
+async function ssApplyNow(vis = true, off = false){
   const show = ss.src === "projector" ? ui.ssNames.projector : ui.ssNames.laptop, hide = ss.src === "projector" ? ui.ssNames.laptop : ui.ssNames.projector;
   let shown = 0, hidden = 0;
   const report = {cropped:0, bounded:[], rotated:[], inner:{}, waiting:[]};
@@ -7886,7 +7897,7 @@ async function ssApplySources(vis = true, off = false){
   if(!shown) return toast(`No source called "${show}" was found in ${ui.collection}. Check the names in Settings → Slideshow.`);
   if(report.bounded.length) return toast(`Not changed: ${report.bounded[0]} has a Bounds setting that could stretch it. In OBS, open its Edit Transform and set Bounds to Automatic (or Fit).`);
   if(report.rotated.length) return toast(`Not cropped: ${report.rotated[0]} is rotated.`);
-  if(on43 && report.waiting.includes(show)) return toast(`"${show}" has no picture yet, so it wasn't moved. It's placed as soon as it has one.`);
+  if(report.waiting.includes(show)) return toast(`"${show}" has no picture right now, so it was left as it is. It's ${on43 ? "placed" : "cropped"} as soon as its picture arrives.`);
   const cropTxt = ss.ratio ? (ss.ratio === "169on43" ? " The top 16:9 part fills the 16:9 slideshow's place." : ss.src === "projector" && ss.ratio === "16:9" ? " Cropped the black bars off the top and bottom." : ss.src === "laptop" && ss.ratio === "4:3" ? " Cropped the black bars off the sides." : " No cropping needed.") : "";
   toast(vis ? `Showing "${show}"${hidden ? `, hid "${hide}"` : ""} in the slideshow scenes.${cropTxt}` : cropTxt.trim() || `${ss.ratio}: no crop needed.`);
 }
@@ -7909,7 +7920,7 @@ async function ssFeedPoll(){
   // · checking (just started counting) · missing (no such source, or no feed inside it) · old (the plug-in needs updating)
   const state = !r ? "" : r.ok === false ? (r.code === "PLUGIN_MISSING" ? "old" : "missing") : r.started || r.fps < 0 ? "checking" : r.fps > 0 ? "live" : r.showing ? "none" : "idle";
   const changed = state !== ss.feed.state;
-  if(changed && state === "live" && ss.ratio === "169on43") ssApplySources(false);   // the projector's picture has arrived: place it
+  if(changed && state === "live" && ss.ratio) ssApplySources(false);   // the projector's picture has arrived: crop / place it now
   ss.feed = {state, fps:r && r.fps > 0 ? r.fps : 0};
   const warn = state === "none" && isSlideScene(ui.program);
   if(warn && $("ndiBanner").hidden) $("ndiBanner").hidden = false;
