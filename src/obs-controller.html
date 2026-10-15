@@ -390,6 +390,19 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .meter .pk{position:absolute;top:0;bottom:0;width:2px;background:var(--fg);left:0}
 .meters.muted .fill{filter:grayscale(1) brightness(.6)}
 .scale{display:flex;justify-content:space-between;font-size:10px;color:var(--dim)}
+/* Singing mic on: both mics squeezed into the Audio panel, one row each */
+.aud-panel.two-mics .audio-row{gap:10px}
+.aud-panel.two-mics .audio-row + .audio-row{margin-top:8px}
+.aud-panel.two-mics .mute{min-height:42px;min-width:118px;font-size:15px}
+.aud-panel.two-mics .mute-ico{width:18px;height:18px}
+.aud-panel.two-mics .meters{gap:4px}
+.aud-panel.two-mics .meter{height:8px}
+.aud-panel.two-mics .scale{display:none}
+.prim-lbl{display:none}
+.aud-panel.two-mics .prim-lbl{display:block}
+.sing-lbl{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sing-lbl b{color:var(--fg);font-weight:600}
+.sing-row .meters.muted .fill{filter:grayscale(1) brightness(.6)}
 
 /* Text & schedule */
 .field{display:flex;flex-direction:column;gap:6px}
@@ -1130,7 +1143,12 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
           <div class="meter"><div class="fill" id="mL"></div><div class="pk" id="pL"></div></div>
           <div class="meter"><div class="fill" id="mR"></div><div class="pk" id="pR"></div></div>
           <div class="scale mono"><span>-60</span><span>-40</span><span>-20</span><span>-9</span><span>0 dB</span></div>
+          <span class="sing-lbl prim-lbl"><b>Primary</b> <span id="primName"></span></span>
         </div>
+      </div>
+      <div class="audio-row sing-row" id="singRow" hidden>
+        <button class="mute" id="singBtn" aria-pressed="false">UNMUTE</button>
+        <div class="meters"><div class="meter"><div class="fill" id="mS"></div></div><span class="sing-lbl"><b>Singing</b> <span id="singName"></span><span class="aud-auto" id="singAuto" hidden>AUTO</span></span></div>
       </div>
     </section>
     <button class="def-warn" id="defWarn" hidden><i data-lucide="triangle-alert"></i><span id="defWarnTxt"></span></button>
@@ -1337,9 +1355,19 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
           </div>
           <div class="set-section">
             <h4>Audio</h4>
-            <div class="field"><label class="label" for="setAudio">Audio input</label>
+            <div class="field"><label class="label" for="setAudio">Primary Audio Input</label>
               <select id="setAudio" data-cfg></select>
               <span class="path">The audio source the Mute button and level meter use in this scene collection.</span></div>
+            <label class="check" for="setSingOn"><input type="checkbox" id="setSingOn" data-cfg>
+              <span>Singing mic<small>A second audio input for the singing. When this is on, it has its own Mute button beside the primary one, on the controller and the phone. When it's off, the controller keeps it muted in OBS.</small></span>
+            </label>
+            <div class="automic sub-check" id="setSingBox">
+              <div class="field"><label class="label" for="setSingIn">Singing Audio Input</label><select id="setSingIn" data-cfg></select></div>
+              <label class="check" for="setSingHymn" id="setSingHymnRow"><input type="checkbox" id="setSingHymn" data-cfg>
+                <span>Unmute the singing mic during hymns<small>While live: it unmutes as soon as a hymn appears (the number showing) and mutes again when the hymn comes off the screen.</small></span>
+              </label>
+              <span class="path warn-txt" id="setSingWarn" hidden></span>
+            </div>
             <label class="check" for="setAutoMic"><input type="checkbox" id="setAutoMic" data-cfg>
               <span>Automatic mute while live<small>When the livestream starts, the audio input is muted. While live, it unmutes when you go from a waiting scene to a camera or slideshow, and mutes when you go from a camera or slideshow to Black or Ending. Recording on its own never changes it, and the Mute button still works any time.</small></span>
             </label>
@@ -1979,6 +2007,7 @@ class MockOBS {
         "Schedule":{kind:"image_source", file:FOLDER+"2. Afternoon Ministry Service.png"},
         "Church Logo":{kind:"image_source", file:"C:\\Users\\Media\\Livestream\\Logos\\Hall Logo.png"},
         "PYLE USB Mixer":{kind:"wasapi_input_capture", muted:false},
+        "Singing Mic":{kind:"wasapi_input_capture", muted:true},
         "Pulpit Cam":{kind:"dshow_input", video_device_id:"USB Video:\\\\?\\usb#vid_534d&pid_2109"},
         "Video":{kind:"dshow_input", video_device_id:"Cam Link 4K:\\\\?\\usb#vid_0fd9&pid_00a1&mi_00#6&1d5aba85&0&0000#{65e8773d-8f56-11d0-a3b9-00a0c9223196}\\global"},
         "Pulpit Mic":{kind:"wasapi_input_capture", muted:false},
@@ -5326,6 +5355,15 @@ function checkMic(){
     steps:["Check that the mixer is on.", "Check the USB cable from the mixer to the laptop.", "Turn up the microphone's channel and the master fader on the mixer.", "Check that the microphone is switched on."]};
   return {id:"mic", state:"ok", title:"Microphone", meter:true, text:`Picking up sound from "${src}".${muted}`};
 }
+// Singing mic (only when it's on in Settings): in OBS, and picking up sound (heard before the mute, as the primary is)
+function checkSing(){
+  const g = singCfg(), quiet = Math.floor((Date.now() - (ui.sing.lastSound || 0)) / 1000);
+  if(ui.sing.missing) return {id:"sing", state:"bad", title:"Singing mic", text:`"${g.input}" isn't in OBS.`, acts:[["Choose it in Settings", () => { closeReady(); settingsGoTo("collections", "setSingIn"); }]]};
+  const muted = ui.sing.muted ? " It's muted right now" + (g.hymns ? ", and unmutes for the hymns." : ".") : "";
+  if(quiet >= 15) return {id:"sing", state:"bad", title:"Singing mic", text:`No sound from "${g.input}" for ${quiet > 3600 ? "a while" : quiet + " seconds"}.${muted}`,
+    steps:["Check that the singing microphones are switched on.", "Turn up their channels on the mixer."]};
+  return {id:"sing", state:"ok", title:"Singing mic", text:`Picking up sound from "${g.input}".${muted}`};
+}
 async function checkYouTube(){
   try{
     const r = await vcall("GetYouTubeStatus");
@@ -5348,7 +5386,7 @@ async function readyRun(full = true){
       rd.checks = [{id:"obs", state:"bad", title:"OBS", text:"Not connected to OBS, so nothing else can be checked.", steps:["Open OBS.", "Check Tools → WebSocket Server Settings in OBS, and the password in Settings → Connection."]}];
     } else {
       const cam = await checkCamera().catch(e => ({id:"cam", state:"warn", title:"Camera 1", text:`Couldn't check: ${e.message}`}));
-      rd.checks = [{id:"obs", state:"ok", title:"OBS", text:"Connected."}, cam, checkMic(), await checkYouTube(), await checkDisk()];
+      rd.checks = [{id:"obs", state:"ok", title:"OBS", text:"Connected."}, cam, checkMic(), ...(singShown() ? [checkSing()] : []), await checkYouTube(), await checkDisk()];
     }
   } finally { rd.busy = false; }
   renderReady();
@@ -5832,6 +5870,7 @@ function syncCfgFields(){
   workCfg[cfgColl] = {text:$("setText").value, image:$("setImg").value,
     folder: mode === "custom" ? ($("setFolder").value.trim() || "") : mode,
     audio: $("setAudio").value,
+    sing: {on:$("setSingOn").checked, input:$("setSingIn").value, hymns:$("setSingHymn").checked},
     wait: {title:$("setWaitTitle").value, w1:$("setWait1").value, w2:$("setWait2").value},
     ltOn: $("setLtOnColl").checked,
     ltTheme: $("setLtTheme").value,
@@ -5867,6 +5906,11 @@ async function fillCfgFields(coll){
   // Not set up yet: suggest the usual audio input only if this collection has it, otherwise its first one
   const auds = inputs.filter(i => AUDIO_IN.test(i.inputKind)).map(i => i.inputName);
   fill($("setAudio"), auds, c && c.audio !== undefined ? c.audio : (auds.includes(ui.src.audio) ? ui.src.audio : auds[0] || ""));
+  // Singing mic: off to start; a likely input suggested by name
+  const sg = (c && c.sing) || {};
+  fill($("setSingIn"), auds, sg.input !== undefined ? sg.input : (auds.find(n => /sing|choir|congregation|room|aux/i.test(n) && n !== $("setAudio").value) || ""));
+  $("setSingOn").checked = !!sg.on; $("setSingHymn").checked = sg.hymns !== false;
+  renderSingSet();
   // Waiting scenes: the saved choice, or the scenes recognized by name if this collection hasn't been set yet
   const scenes = await listScenes(coll), auto = findWaitGroup(scenes) || [];
   const w = c && c.wait ? c.wait : {title:auto[0] || "", w1:auto[1] || "", w2:auto[2] || ""};
@@ -5913,6 +5957,15 @@ document.querySelectorAll("#page-collections [data-cfg]").forEach(el => {
 });
 $("setAutoMicList").addEventListener("change", touchCfg);   // the per-scene choices are made fresh for each collection
 $("setAutoMic").addEventListener("change", () => { $("setAutoMicBox").hidden = !$("setAutoMic").checked; });
+["setSingOn", "setSingIn", "setAudio"].forEach(id => $(id).addEventListener("change", renderSingSet));
+function renderSingSet(){
+  const on = $("setSingOn").checked, inp = $("setSingIn").value, w = $("setSingWarn");
+  $("setSingHymnRow").hidden = !on;
+  const msg = !inp ? (on ? "Choose the singing mic's audio input." : "")
+    : inp === $("setAudio").value ? "The singing mic must be a different input from the primary one."
+    : !on ? `"${inp}" is kept muted in OBS while the singing mic is off.` : "";
+  w.textContent = msg; w.hidden = !msg; w.classList.toggle("warn-txt", !!(on || inp === $("setAudio").value));
+}
 $("setAutoEnd").addEventListener("change", () => { $("setAutoEndBox").hidden = !$("setAutoEnd").checked; });
 $("setCfgUse").addEventListener("click", () => {
   cfgTouched.add(cfgColl); syncCfgFields(); renderCfgState(); updateSetDots();
@@ -6724,11 +6777,57 @@ function renderMute(){
   $("meters").classList.toggle("muted", ui.muted);
 }
 $("muteBtn").addEventListener("click", () => obs.call("SetInputMute",{inputName:srcAudio(),inputMuted:!ui.muted}));
+/* Singing mic (Settings → Scene collections → Audio). On: its own Mute button and meter in the Audio panel (and on
+   the phone), and, if chosen, unmuted while a hymn is on screen during a livestream. Off: kept muted in OBS. */
+const singCfg = (c = cfg()) => { const g = (c && c.sing) || {}; return {on:!!g.on, input:g.input && g.input !== srcAudio() ? g.input : "", hymns:g.hymns !== false}; };
+ui.sing = {muted:true, missing:false, auto:false, lastSound:0};
+const singShown = () => { const g = singCfg(); return g.on && !!g.input; };
+async function loadSing(){
+  const g = singCfg();
+  if(!g.input){ ui.sing.missing = false; renderSing(); return; }
+  try{
+    ui.sing.muted = (await obs.call("GetInputMute", {inputName:g.input})).inputMuted; ui.sing.missing = false;
+    if(!g.on && !ui.sing.muted) await obs.call("SetInputMute", {inputName:g.input, inputMuted:true});   // off: kept muted
+  }catch(e){ ui.sing.missing = true; }
+  renderSing();
+}
+function renderSing(){
+  const show = singShown(), g = singCfg();
+  $("singRow").hidden = !show;
+  $("primName").textContent = `· ${srcAudio() || "None"}`;
+  document.querySelector(".aud-panel").classList.toggle("two-mics", show);
+  if(!show) return;
+  const on = !ui.sing.muted && !ui.sing.missing;
+  $("singName").textContent = ui.sing.missing ? `· "${g.input}" isn't in OBS` : `· ${g.input}`;
+  $("singAuto").hidden = !g.hymns;
+  $("singBtn").disabled = ui.sing.missing;
+  $("singBtn").classList.toggle("on", on);
+  $("singBtn").innerHTML = `<i data-lucide="${on ? "mic-off" : "mic"}" class="mute-ico"></i><span>${on ? "MUTE" : "UNMUTE"}</span>`;
+  $("singBtn").setAttribute("aria-pressed", on);
+  $("singBtn").setAttribute("aria-label", on ? "Singing mic is on. Tap to mute" : "Singing mic is muted. Tap to unmute");
+  $("singRow").querySelector(".meters").classList.toggle("muted", !on);
+  if(window.lucide) lucide.createIcons();
+}
+$("singBtn").addEventListener("click", () => { const g = singCfg(); if(g.input) obs.call("SetInputMute", {inputName:g.input, inputMuted:!ui.sing.muted}).catch(e => toast(e.message)); });
+// A hymn on screen while live: singing mic on; the hymn gone: off again (only if it was turned on for the hymn)
+function singHymnSync(){
+  const g = singCfg(), up = !!(ot.item && ot.item.kind === "hymn" && ot.showing);
+  if(!g.on || !g.hymns || !g.input || ui.sing.missing || ui.connected === false){ ui.sing.auto = false; return; }
+  if(up && !ui.sing.auto && ui.stream.active){
+    ui.sing.auto = true;
+    if(ui.sing.muted) obs.call("SetInputMute", {inputName:g.input, inputMuted:false}).then(() => toast("Singing mic on for the hymn")).catch(() => {});
+  } else if(!up && ui.sing.auto){
+    ui.sing.auto = false;
+    if(!ui.sing.muted) obs.call("SetInputMute", {inputName:g.input, inputMuted:true}).then(() => toast("Singing mic muted: the hymn is done")).catch(() => {});
+  }
+}
+setInterval(singHymnSync, 250);
 // The audio toggle controls whatever is live, so it uses the loaded scene collection
 async function loadAudio(){
   try{ if(!srcAudio()) throw new Error("none"); ui.muted = (await obs.call("GetInputMute",{inputName:srcAudio()})).inputMuted; ui.audioMissing = false; }
   catch(e){ ui.audioMissing = true; ui.muted = true; }
   renderMute();
+  loadSing();
 }
 const pct = db => Math.max(0, Math.min(100, (db+60)/60*100));
 const peaks = [ -60, -60 ], holds = [0,0];
@@ -6943,6 +7042,15 @@ obs.on("CurrentSceneCollectionChanged", async d => {
   ot.showing = false; ui.lt.showing = "";
   await otSync();
 });
+obs.on("InputMuteStateChanged", d => {
+  const g = singCfg();
+  if(g.input && d.inputName === g.input){
+    ui.sing.muted = d.inputMuted; renderSing();
+    // The singing mic is switched off in Settings: it stays muted, even if it's unmuted in OBS
+    if(!g.on && !d.inputMuted){ obs.call("SetInputMute", {inputName:g.input, inputMuted:true}).catch(() => {}); toast("The singing mic is off in Settings, so it was muted again."); }
+    return;
+  }
+});
 obs.on("InputMuteStateChanged", d => { if(d.inputName !== srcAudio()) return; ui.muted = d.inputMuted; renderMute(); if(!ui.muted) lastSoundAt = Date.now(); });
 let lastSoundAt = Date.now();
 // Fix 7: anything louder than the silence level (set in Settings) counts as sound
@@ -6952,6 +7060,9 @@ obs.on("InputVolumeMeters", d => {
   const m = d.inputs.find(x => x.inputName === srcAudio());
   renderMeter(m ? m.peakDb : [-60,-60]);
   ui.lastPeak = m ? Math.max(...m.peakDb) : -90;
+  // Singing mic's meter
+  const g = singCfg(), sm = g.input && d.inputs.find(x => x.inputName === g.input);
+  if(sm){ const db = Math.max(...sm.peakDb); $("mS").style.width = pct(db) + "%"; if(db > ui.silenceDb) ui.sing.lastSound = Date.now(); }
   if(m && ui.lastPeak > ui.silenceDb) lastSoundAt = Date.now();
   if(!$("setOverlay").hidden) renderSilencePreview();
 });
