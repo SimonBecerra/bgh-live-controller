@@ -7838,15 +7838,29 @@ async function ssMatchVideo(sceneName, items, report){
   const vid = await ssVideoRect(sceneName, items);
   if(!vid) return;
   let gap = null; try{ gap = JSON.parse(localStorage.getItem(ssGapKey(sceneName)) || "null"); }catch(e){}
+  // The gap, measured once from the layout set up in OBS: the slideshow source's own box with its crop taken back off
+  // (the laptop source first, as it's the one set up to fill its box), so cropping never changes it
+  if(!gap){
+    const mine = items.filter(x => x.sourceName === ui.ssNames.laptop || x.sourceName === ui.ssNames.projector)
+      .sort((a, b) => (a.sourceName === ui.ssNames.laptop ? 0 : 1) - (b.sourceName === ui.ssNames.laptop ? 0 : 1));
+    for(const it of mine){
+      const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
+      if(!(t.sourceWidth > 2 && t.sourceHeight > 2)) continue;
+      const o = tfRect(t), sx = t.scaleX ?? 1, x = o.x - (t.cropLeft || 0) * sx, w = (t.sourceWidth) * sx;
+      const right = x + w / 2 >= vid.x + vid.w / 2;
+      gap = {right, px:right ? x - (vid.x + vid.w) : vid.x - (x + w)};
+      try{ localStorage.setItem(ssGapKey(sceneName), JSON.stringify(gap)); }catch(e){}
+      break;
+    }
+    if(!gap) return;
+  }
   for(const it of items){
     if(it.sourceName !== ui.ssNames.projector && it.sourceName !== ui.ssNames.laptop) continue;
     const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
     if(t.boundsType && t.boundsType !== "OBS_BOUNDS_NONE"){ report.bounded.push(`${it.sourceName} in ${sceneName}`); continue; }
     if(t.rotation || !(t.sourceWidth > 2 && t.sourceHeight > 2)) continue;
     const pr = await ssPicRect(sceneName, it, t); if(!pr || !rectOk(pr.rect)) continue;
-    const R = pr.rect, right = R.x + R.w / 2 >= vid.x + vid.w / 2;   // which side of the camera the slideshow is on
-    // The gap, measured once from the layout set up in OBS (from whichever slideshow source is seen first)
-    if(!gap || gap.right !== right){ gap = {right, px:right ? R.x - (vid.x + vid.w) : vid.x - (R.x + R.w)}; try{ localStorage.setItem(ssGapKey(sceneName), JSON.stringify(gap)); }catch(e){} }
+    const R = pr.rect, right = gap.right;
     const k = vid.h / R.h, s = (t.scaleX ?? 1) * k, w = R.w * k;
     const nx = right ? vid.x + vid.w + gap.px : vid.x - gap.px - w, ny = vid.y;
     if(Math.abs(k - 1) < 0.0005 && Math.abs(nx - R.x) < 0.5 && Math.abs(ny - R.y) < 0.5) continue;
