@@ -5879,6 +5879,17 @@ async function checkCamera(){
   if(dev && camGood[key] !== dev){ camGood[key] = dev; try{ localStorage.setItem("readyCamDev", JSON.stringify(camGood)); }catch(e){} }
   return {id:"cam", state:"ok", title:"Camera 1", text:`${moving ? "Live picture" : "A picture (nothing moving right now)"} from "${name}" (${devName(dev)}).`};
 }
+// Slideshow from the projector: is its NDI feed arriving?
+function checkSlides(){
+  if(!ss.on || !ss.src) return [];
+  if(ss.src === "laptop") return [{id:"slides", state:sl.open ? "ok" : slId(sl.cfg.link) ? "warn" : "bad", title:"Slideshow",
+    text:sl.open ? `Open on this laptop${sl.title ? ": " + sl.title : ""}.` : slId(sl.cfg.link) ? "Not open yet. It opens when you switch to the Slideshow scene, or press Open in the Slideshow panel." : "No Google Slides link yet. Paste it in the Slideshow panel (the button at the top)."}];
+  const f = ss.feed.state;
+  return [{id:"slides", state:f === "live" ? "ok" : f === "none" || f === "missing" ? "bad" : "warn", title:"Projector feed",
+    text:f === "live" ? `Live, ${ss.feed.fps} frames a second.` : f === "none" ? "No picture is arriving from the projector." : f === "missing" ? `No NDI feed found in "${ui.ssNames.projector}".`
+      : f === "idle" ? "Checked while a Slideshow scene is on." : f === "old" ? "The OBS plug-in needs updating to check it." : "Checking…",
+    steps:f === "none" || f === "missing" ? ["Check the projector laptop is on and showing the slideshow.", "Check its NDI output is running, and that it's on the church network.", `Check the source's name in Settings → Slideshow ("${ui.ssNames.projector}").`] : null}];
+}
 function checkMic(){
   const src = srcAudio(), quiet = Math.floor((Date.now() - lastSoundAt) / 1000);
   if(!src) return {id:"mic", state:"bad", title:"Microphone", text:"No audio input is chosen for this scene collection.", acts:[["Choose it in Settings", () => { closeReady(); settingsGoTo("collections", "setAudio"); }]]};
@@ -5914,7 +5925,7 @@ async function readyRun(full = true){
       rd.checks = [{id:"obs", state:"bad", title:"OBS", text:"Not connected to OBS, so nothing else can be checked.", steps:["Open OBS.", "Check Tools → WebSocket Server Settings in OBS, and the password in Settings → Connection."]}];
     } else {
       const cam = await checkCamera().catch(e => ({id:"cam", state:"warn", title:"Camera 1", text:`Couldn't check: ${e.message}`}));
-      rd.checks = [{id:"obs", state:"ok", title:"OBS", text:"Connected."}, cam, checkMic(), await checkYouTube(), await checkDisk()];
+      rd.checks = [{id:"obs", state:"ok", title:"OBS", text:"Connected."}, cam, checkMic(), await checkYouTube(), await checkDisk(), ...checkSlides()];
     }
   } finally { rd.busy = false; }
   renderReady();
@@ -7523,36 +7534,86 @@ const sl = {open:false, title:"", n:0, total:0, busy:false,
   cfg:(() => { try{ return JSON.parse(localStorage.getItem("slides") || "null") || {link:"", recent:[], screen:""}; }catch(e){ return {link:"", recent:[], screen:""}; } })()};
 const slSave = () => { try{ localStorage.setItem("slides", JSON.stringify(sl.cfg)); }catch(e){} };
 const slId = link => (String(link || "").match(/docs\.google\.com\/presentation\/d\/([\w-]{20,})/) || [])[1] || "";
+// The monitors (desktop app); one monitor means "behind the controller"
+let slScreens = [];
+async function slLoadScreens(){
+  if(!window.bgh || !window.bgh.displays) return;
+  try{ slScreens = (await window.bgh.displays()).map(d => { const [w, h] = String(d.size || "").split("×").map(Number); return {id:String(d.id), name:d.label || "Monitor", w, h, primary:!!d.primary}; }); }catch(e){}
+}
+slLoadScreens();
+if(window.bgh && window.bgh.onDisplaysChanged) window.bgh.onDisplaysChanged(() => slLoadScreens());
+const SL_SCREENS = () => slScreens;
 // #proto-start
 const SL_PROTO = {total:12, titles:{}};
-const SL_SCREENS = () => [{id:"1", name:"Laptop screen", w:1920, h:1080, primary:true}];   // the church laptop: one monitor
+slScreens = [{id:"1", name:"Laptop screen", w:1920, h:1080, primary:true}];   // the church laptop: one monitor
 // #proto-end
-// #real const SL_SCREENS = () => (window.bgh && window.bgh.screensNow ? window.bgh.screensNow() : []);
+// The slideshow's real name, once Chrome has it, replaces "New slideshow" in the recent list
+function slRemember(title){
+  if(!title) return;
+  const rec = (sl.cfg.recent || []).find(x => slId(x.link) === slId(sl.cfg.link));
+  if(rec && rec.title !== title){ rec.title = title; slSave(); }
+}
+/* OBS's Window Capture for this laptop's slideshow ("Presentation", or the window capture inside it when it's a scene)
+   is pointed at the slideshow window: title "BGH Slideshow", Chrome's window type and program, title must match.
+   With one monitor the window is behind the controller, so the capture method that can see covered windows is used. */
+async function slPointCapture(r){
+  const want = `BGH Slideshow:Chrome_WidgetWin_1:${r.exe || "chrome.exe"}`, behind = !sl.cfg.screen || sl.cfg.screen === "behind";
+  const caps = [];
+  const name = ui.ssNames.laptop;
+  try{
+    const inputs = ((await obs.call("GetInputList")).inputs || []);
+    const direct = inputs.find(i => i.inputName === name);
+    if(direct) caps.push(direct);
+    else {
+      const items = ((await obs.call("GetSceneItemList", {sceneName:name})).sceneItems || []);
+      items.forEach(it => { const i = inputs.find(x => x.inputName === it.sourceName); if(i) caps.push(i); });
+    }
+  }catch(e){}
+  let changed = 0;
+  for(const c of caps.filter(c => /window_capture/.test(c.inputKind || c.unversionedInputKind || ""))){
+    try{
+      const cur = (await obs.call("GetInputSettings", {inputName:c.inputName})).inputSettings || {};
+      const next = {window:want, priority:1, client_area:true, ...(behind ? {method:2} : {})};
+      if(cur.window !== next.window || cur.priority !== 1 || (behind && cur.method !== 2)){ await obs.call("SetInputSettings", {inputName:c.inputName, inputSettings:next}); changed++; }
+    }catch(e){}
+  }
+  if(changed) toast(`"${c0(caps)}" now captures the slideshow window.`);
+  else if(!caps.some(c => /window_capture/.test(c.inputKind || c.unversionedInputKind || ""))) toast(`"${name}" isn't a Window Capture, so the controller couldn't point it at the slideshow window. Check it in OBS.`);
+}
+const c0 = caps => (caps[0] && caps[0].inputName) || ui.ssNames.laptop;
 async function slOpen(){
   const id = slId(sl.cfg.link);
-  if(!id){ toast("Choose the slideshow first: Settings → Slideshow."); return settingsGoTo("slides", "setSlLink"); }
+  if(!id){ toast("Paste the Google Slides link first: the Slideshow button at the top."); $("ssOverlay").hidden = false; ssEditor($("ssPanelEd")); return; }
   sl.busy = true; renderSlides();
   // #proto-start
-  await sleep(700); Object.assign(sl, {open:true, n:1, total:SL_PROTO.total, title:(sl.cfg.recent.find(x => slId(x.link) === id) || {}).title || "Sunday slides"});
+  if(!window.bgh){ await sleep(700); Object.assign(sl, {open:true, n:1, total:SL_PROTO.total, title:(sl.cfg.recent.find(x => slId(x.link) === id) || {}).title || "Sunday slides"}); }
   // #proto-end
-  // #real try{ Object.assign(sl, await window.bgh.slides.open({id, screen:sl.cfg.screen})); }catch(e){ toast(`Couldn't open the slideshow: ${e.message}`); }
-  sl.busy = false; renderSlides();
+  if(window.bgh && window.bgh.slides){
+    toast("Opening the slideshow…");
+    const r = await window.bgh.slides.open({id, screen:sl.cfg.screen || "behind"}).catch(e => ({ok:false, error:e.message}));
+    if(r.ok){ Object.assign(sl, {open:true, n:r.n || 1, total:r.total || 0, title:r.title || ""}); slRemember(r.title); await slPointCapture(r); }
+    else toast(`Couldn't open the slideshow: ${r.error}`);
+  }
+  sl.busy = false; renderSlides(); phSend && phSend();
 }
 async function slClose(){
-  // #proto-start
+  if(window.bgh && window.bgh.slides){ try{ await window.bgh.slides.close(); }catch(e){} }
   Object.assign(sl, {open:false, n:0, total:0});
-  // #proto-end
-  // #real try{ await window.bgh.slides.close(); }catch(e){} Object.assign(sl, {open:false, n:0, total:0});
-  renderSlides(); ssRender();
+  renderSlides(); ssRender(); phSend && phSend();
 }
 async function slStep(d){
   if(!sl.open) return;
   // #proto-start
-  sl.n = Math.max(1, Math.min(sl.total, sl.n + d));
+  if(!window.bgh) sl.n = Math.max(1, Math.min(sl.total, sl.n + d));
   // #proto-end
-  // #real try{ Object.assign(sl, await window.bgh.slides.step(d)); }catch(e){ toast("The slideshow didn't respond. Is its window still open?"); }
+  if(window.bgh && window.bgh.slides){
+    const r = await window.bgh.slides.step(d).catch(e => ({ok:false, error:e.message}));
+    if(r.ok) Object.assign(sl, {n:r.n, total:r.total, title:r.title || sl.title}); else toast(r.error || "The slideshow didn't respond. Is its window still open?");
+  }
   renderSlides(); phSend && phSend();
 }
+// The slideshow window closed by hand, or the slide number read back
+if(window.bgh && window.bgh.slides) window.bgh.slides.onState(st => { Object.assign(sl, {open:st.open, n:st.n, total:st.total, title:st.title || sl.title}); slRemember(st.title); renderSlides(); ssRender(); phSend && phSend(); });
 function renderSlides(){
   const on = isSlideScene(ui.program) && ss.on && ss.src === "laptop";
   $("slBar").hidden = !on || !sl.open;
@@ -7582,8 +7643,11 @@ function ssEditor(el){
     <div class="ss-q"><span class="label">Where it comes from</span><div class="ss-srcs">
       <button type="button" class="ss-src" data-src="projector" aria-pressed="${proj}"><i data-lucide="cast"></i><span>From the projector<small>Its live feed (NDI)</small></span></button>
       <button type="button" class="ss-src" data-src="laptop" aria-pressed="${lap}"><i data-lucide="laptop"></i><span>Played on this laptop<small>Google Slides</small></span></button></div></div>
-    ${proj ? `<div class="ss-feed ${ss.feed.state}" aria-live="polite"><i class="d"></i><span>${ss.feed.state === "live" ? `<b>Projector feed: live</b> · ${ss.feed.fps} fps from "${esc(ui.ssNames.projector)}"`
-      : ss.feed.state === "none" ? `<b>No picture from the projector.</b> Check the projector laptop is on, its NDI output is running, and it's on the church network.` : "Checking the projector's feed…"}</span></div>` : ""}
+    ${proj ? `<div class="ss-feed ${ss.feed.state}" aria-live="polite"><i class="d"></i><span>${ss.feed.state === "live" ? `<b>Projector feed: live</b> · ${ss.feed.fps} fps`
+      : ss.feed.state === "none" ? `<b>No picture from the projector.</b> Check the projector laptop is on, its NDI output is running, and it's on the church network.`
+      : ss.feed.state === "idle" ? "The projector's feed is checked while a Slideshow scene is on."
+      : ss.feed.state === "missing" ? `No NDI feed found in "${esc(ui.ssNames.projector)}". Check the name in Settings → Slideshow.`
+      : ss.feed.state === "old" ? "Update the OBS plug-in (Settings → About & help) to check the projector's feed." : "Checking the projector's feed…"}</span></div>` : ""}
     ${lap ? `<div class="ss-q"><label class="label" for="${el.id}Link">Google Slides link</label>
       <ol class="ss-steps"><li>In Google Slides, press <b>Share</b>.</li><li>Under General access choose <b>Anyone with the link</b> (Viewer).</li><li>Press <b>Copy link</b>, then paste it here.</li></ol>
       <div class="ss-link"><input id="${el.id}Link" value="${esc(sl.cfg.link || "")}" placeholder="https://docs.google.com/presentation/d/…" autocomplete="off" spellcheck="false"><button type="button" class="btn primary" data-ss="open"${linkOk ? "" : " disabled"}>${sl.open ? "Open again" : "Open"}</button></div>
@@ -7696,11 +7760,14 @@ async function ssFeedPoll(){
   if(!(ss.on && ss.src === "projector")){ if(ss.feed.state){ ss.feed = {state:"", fps:0}; $("ndiBanner").hidden = true; } return; }
   let r = null;
   // #proto-start
-  r = SL_PROTO.feedOff ? {frames:0} : {frames:30};
+  r = SL_PROTO.feedOff ? {ok:true, fps:0, showing:true} : {ok:true, fps:30, showing:true};
   // #proto-end
-  // #real try{ r = await vcall("GetSourceFrames", {sourceName:ui.ssNames.projector, deep:true}); }catch(e){ r = null; }   // the plug-in looks inside a scene for its NDI source
-  const state = !r ? "" : r.frames > 0 ? "live" : "none", changed = state !== ss.feed.state;
-  ss.feed = {state, fps:r ? r.frames : 0};
+  // #real try{ r = await vcall("GetSourceFrames", {sourceName:ui.ssNames.projector, deep:true}); }catch(e){ r = e.code === "PLUGIN_MISSING" ? {ok:false, code:"PLUGIN_MISSING"} : null; }   // the plug-in looks inside a scene for its NDI source
+  // live · none (no frames while it's on screen) · idle (no frames, but not on screen: some NDI sources disconnect then)
+  // · checking (just started counting) · missing (no such source, or no feed inside it) · old (the plug-in needs updating)
+  const state = !r ? "" : r.ok === false ? (r.code === "PLUGIN_MISSING" ? "old" : "missing") : r.started || r.fps < 0 ? "checking" : r.fps > 0 ? "live" : r.showing ? "none" : "idle";
+  const changed = state !== ss.feed.state;
+  ss.feed = {state, fps:r && r.fps > 0 ? r.fps : 0};
   const warn = state === "none" && isSlideScene(ui.program);
   if(warn && $("ndiBanner").hidden) $("ndiBanner").hidden = false;
   if(!warn) $("ndiBanner").hidden = true;
@@ -8357,6 +8424,8 @@ function phState(){
     tr:ot.trSession || ui.ot.bbTr || "KJV",
     health:ui.stream.active ? {level:hs.level || "", text:hs.text || "", alert:hs.alert || null} : null,
     reading:ui.brProg && ui.brReading ? brChapterOf(ui.brReading) : "",
+    slides:{on:ss.on, ratio:ss.ratio, src:ss.src, feed:ss.feed.state, live:isSlideScene(ui.program), open:sl.open, n:sl.n, total:sl.total, title:sl.title,
+      recent:(sl.cfg.recent || []).map(x => ({title:x.title || "Slideshow", on:slId(x.link) === slId(sl.cfg.link)}))},
     battery:bat.on ? {pct:bat.pct, low:bat.pct <= 20} : null
   };
 }
@@ -8401,6 +8470,21 @@ async function phRun(cmd, a){
       for(let i = 0; i < 10 && !b.group.includes(ui.program); i++) await sleep(150);
       if(!b.group.includes(ui.program)) await syncProgram();
       return {program:ui.program, on:b.group.includes(ui.program)};
+    }
+    case "ss": {   // the phone's Slideshow sheet: on/off, size, where it comes from
+      const ch = {};
+      if(typeof a.on === "boolean") ch.on = a.on;
+      if(a.ratio === "4:3" || a.ratio === "16:9") ch.ratio = a.ratio;
+      if(a.src === "projector" || a.src === "laptop") ch.src = a.src;
+      await ssSet(ch); return {};
+    }
+    case "slide": { if(!sl.open) throw phErr("The slideshow isn't open."); await slStep(a.d > 0 ? 1 : -1); return {}; }
+    case "slide-open": { await slOpen(); return {}; }
+    case "slide-rec": {
+      const x = (sl.cfg.recent || [])[+a.i]; if(!x) throw phErr("That slideshow isn't in the list any more.");
+      const was = slId(sl.cfg.link); sl.cfg.link = x.link; slSave();
+      if(sl.open && slId(x.link) !== was) await slOpen(); else slAutoOpen();
+      ssRender(); return {};
     }
     case "keep": {   // Ending tapped again on the phone: stay on Ending, but don't end the stream by itself
       if(!autoEnd) return {};

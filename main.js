@@ -548,6 +548,10 @@ app.whenReady().then(() => {
   screen.on("display-removed", (e, d) => displaysChanged("removed", d));
   createWindow();
   phone = require("./phone").setup({ ipcMain, getWin: () => win, userData, appDir: __dirname });
+  slides = require("./slides").setup({ ipcMain, getWin: () => win, userData: userData(), screen });
   setupAppUpdates();
 });
+// The slideshow's Chrome window closes with the controller
+let slides = null;
+app.on("will-quit", () => { if (slides) slides.close().catch(() => {}); });
 app.on("window-all-closed", () => app.quit());

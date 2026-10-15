@@ -24,6 +24,13 @@ contextBridge.exposeInMainWorld("bgh", {
     lookup: q => ipcRenderer.invoke("bible-lookup", q)
   },
   appCpu: () => ipcRenderer.invoke("app-cpu"),
+  slides: {
+    open: q => ipcRenderer.invoke("slides-open", q),
+    step: d => ipcRenderer.invoke("slides-step", d),
+    close: () => ipcRenderer.invoke("slides-close"),
+    state: () => ipcRenderer.invoke("slides-state"),
+    onState: fn => ipcRenderer.on("slides-state", (e, s) => fn(s))
+  },
   phone: {
     info: () => ipcRenderer.invoke("phone-info"),
     enable: on => ipcRenderer.invoke("phone-enable", !!on),
