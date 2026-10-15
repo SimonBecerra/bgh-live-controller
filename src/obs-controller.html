@@ -7643,6 +7643,12 @@ async function phRun(cmd, a){
       if(!b.group.includes(ui.program)) await syncProgram();
       return {program:ui.program, on:b.group.includes(ui.program)};
     }
+    case "keep": {   // Ending tapped again on the phone: stay on Ending, but don't end the stream by itself
+      if(!autoEnd) return {};
+      cancelAutoEnd(); ui.autoEndSkip = ui.program;
+      toast("From the phone: still live. It won't end by itself until you leave Ending and come back.");
+      return {};
+    }
     case "mute": {
       if(!srcAudio() || ui.audioMissing) throw phErr("No microphone input is set up for this scene collection.");
       await obs.call("SetInputMute", {inputName:srcAudio(), inputMuted:!!a.muted}); return {};
