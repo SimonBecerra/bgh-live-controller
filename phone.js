@@ -150,6 +150,7 @@ function setup({ ipcMain, getWin, userData, appDir }) {
         sse(res, "hello", { sid, name: d.name, now: Date.now() });
         if (lastStateJson) sse(res, "state", lastStateJson);
         if (c.view && lastFrame) sse(res, "frame", lastFrame);
+        if (lastSlide) sse(res, "slide", lastSlide);
         seen(d); watch(); changed();
         const ping = setInterval(() => { try { res.write(": ping\n\n"); } catch (e) {} }, 15000);
         req.on("close", () => { clearInterval(ping); clients.delete(sid); watch(); changed(); });
@@ -250,6 +251,13 @@ function setup({ ipcMain, getWin, userData, appDir }) {
     if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/") || dataUrl.length > 400000) return;
     lastFrame = JSON.stringify({ img: dataUrl, at: Date.now() });
     broadcast("frame", lastFrame, c => c.view);
+  });
+  // The slideshow's current slide (after Back / Next): a small picture for every phone, so the change is confirmed
+  let lastSlide = null;
+  ipcMain.on("phone-slide", (e, dataUrl) => {
+    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/") || dataUrl.length > 200000) return;
+    lastSlide = JSON.stringify({ img: dataUrl, at: Date.now() });
+    broadcast("slide", lastSlide);
   });
   ipcMain.on("phone-reply", (e, r) => {
     const p = r && pending.get(r.id);
