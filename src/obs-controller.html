@@ -307,6 +307,12 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .ph-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none;opacity:.5}
 .ph-dot.on{background:#2fbf71;opacity:1}
 @media (max-width:640px){ .ph-pair{grid-template-columns:1fr} }
+/* Settings → Scene collections → Transitions: Fade after Live Soon */
+.fade-after{display:flex;flex-wrap:wrap;gap:6px 14px}
+.fade-chk{display:flex;align-items:center;gap:8px;min-height:40px;font-weight:500;cursor:pointer}
+.fade-chk input{width:20px;height:20px}
+.fade-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:600px){.fade-pair{grid-template-columns:1fr}}
 .check{display:flex;gap:16px;align-items:center;font-weight:600;cursor:pointer;min-height:56px;padding:6px 0}
 .check span{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
 .check small{font-weight:400;font-size:13px;color:var(--muted);line-height:1.4}
@@ -598,6 +604,14 @@ textarea:disabled,select:disabled{opacity:.5}
 .clr-row .btn{flex:none;min-height:46px;font-size:14px}
 .clr-swatch{width:48px;height:48px;border-radius:8px;flex:none;border:1px solid var(--line-2);background-image:linear-gradient(45deg,#9aa7b4 25%,transparent 25%,transparent 75%,#9aa7b4 75%),linear-gradient(45deg,#9aa7b4 25%,#c8d0d8 25%,#c8d0d8 75%,#9aa7b4 75%);background-size:12px 12px;background-position:0 0,6px 6px;position:relative;overflow:hidden}
 /* Conference colour: a small piece of the lower third, with "Conference" in the darker shade */
+/* See-through level: the box over a stand-in camera picture */
+.op-val{font-weight:700;font-variant-numeric:tabular-nums}
+.op-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#setBoxOp{flex:1;min-width:200px;max-width:340px;accent-color:var(--accent)}
+.op-prev{position:relative;height:56px;max-width:340px;border-radius:8px;overflow:hidden;border:1px solid var(--line-2);margin-top:4px;
+  background:linear-gradient(100deg,#d9c7a8 0%,#8a6f55 30%,#f2efe9 55%,#3d4b5c 80%,#c2a27e 100%)}
+.op-prev i{position:absolute;left:10px;right:40%;top:10px;bottom:10px;border-radius:4px;background:var(--op-box,rgba(19,41,50,.9))}
+.op-prev span{position:absolute;left:22px;top:50%;transform:translateY(-50%);color:#fff;font-weight:600;font-size:15px}
 .clr-prev{position:relative;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line-2);margin-top:8px;max-width:340px;
   background-image:linear-gradient(45deg,#9aa7b4 25%,transparent 25%,transparent 75%,#9aa7b4 75%),linear-gradient(45deg,#9aa7b4 25%,#c8d0d8 25%,#c8d0d8 75%,#9aa7b4 75%);background-size:12px 12px;background-position:0 0,6px 6px}
 .clr-prev::before{content:"";position:absolute;inset:0;background:var(--sw,rgba(19,41,50,.76))}
@@ -1280,6 +1294,11 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <span class="path" id="setLtThemeHint"></span></div>
             <div class="opt-box" id="setLtOpts">
               <h5 id="setLtOptsH">Theme options</h5>
+              <div class="field" id="setBoxOpField"><div class="field-top"><label class="label" for="setBoxOp">See-through level</label><span class="op-val" id="setBoxOpVal">90%</span></div>
+                <div class="op-row"><input type="range" id="setBoxOp" data-cfg min="50" max="100" step="5" value="90" aria-describedby="setBoxOpHelp">
+                  <button type="button" class="btn" id="setBoxOpReset">Reset to default</button></div>
+                <div class="op-prev" id="setBoxOpPrev" aria-hidden="true"><i></i><span>Simon Becerra</span></div>
+                <span class="path" id="setBoxOpHelp">How solid the lower third box and the hymn and Bible box are. 100% is solid; 90% is the default. The words stay solid white.</span></div>
               <div class="field" id="setLtSsMaxField" hidden><label class="label" for="setLtSsMax">Speakers in Go Live</label>
                 <select id="setLtSsMax" data-cfg><option value="1">1 speaker</option><option value="2">Up to 2 speakers</option><option value="3">Up to 3 speakers</option><option value="4">Up to 4 speakers</option></select>
                 <span class="path">Choosing a speaker is optional. Each speaker gets a lower third button before the teachers and is named in the livestream description.</span></div>
@@ -1301,7 +1320,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               </div>
               <div class="clr-prev" id="setLtPrev" aria-hidden="true"><span>Conference</span><b id="setLtDark"></b></div>
               <div class="clr-recent" id="setLtRecent"></div>
-              <span class="path" id="setLtColorMsg">A hex code, like #132932. It's shown at the same see-through level as the Barrington lower third.</span></div>
+              <span class="path" id="setLtColorMsg">A hex code, like #132932. It's shown at the see-through level set above.</span></div>
               <div class="teach-box" id="setTeachBox" hidden>
                 <h5 id="setTeachHdr">Sunday School teachers</h5>
                 <span class="path">Every class gets a lower third button, shown as "Mrs. Setty’s Class" with the subtitle under it. A class with two teachers shows "Ms. Faith and Mrs. Hope’s Class". Teachers aren't offered in Go Live. The list is shared by every scene collection that uses the Sunday School theme.</span>
@@ -1348,6 +1367,22 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <div class="automic-list" id="setAutoMicList"></div>
               <span class="path">Going from a "Mic off" scene to a "Mic on" scene unmutes; going the other way mutes. "No change" scenes never change it.</span>
             </div>
+          </div>
+          <div class="set-section">
+            <h4>Transitions</h4>
+            <label class="check" for="setFadeIn"><input type="checkbox" id="setFadeIn" data-cfg>
+              <span>Fade after Live Soon<small>Go straight from Live Soon (or a scene chosen below) to the first camera, and the next switch to the second camera is a 1.2-second fade. Every other camera switch stays as your Transition Table sets it. For switches made from the controller or the phone.</small></span>
+            </label>
+            <div class="automic sub-check" id="setFadeBox" hidden>
+              <span class="label">Coming straight from</span>
+              <div class="fade-after" id="setFadeAfter"></div>
+              <div class="fade-pair">
+                <div class="field"><label class="label" for="setFadeFrom">First camera</label><select id="setFadeFrom" data-cfg></select></div>
+                <div class="field"><label class="label" for="setFadeTo">Then fades to</label><select id="setFadeTo" data-cfg></select></div>
+              </div>
+              <span class="path" id="setFadeHint"></span>
+            </div>
+          </div>
           <div class="set-section">
             <h4>Recording</h4>
             <label class="check" for="setRecRemind"><input type="checkbox" id="setRecRemind" data-cfg>
@@ -2053,6 +2088,13 @@ class MockOBS {
         this.emit("StudioModeStateChanged",{studioModeEnabled:s.studio});
         if(s.studio) this.emit("CurrentPreviewSceneChanged",{sceneName:s.preview});
         return {};
+      case "GetSceneTransitionList": return {currentSceneTransitionName:s.transition, transitions:[{transitionName:"Cut", transitionKind:"cut_transition"}, {transitionName:"Fade", transitionKind:"fade_transition"}]};
+      case "GetSceneSceneTransitionOverride": { const o = (this.overrides || {})[d.sceneName] || {}; return {transitionName:o.transitionName || null, transitionDuration:o.transitionDuration || null}; }
+      case "SetSceneSceneTransitionOverride":
+        this.overrides ||= {};
+        if(d.transitionName) this.overrides[d.sceneName] = {transitionName:d.transitionName, transitionDuration:d.transitionDuration || null};
+        else delete this.overrides[d.sceneName];
+        return {};
       case "SetCurrentSceneTransition":
         s.transition = d.transitionName; this.emit("CurrentSceneTransitionChanged",{transitionName:s.transition}); return {};
       case "SetInputMute":
@@ -2326,7 +2368,8 @@ class MockOBS {
     this.emit(ev,{outputActive:start, t0:o.t0}); return {};
   }
   _transitionFor(from, to){
-    const T = this.table;
+    const T = this.table, o = (this.overrides || {})[to];
+    if(o && o.transitionName) return o.transitionName;   // a scene's own Transition Override comes first
     return T[`${from} -> ${to}`] || T[`Any -> ${to}`] || T[`${from} -> Any`] || this.s.transition;
   }
   _switch(n){
@@ -2433,6 +2476,46 @@ const noExt = f => f.replace(/\.[^.]+$/,"").replace(/^\s*\d+\s*[.)\-–:]\s*/, "
 const serviceName = () => noExt(base(ui.schedule || ""));
 const fmt = ms => { const s = Math.floor(ms/1000); return [s/3600, s/60%60, s%60].map(v => String(Math.floor(v)).padStart(2,"0")).join(":"); };
 
+/* Fade after Live Soon (Settings → Scene collections → Transitions, per collection). Straight from Live Soon or
+   We'll Be Right Back (or the scenes chosen) to the first camera (Camera 2) arms it; the next switch, from that camera
+   to the second one (Camera 1), gets a 1200 ms Fade through OBS's Transition Override on the second camera for that
+   one switch. Any other switch disarms it. Everything else stays as OBS and the Transition Table decide. */
+const FADE_MS = 1200;
+const isBreakScene = n => /\b(live soon|we'?ll be right back|be right back|brb)\b/i.test(String(n || ""));
+function fadeCfgOf(c, scenes = []){
+  const f = (c && c.fadeIn) || {};
+  const pick = re => scenes.find(n => re.test(n.trim())) || "";
+  return {on:!!f.on, after:Array.isArray(f.after) ? f.after : scenes.filter(isBreakScene),
+    from:f.from !== undefined ? f.from : pick(/^cam(era)?\s*2$/i), to:f.to !== undefined ? f.to : pick(/^cam(era)?\s*1$/i)};
+}
+let fadeArmed = false;
+// Every Program change, however it was made: arm on "Live Soon → Camera 2", disarm on anything else
+function fadeTrack(prev, next){
+  const f = fadeCfgOf(cfg(), BUTTONS.flatMap(b => b.group));
+  fadeArmed = !!(f.on && f.from && next === f.from && f.after.includes(prev));
+}
+// Just before the controller (or the phone) switches Program to `to`
+let fadeRestore = null;   // {scene, was, timer}: the override to put back after the fade
+async function fadeFlush(){
+  const r = fadeRestore; if(!r) return;
+  fadeRestore = null; clearTimeout(r.timer);
+  await obs.call("SetSceneSceneTransitionOverride", {sceneName:r.scene, transitionName:r.was.transitionName || null, transitionDuration:r.was.transitionDuration || null}).catch(() => {});
+}
+async function fadeBeforeSwitch(to){
+  await fadeFlush();   // a quick switch after the fade: the scene's own override is back first
+  const f = fadeCfgOf(cfg(), BUTTONS.flatMap(b => b.group));
+  if(!fadeArmed || !f.on || ui.program !== f.from || to !== f.to) return;
+  try{
+    const list = await obs.call("GetSceneTransitionList");
+    const fade = (list.transitions || []).find(t => t.transitionKind === "fade_transition") || (list.transitions || []).find(t => /fade/i.test(t.transitionName));
+    if(!fade) return;
+    const was = await obs.call("GetSceneSceneTransitionOverride", {sceneName:to}).catch(() => ({}));
+    await obs.call("SetSceneSceneTransitionOverride", {sceneName:to, transitionName:fade.transitionName, transitionDuration:FADE_MS});
+    // Put the scene's own override back once the fade has run (or before the next switch, if that's sooner)
+    fadeRestore = {scene:to, was, timer:setTimeout(fadeFlush, FADE_MS + 800)};
+  }catch(e){ /* never stop the switch because of the fade */ }
+}
+
 // Scene bank. A tap shows straight away as "switching" (a pulsing outline on that button); the button turns
 // solid only when OBS reports the switch, so it still always matches what OBS is really showing.
 let scPending = null;   // {b, kind:"pgm"|"pvw", timer}
@@ -2454,7 +2537,7 @@ async function selectScene(b){
   }
   try{
     if(ui.studio) await obs.call("SetCurrentPreviewScene",{sceneName:b.scene});
-    else await obs.call("SetCurrentProgramScene",{sceneName:b.scene});
+    else { await fadeBeforeSwitch(b.scene); await obs.call("SetCurrentProgramScene",{sceneName:b.scene}); }
   }catch(e){ clearScPending(); toast(e.message); }
 }
 /* Program as OBS has it right now. If the controller missed OBS's message about a switch (from the phone,
@@ -2523,6 +2606,7 @@ $("sqStudio").addEventListener("click", toggleStudio);
 // Done by the controller so it works whatever OBS's own "swap after transitioning" setting is.
 $("cutBtn").addEventListener("click", async () => {
   const prev = ui.program;
+  if(ui.preview) await fadeBeforeSwitch(ui.preview);
   await obs.call("TriggerStudioModeTransition");
   if(!prev || prev === ui.program && prev === ui.preview) return;
   // Leaving the waiting rotation mid-cycle: queue Title Slide so cutting back restarts the sequence
@@ -4221,16 +4305,23 @@ function ltDarker(hex){
 // The hymn and Bible box takes the lower third theme's colour (only the colour: fonts and sizes stay the same)
 function themeBox(){
   const t = ltTheme();
-  return t === "conference" ? {boxColor:ltColor(), boxOpacity:0.76}
-    : t === "christmas" ? {boxColor:"#B32929", boxOpacity:0.76, boxStyle:"christmas"}   // the gradient and snow too
+  const o = boxPct() / 100;
+  return t === "conference" ? {boxColor:ltColor(), boxOpacity:o}
+    : t === "christmas" ? {boxColor:"#B32929", boxOpacity:o, boxStyle:"christmas"}   // the gradient and snow too
     : t === "sundayschool" ? {boxColor:"#449DD1", boxOpacity:1}
-    : {boxColor:LT_COLOR, boxOpacity:0.76};
+    : {boxColor:LT_COLOR, boxOpacity:o};
 }
 const ltColor = () => hexColor((cfg() || {}).ltColor) || LT_COLOR;
+/* See-through level of the lower third box and the hymn and Bible box (Settings → Scene collections), 50–100%.
+   Not saved while it's at the default, so changing BOX_OPACITY_DEFAULT in an update moves every collection
+   that hasn't been set to something else. Sunday School stays solid. */
+const BOX_OPACITY_DEFAULT = 90;
+const boxPct = (c = cfg()) => { const v = c && parseInt(c.boxOpacity, 10); return v >= 50 && v <= 100 ? v : BOX_OPACITY_DEFAULT; };
 async function ltSetTheme(){
-  try{ await vcall("SetLowerThirdTheme", {theme:ltTheme(), color:ltColor()}); }catch(e){ if(e.code === "PLUGIN_MISSING") ot.plugin = false; }
+  try{ await vcall("SetLowerThirdTheme", {theme:ltTheme(), color:ltColor(), opacity:boxPct()}); }catch(e){ if(e.code === "PLUGIN_MISSING") ot.plugin = false; }
 }
-const ltThemeOff = d => (d.theme && d.theme !== ltTheme()) || (ltTheme() === "conference" && d.color && hexColor(d.color) !== ltColor());
+const ltThemeOff = d => (d.theme && d.theme !== ltTheme()) || (ltTheme() === "conference" && d.color && hexColor(d.color) !== ltColor())
+  || (typeof d.opacity === "number" && ltTheme() !== "sundayschool" && d.opacity !== boxPct());   // an older plug-in doesn't report it
 // The host's button (Settings → Scene collections → Lower third → Host), or null when there isn't one
 function ltHost(){
   if(!hostAllowed() || !ui.hostId) return null;
@@ -5840,7 +5931,10 @@ function syncCfgFields(){
     recRemind: $("setRecRemind").checked,
     ssMax: parseInt($("setLtSsMax").value, 10) || 1,
     ltHost: {on:$("setLtHostOn").checked, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
+    boxOpacity: parseInt($("setBoxOp").value, 10) === BOX_OPACITY_DEFAULT ? undefined : parseInt($("setBoxOp").value, 10),
     ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
+    fadeIn: {on:$("setFadeIn").checked, from:$("setFadeFrom").value, to:$("setFadeTo").value,
+      after:[...document.querySelectorAll("#setFadeAfter input:checked")].map(el => el.dataset.scene)},
     autoMic: {on: $("setAutoMic").checked,
       scenes: Object.fromEntries([...document.querySelectorAll("#setAutoMicList select")].map(el => [el.dataset.scene, el.value]))}};
 }
@@ -5880,6 +5974,7 @@ async function fillCfgFields(coll){
   $("setLtSsMax").value = String(c && c.ssMax >= 1 && c.ssMax <= 10 ? c.ssMax : 1);
   fillLtHost(c && c.ltHost);
   $("setLtColor").value = (c && c.ltColor) || LT_COLOR;
+  $("setBoxOp").value = String(boxPct(c));
   renderLtColor();
   // Automatic mute: one row per scene
   const am = (c && c.autoMic) || {on:false, scenes:{}};
@@ -5895,6 +5990,20 @@ async function fillCfgFields(coll){
     $("setAutoMicList").appendChild(row);
   });
   $("setAutoMicBox").hidden = !am.on;
+  // Fade after Live Soon
+  const fd = fadeCfgOf(c, scenes);
+  $("setFadeIn").checked = !!fd.on;
+  $("setFadeAfter").innerHTML = "";
+  scenes.forEach(n => {
+    const l = document.createElement("label"); l.className = "fade-chk";
+    l.innerHTML = `<input type="checkbox" data-cfg><span></span>`;
+    l.querySelector("span").textContent = n;
+    const cb = l.querySelector("input"); cb.dataset.scene = n; cb.checked = fd.after.includes(n);
+    $("setFadeAfter").appendChild(l);
+  });
+  fill($("setFadeFrom"), scenes, fd.from); fill($("setFadeTo"), scenes, fd.to);
+  $("setFadeBox").hidden = !fd.on;
+  renderFadeHint();
   const f = c ? c.folder : "auto";
   $("setFolderMode").value = f === "auto" || f === "" ? f : "custom";
   $("setFolder").value = f === "auto" || f === "" ? "" : f;
@@ -5912,7 +6021,18 @@ document.querySelectorAll("#page-collections [data-cfg]").forEach(el => {
   el.addEventListener("input", touchCfg); el.addEventListener("change", touchCfg);
 });
 $("setAutoMicList").addEventListener("change", touchCfg);   // the per-scene choices are made fresh for each collection
+$("setFadeAfter").addEventListener("change", touchCfg);
 $("setAutoMic").addEventListener("change", () => { $("setAutoMicBox").hidden = !$("setAutoMic").checked; });
+$("setFadeIn").addEventListener("change", () => { $("setFadeBox").hidden = !$("setFadeIn").checked; renderFadeHint(); });
+["setFadeFrom", "setFadeTo"].forEach(id => $(id).addEventListener("change", renderFadeHint));
+$("setFadeAfter").addEventListener("change", renderFadeHint);
+function renderFadeHint(){
+  const after = [...document.querySelectorAll("#setFadeAfter input:checked")].map(el => el.dataset.scene), from = $("setFadeFrom").value, to = $("setFadeTo").value;
+  const h = $("setFadeHint");
+  h.classList.toggle("warn-txt", !after.length || !from || !to || from === to);
+  h.textContent = !after.length ? "Tick at least one scene it comes from." : !from || !to ? "Choose both cameras." : from === to ? "Choose two different cameras."
+    : `${listWords(after.map(n => `"${n}"`))} → ${from}: then ${from} → ${to} fades over 1.2 seconds, once.`;
+}
 $("setAutoEnd").addEventListener("change", () => { $("setAutoEndBox").hidden = !$("setAutoEnd").checked; });
 $("setCfgUse").addEventListener("click", () => {
   cfgTouched.add(cfgColl); syncCfgFields(); renderCfgState(); updateSetDots();
@@ -5932,7 +6052,23 @@ function hexColor(v){
   const h = m[1].length === 3 ? m[1].replace(/./g, c => c + c) : m[1];
   return "#" + h.toUpperCase();
 }
-const rgba = hex => `rgba(${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)},.76)`;
+const rgba = (hex, a = (parseInt($("setBoxOp").value, 10) || BOX_OPACITY_DEFAULT) / 100) => `rgba(${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)},${a})`;
+// The see-through slider: its number and a preview box in this theme's colour over a stand-in picture
+function renderBoxOp(){
+  const v = parseInt($("setBoxOp").value, 10) || BOX_OPACITY_DEFAULT, th = $("setLtTheme").value;
+  $("setBoxOpVal").textContent = `${v}%${v === BOX_OPACITY_DEFAULT ? " (default)" : ""}`;
+  $("setBoxOpReset").disabled = v === BOX_OPACITY_DEFAULT;
+  const col = th === "conference" ? (hexColor($("setLtColor").value) || LT_COLOR) : th === "christmas" ? "#B32929" : LT_COLOR;
+  $("setBoxOpPrev").style.setProperty("--op-box", th === "christmas"
+    ? `linear-gradient(180deg, ${rgba("#B32929", v / 100)} 0%, ${rgba("#D0787A", Math.min(1, v / 100 + .06))} 100%)` : rgba(col, v / 100));
+}
+$("setBoxOp").addEventListener("input", () => { renderBoxOp(); renderLtColor(); });
+// Back to the default (and stored as "default", so a new default in a later update applies here too)
+$("setBoxOpReset").addEventListener("click", () => {
+  $("setBoxOp").value = String(BOX_OPACITY_DEFAULT);
+  $("setBoxOp").dispatchEvent(new Event("input", {bubbles:true}));
+  $("setBoxOp").dispatchEvent(new Event("change", {bubbles:true}));
+});
 ui.ltRecent = (() => { try{ const l = JSON.parse(localStorage.getItem("ltRecentColors")); return Array.isArray(l) ? l.filter(hexColor).slice(0, 2) : []; }catch(e){ return []; } })();
 function renderLtColor(){
   const on = $("setLtOnColl").checked, th = $("setLtTheme").value, conf = th === "conference";
@@ -5945,6 +6081,8 @@ function renderLtColor(){
   $("setLtConfSubNote").hidden = !conf;
   $("setLtSubBField").hidden = conf;
   $("setLtSsMaxField").hidden = !ss;
+  $("setBoxOpField").hidden = ss;   // Sunday School stays solid
+  renderBoxOp();
   $("setHomeSubBox").hidden = !$("setHomeSubOn").checked;
   const hsText = $("setHomeSub").value.trim().toUpperCase();
   $("setHomeSubPrev").textContent = hsText ? `Home speakers: ${hsText} · Elders: ELDER, ${hsText}` : "Leave it empty to show only ELDER under elders' names.";
@@ -5962,7 +6100,7 @@ function renderLtColor(){
   $("setLtSwatch").style.setProperty("--sw", rgba(hex || LT_COLOR));
   $("setLtColorMsg").classList.toggle("err", !hex && !!v.trim());
   $("setLtColorMsg").textContent = !hex && v.trim() ? "That isn't a hex code. Use # and 6 characters from 0–9 and A–F, like #132932."
-    : `A hex code, like #132932. It's shown at the same see-through level as the Barrington lower third. The word "Conference" behind the name is a darker shade of it: ${ltDarker(hex || LT_COLOR)}.`;
+    : `A hex code, like #132932. It's shown at the see-through level set above. The word "Conference" behind the name is a darker shade of it: ${ltDarker(hex || LT_COLOR)}.`;
   $("setLtPrev").style.setProperty("--sw", rgba(hex || LT_COLOR));
   $("setLtPrev").style.setProperty("--dk", ltDarker(hex || LT_COLOR));
   $("setLtDark").textContent = ltDarker(hex || LT_COLOR);
@@ -6633,7 +6771,7 @@ $("setForm").addEventListener("submit", e => {
   const before = JSON.stringify(ui.collCfg[ui.collection] || null);
   Object.values(workCfg).forEach(c => { if(c && c.ltTheme === "conference" && c.ltColor) rememberLtColor(c.ltColor); });
   ui.collCfg = workCfg; saveCollCfg();
-  if(JSON.stringify(ui.collCfg[ui.collection] || null) !== before){ loadDefaultSources(); loadAudio(); refreshScenes(); ltSetEnabled(); ltSetTheme(); renderOt(); }
+  if(JSON.stringify(ui.collCfg[ui.collection] || null) !== before){ loadDefaultSources(); loadAudio(); refreshScenes(); ltSetEnabled(); ltSetTheme(); if(ot.showing) otSend(); renderOt(); }
   // #proto-start
   if($("setFail")) obs.protoFail = $("setFail").value || null;
   // #proto-end
@@ -6892,6 +7030,7 @@ obs.on("CurrentProgramSceneChanged", d => {
   if(scPending && scPending.kind === "pgm"){ clearTimeout(scPending.timer); scPending = null; }   // OBS has switched (to that, or something else)
   renderScenes();
   autoMute(prev, d.sceneName);
+  fadeTrack(prev, d.sceneName);
   if(ui.autoEndSkip && ui.autoEndSkip !== d.sceneName) ui.autoEndSkip = null;   // "Keep streaming" lasts until Ending is left
   if(!ui.autoEndSkip) checkAutoEnd(d.sceneName);
 });
@@ -7497,12 +7636,18 @@ async function phRun(cmd, a){
       if(!b) throw phErr(`There's no ${a.label} scene in ${ui.collection} any more.`);
       if(b.group.includes(ui.program)) return {};
       // The phone always changes Program, even in Studio Mode
-      if(ui.studio) await obs.call("SetCurrentProgramScene", {sceneName:b.scene});
+      if(ui.studio){ await fadeBeforeSwitch(b.scene); await obs.call("SetCurrentProgramScene", {sceneName:b.scene}); }
       else await selectScene(b);
       // OBS has taken it; wait for its message, or ask, so the phone hears straight away
       for(let i = 0; i < 10 && !b.group.includes(ui.program); i++) await sleep(150);
       if(!b.group.includes(ui.program)) await syncProgram();
       return {program:ui.program, on:b.group.includes(ui.program)};
+    }
+    case "keep": {   // Ending tapped again on the phone: stay on Ending, but don't end the stream by itself
+      if(!autoEnd) return {};
+      cancelAutoEnd(); ui.autoEndSkip = ui.program;
+      toast("From the phone: still live. It won't end by itself until you leave Ending and come back.");
+      return {};
     }
     case "mute": {
       if(!srcAudio() || ui.audioMissing) throw phErr("No microphone input is set up for this scene collection.");

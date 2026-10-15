@@ -39,7 +39,8 @@ writeFileSync(join(out, "index.html"), html);
 console.log(`app/index.html built: ${elements} prototype-only elements and ${blocks} code blocks removed, fonts and icons bundled.`);
 
 // The phone remote's page, served to phones by phone.js
-const phone = readFileSync(join(root, "src", "phone.html"), "utf8");
+const { html: phone, elements: phEls, blocks: phBlocks } = stripPrototype(readFileSync(join(root, "src", "phone.html"), "utf8"));
+if(/PROTO_CTL|data-pt=/.test(phone)) throw new Error("Build stopped: the phone page still has prototype-only code");
 if(/https?:\/\/(?!www\.w3\.org)/.test(phone.replace(/<!--[\s\S]*?-->/g, ""))) throw new Error("Build stopped: the phone page loads something from the internet");
 writeFileSync(join(out, "phone.html"), phone);
-console.log("app/phone.html built.");
+console.log(`app/phone.html built: ${phEls} prototype-only elements and ${phBlocks} code blocks removed.`);
