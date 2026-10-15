@@ -18,7 +18,7 @@
 
   // Events the controller listens to, passed through (some translated in adapt below)
   const EVENTS = ["CurrentProgramSceneChanged", "CurrentPreviewSceneChanged", "SceneTransitionStarted",
-    "StudioModeStateChanged", "CurrentSceneTransitionChanged", "CurrentSceneCollectionChanged",
+    "StudioModeStateChanged", "CurrentSceneTransitionChanged", "CurrentSceneCollectionChanging", "CurrentSceneCollectionChanged", "SceneItemCreated",
     "SceneCreated", "SceneRemoved", "SceneNameChanged", "SceneListChanged",
     "InputCreated", "InputRemoved", "InputNameChanged", "InputSettingsChanged", "InputMuteStateChanged",
     "InputVolumeMeters", "StreamStateChanged", "RecordStateChanged", "ExitStarted", "VendorEvent"];
