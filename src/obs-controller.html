@@ -2763,15 +2763,23 @@ function bapCamShown(b){
 /* Slideshow scenes: hidden unless the slideshow is on for this service, and then only the chosen shape
    ("Slideshow 4:3" or "Slideshow 16:9"; a slideshow scene without a shape in its name shows for either).
    A scene that's on Program stays visible. */
+// A Slideshow scene's shape from its name: "Slideshow 4:3" → "4:3", "Slideshow 16x9" → "16:9", no shape → ""
+const slideRatioOf = n => { const m = String(n || "").match(/(4\s*[:x×]\s*3|16\s*[:x×]\s*9)/i); return m ? (m[1].startsWith("4") ? "4:3" : "16:9") : ""; };
 function slideShown(b){
   if(b.group.includes(ui.program) || (ui.studio && b.group.includes(ui.preview))) return true;
   if(!ss.on) return false;
-  const m = b.scene.match(/(4\s*[:x×]\s*3|16\s*[:x×]\s*9)/i);
-  return !m || !ss.ratio || m[1].replace(/\s|x|×/gi, ":").replace(/:+/, ":") === ss.ratio;
+  const r = slideRatioOf(b.scene);
+  return !r || !ss.ratio || r === ss.ratio;
 }
 const sceneShown = b => (!b.bapCam || bapCamShown(b)) && (!b.slide || slideShown(b));
+// The Slideshow scene buttons share one place: whichever shape is showing sits where the first Slideshow button is,
+// so changing 4:3 ↔ 16:9 swaps the button in place (on the phone too)
+const sceneSlot = i => { const b = BUTTONS[i]; if(!b || !b.slide) return i; const f = BUTTONS.findIndex(x => x.slide); return f < 0 ? i : f; };
 function renderBapCam(){
-  BUTTONS.forEach((b, i) => { if(b.bapCam || b.slide){ const h = !sceneShown(b); if(sceneEls[i] && sceneEls[i].hidden !== h) sceneEls[i].hidden = h; } });
+  BUTTONS.forEach((b, i) => {
+    if(b.bapCam || b.slide){ const h = !sceneShown(b); if(sceneEls[i] && sceneEls[i].hidden !== h) sceneEls[i].hidden = h; }
+    if(sceneEls[i]){ const o = String(sceneSlot(i)); if(sceneEls[i].style.order !== o) sceneEls[i].style.order = o; }
+  });
 }
 setInterval(renderBapCam, 300);
 function renderScenes(){
@@ -7675,6 +7683,16 @@ async function ssSet(ch){
   Object.assign(ss, ch);
   if(ch.on === false){ ss.ratio = ""; ss.src = ""; }
   ssRender();
+  // A Slideshow scene is on Program (or Preview, in Studio Mode) and the shape changes: switch to the other shape's scene
+  if(ss.on && ch.ratio){
+    const to = BUTTONS.find(b => b.slide && slideRatioOf(b.scene) === ss.ratio);
+    const onPgm = isSlideScene(ui.program) && slideRatioOf(ui.program) && slideRatioOf(ui.program) !== ss.ratio;
+    const onPvw = ui.studio && isSlideScene(ui.preview) && slideRatioOf(ui.preview) && slideRatioOf(ui.preview) !== ss.ratio;
+    try{
+      if(to && onPgm){ await fadeFlush(); await obs.call("SetCurrentProgramScene", {sceneName:to.scene}); toast(`Switched to ${to.label}.`); }
+      else if(to && onPvw) await obs.call("SetCurrentPreviewScene", {sceneName:to.scene});
+    }catch(e){ toast(`Couldn't switch to ${to.label}: ${e.message}`); }
+  }
   if((ch.src && ch.src !== was.src) || (ch.ratio && ch.ratio !== was.ratio && ss.src)) await ssApplySources(!!ch.src && ch.src !== was.src);
   if(ch.on === false && sl.open) slClose();
   slAutoOpen();
@@ -8407,7 +8425,7 @@ function phState(){
     rec:!!ui.rec.active, recT0:ui.rec.active ? ui.rec.t0 : 0,
     viewers:ui.stream.active && vw.cfg.on && vw.state === "count" ? vw.now : null,
     safe:!!ui.safe, program:ui.program || "",
-    scenes:BUTTONS.filter(sceneShown).map(b => {
+    scenes:BUTTONS.map((b, i) => ({b, k:sceneSlot(i)})).filter(x => sceneShown(x.b)).sort((x, y) => x.k - y.k).map(({b}) => {
       const on = b.group.includes(ui.program);
       return {label:b.label, icon:b.icon, on, mic:micOf(b.scene), ending:isEnding(b.label) || isEnding(b.scene),
         sub:b.waiting ? (on && ui.program !== b.label ? ui.program : "Title Slide") : ""};
