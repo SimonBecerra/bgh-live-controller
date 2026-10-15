@@ -550,6 +550,8 @@ select{min-height:52px;appearance:none;background-image:linear-gradient(45deg,tr
 .dialog h2{margin:0;font-family:var(--f-display);font-size:28px;font-weight:700;text-wrap:balance}
 .dialog p{margin:0;color:var(--muted);line-height:1.45}
 .dialog .apply-row{margin-top:8px}
+#ssNeed{flex:1;align-self:center}
+.ss-dlg .apply-row{justify-content:flex-end}
 .btn.danger{flex:1;background:var(--pgm);border-color:var(--pgm);color:#fff}
 /* Go Live sheet */
 .sheet{background:var(--panel);border:1px solid var(--line-2);border-radius:18px;width:min(1120px,100%);max-height:100%;overflow-y:auto;padding:24px;box-sizing:border-box}
@@ -1482,6 +1484,12 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             </div>
           </div>
           <div class="set-section">
+            <h4>Scene buttons</h4>
+            <label class="check" for="setBlackBtn"><input type="checkbox" id="setBlackBtn" data-cfg>
+              <span>Black button<small id="setBlackHint">Shows the button for the Black scene in this collection. It still shows while Black is on Program or Preview.</small></span>
+            </label>
+          </div>
+          <div class="set-section">
             <h4>Transitions</h4>
             <label class="check" for="setFadeIn"><input type="checkbox" id="setFadeIn" data-cfg>
               <span>Fade after Live Soon<small>Go straight from Live Soon (or a scene chosen below) to the first camera, and the next switch to the second camera is a 1.2-second fade. Every other camera switch stays as your Transition Table sets it. For switches made from the controller or the phone.</small></span>
@@ -2133,7 +2141,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
   <div class="dialog ss-dlg" role="dialog" aria-modal="true" aria-labelledby="ssH">
     <div class="ready-head"><h2 id="ssH">Slideshow</h2></div>
     <div class="ss-ed" id="ssPanelEd"></div>
-    <div class="apply-row"><button type="button" class="btn primary" id="ssDone">Done</button></div>
+    <div class="apply-row"><span class="path warn-txt" id="ssNeed" hidden>Choose a size and where it comes from.</span><button type="button" class="btn primary" id="ssDone">Done</button></div>
   </div>
 </div>
 <div class="overlay" id="phOverlay" hidden>
@@ -2192,6 +2200,7 @@ class MockOBS {
         "Church Logo":{kind:"image_source", file:"C:\\Users\\Media\\Livestream\\Logos\\Hall Logo.png"},
         "PYLE USB Mixer":{kind:"wasapi_input_capture", muted:false},
         "Pulpit Cam":{kind:"dshow_input", video_device_id:"USB Video:\\\\?\\usb#vid_534d&pid_2109"},
+        "Cam 2":{kind:"dshow_input", video_device_id:"USB Video:\\\\?\\usb#vid_534d&pid_2109"},
         "Video":{kind:"dshow_input", video_device_id:"Cam Link 4K:\\\\?\\usb#vid_0fd9&pid_00a1&mi_00#6&1d5aba85&0&0000#{65e8773d-8f56-11d0-a3b9-00a0c9223196}\\global"},
         "Pulpit Mic":{kind:"wasapi_input_capture", muted:false},
         "Desktop Audio":{kind:"wasapi_output_capture", muted:false},
@@ -2641,7 +2650,7 @@ function buildButtons(names){
       if(n === names.find(x => g.includes(x))) BUTTONS.push({label:"Waiting", scene:g[0], group:g, icon:"hourglass", waiting:true});
       return;
     }
-    BUTTONS.push({label:n, scene:n, group:[n], icon:iconFor(n), bapCam:isBapCam(n), slide:isSlideScene(n)});
+    BUTTONS.push({label:n, scene:n, group:[n], icon:iconFor(n), bapCam:isBapCam(n), slide:isSlideScene(n), cam2:isCam2Scene(n), black:isBlackScene(n)});
   });
   $("scenes").innerHTML = "";
   sceneEls = BUTTONS.map(b => {
@@ -2778,13 +2787,71 @@ function slideShown(b){
   const r = slideRatioOf(b.scene);
   return !r || !ss.ratio || r === sceneRatioFor(ss.ratio);
 }
-const sceneShown = b => (!b.bapCam || bapCamShown(b)) && (!b.slide || slideShown(b));
+/* Camera 2: its button only shows while the second camera's source ("Cam 2") is in this collection AND video is
+   actually arriving from it. The OBS plug-in counts the frames coming in (a camera that's unplugged or switched off
+   sends none, even if OBS still shows its last picture); checked every 3 seconds, hidden after two checks in a row
+   with nothing, shown again as soon as frames arrive. A camera set to "Deactivate when not showing" sends nothing
+   while it's off screen, so that alone doesn't hide it. If the plug-in can't count (too old), the source being there
+   is enough. Black (or "Fade to Black"): its button can be turned off per collection (Settings → Scene collections →
+   Scene buttons). Either one always shows while it's on Program or Preview. */
+const isCam2Scene = n => /^cam(era)?\s*2$/i.test(String(n || "").trim());
+const isBlackScene = n => /\b(black|blank)\b/i.test(String(n || ""));
+const CAM2_SOURCE = "Cam 2";
+ui.cam2Found = null;   // null: not checked yet (shown meanwhile)
+ui.cam2Exists = null;
+let cam2Zero = 0, cam2Busy = false;
+const onAir = b => b.group.includes(ui.program) || (ui.studio && b.group.includes(ui.preview));
+const cam2Shown = b => onAir(b) || ui.cam2Found !== false;
+const blackShown = b => onAir(b) || !(cfg() && cfg().blackBtn === false);
+async function cam2Check(){
+  try{
+    const list = (await obs.call("GetInputList")).inputs || [];
+    ui.cam2Exists = list.some(i => i.inputName === CAM2_SOURCE);
+  }catch(e){ ui.cam2Exists = null; }
+  cam2Zero = 0;
+  ui.cam2Found = ui.cam2Exists ? null : ui.cam2Exists;   // there: shown until the frame count says otherwise
+  renderBapCam();
+  if(ui.cam2Exists) cam2Poll();
+}
+async function cam2Poll(){
+  if(!ui.cam2Exists || cam2Busy) return;
+  cam2Busy = true;
+  let r = null;
+  // #proto-start
+  r = {ok:true, fps:CAM2_PROTO.off ? 0 : 30, showing:false};
+  // #proto-end
+  // #real try{ r = await vcall("GetSourceFrames", {sourceName:CAM2_SOURCE}); }catch(e){ r = e.code === "NOT_CONNECTED" ? undefined : null; }
+  let found = ui.cam2Found;
+  if(r === undefined){ cam2Busy = false; return; }   // not connected: leave it as it is
+  if(!r || r.ok === false){ found = true; cam2Zero = 0; }   // the plug-in can't count it: the source is there, so it's shown
+  else if(r.started || r.fps < 0){}                         // just started counting
+  else if(r.fps > 0){ found = true; cam2Zero = 0; }
+  else if(++cam2Zero >= 2){
+    let idle = false;
+    if(!r.showing){ try{ idle = !!((await obs.call("GetInputSettings", {inputName:CAM2_SOURCE})).inputSettings || {}).deactivate_when_not_showing; }catch(e){} }
+    found = idle;
+  }
+  cam2Busy = false;
+  if(found === ui.cam2Found || !ui.cam2Exists) return;
+  const was = ui.cam2Found; ui.cam2Found = found;
+  renderBapCam();
+  if(found === false) toast(`No video from ${CAM2_SOURCE}, so the ${camScene(2) || "Camera 2"} button is hidden until it has some.`);
+  else if(was === false) toast(`${CAM2_SOURCE} has video again: ${camScene(2) || "Camera 2"} is back.`);
+}
+setInterval(cam2Poll, 3000);
+// #proto-start
+const CAM2_PROTO = {off:false};
+// #proto-end
+obs.on("InputCreated", d => { if(d.inputName === CAM2_SOURCE) cam2Check(); });
+obs.on("InputRemoved", d => { if(d.inputName === CAM2_SOURCE) cam2Check(); });
+obs.on("InputNameChanged", d => { if(d.inputName === CAM2_SOURCE || d.oldInputName === CAM2_SOURCE) cam2Check(); });
+const sceneShown = b => (!b.bapCam || bapCamShown(b)) && (!b.slide || slideShown(b)) && (!b.cam2 || cam2Shown(b)) && (!b.black || blackShown(b));
 // The Slideshow scene buttons share one place: whichever shape is showing sits where the first Slideshow button is,
 // so changing 4:3 ↔ 16:9 swaps the button in place (on the phone too)
 const sceneSlot = i => { const b = BUTTONS[i]; if(!b || !b.slide) return i; const f = BUTTONS.findIndex(x => x.slide); return f < 0 ? i : f; };
 function renderBapCam(){
   BUTTONS.forEach((b, i) => {
-    if(b.bapCam || b.slide){ const h = !sceneShown(b); if(sceneEls[i] && sceneEls[i].hidden !== h) sceneEls[i].hidden = h; }
+    if(b.bapCam || b.slide || b.cam2 || b.black){ const h = !sceneShown(b); if(sceneEls[i] && sceneEls[i].hidden !== h) sceneEls[i].hidden = h; }
     if(sceneEls[i]){ const o = String(sceneSlot(i)); if(sceneEls[i].style.order !== o) sceneEls[i].style.order = o; }
   });
 }
@@ -3734,6 +3801,7 @@ function glVisRender(){
 }
 $("glBack").addEventListener("click", () => glShow("glDetails"));
 $("glGo").addEventListener("click", async () => {
+  if(!ssReady()){ toast("Slideshow: choose its size and where it comes from, or turn it off."); ssEditor($("glSsEd")); return; }
   if(!(await glReadyConfirm())) return;
   glReadyWatch(false);
   closeGoLive();
@@ -6434,6 +6502,7 @@ function syncCfgFields(){
     ltHost: {on:$("setLtHostOn").checked, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
     boxOpacity: parseInt($("setBoxOp").value, 10) === BOX_OPACITY_DEFAULT ? undefined : parseInt($("setBoxOp").value, 10),
     ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
+    blackBtn: $("setBlackBtn").checked ? undefined : false,
     fadeIn: {on:$("setFadeIn").checked, from:$("setFadeFrom").value, to:$("setFadeTo").value,
       after:[...document.querySelectorAll("#setFadeAfter input:checked")].map(el => el.dataset.scene)},
     autoMic: {on: $("setAutoMic").checked,
@@ -6493,6 +6562,9 @@ async function fillCfgFields(coll){
   $("setAutoMicBox").hidden = !am.on;
   // Fade after Live Soon
   const fd = fadeCfgOf(c, scenes);
+  $("setBlackBtn").checked = !(c && c.blackBtn === false);
+  { const bl = scenes.find(isBlackScene); $("setBlackBtn").disabled = !bl;
+    $("setBlackHint").textContent = bl ? `Shows the "${bl}" button in this collection. It still shows while it's on Program or Preview.` : "This collection has no Black scene."; }
   $("setFadeIn").checked = !!fd.on;
   $("setFadeAfter").innerHTML = "";
   scenes.forEach(n => {
@@ -7698,7 +7770,10 @@ function ssEditor(el){
   el.querySelectorAll("[data-ss=open]").forEach(b => b.onclick = () => slOpen().then(ssRender));
   if(window.lucide) lucide.createIcons();
 }
+// Slideshow on: its size and where it comes from must both be chosen before Done (or Go Live)
+const ssReady = () => !ss.on || (!!ss.ratio && !!ss.src);
 function ssRender(){
+  $("ssDone").disabled = !ssReady(); $("ssNeed").hidden = ssReady();
   $("ssBtn").setAttribute("aria-pressed", ss.on);
   $("ssBtn").title = ss.on ? `Slideshow on · ${ssLabel(ss.ratio) || "size?"} · ${ss.src === "projector" ? "from the projector" : ss.src === "laptop" ? "on this laptop" : "source?"}` : "Slideshow";
   $("ssDot").hidden = !(ss.on && ss.src === "projector" && ss.feed.state === "none");
@@ -7706,11 +7781,22 @@ function ssRender(){
   if(!$("glOverlay").hidden) ssEditor($("glSsEd"));
   renderBapCam(); renderSlides();
 }
-async function ssSet(ch){
+async function ssSet(ch, quiet){
   const was = {...ss};
   Object.assign(ss, ch);
   if(ch.on === false){ ss.ratio = ""; ss.src = ""; }
+  if(ch.on === true && !was.on){ if(!ch.ratio) ss.ratio = ""; if(!ch.src) ss.src = ""; }
   ssRender();
+  // Turned on: "Projector" and "Presentation" are both hidden until where it comes from is chosen
+  if(ch.on === true && !was.on) await ssHideBoth();
+  // Turned off while a Slideshow scene is on Program (or Preview): Camera 1 instead, so its button can go
+  if(ch.on === false && was.on && !quiet){
+    const c1 = camScene(1);
+    try{
+      if(c1 && isSlideScene(ui.program)){ await fadeFlush(); await obs.call("SetCurrentProgramScene", {sceneName:c1}); toast(`Slideshow off: switched to ${c1}.`); }
+      if(c1 && ui.studio && isSlideScene(ui.preview)) await obs.call("SetCurrentPreviewScene", {sceneName:c1});
+    }catch(e){ toast(`Couldn't switch to ${c1}: ${e.message}`); }
+  }
   // A Slideshow scene is on Program (or Preview, in Studio Mode) and the shape changes: switch to the other shape's scene
   if(ss.on && ch.ratio){
     const want = sceneRatioFor(ss.ratio), to = BUTTONS.find(b => b.slide && slideRatioOf(b.scene) === want);
@@ -7913,6 +7999,18 @@ async function ssPlaceOn43(sceneName, items, report){
     report.cropped++;
   }
 }
+async function ssHideBoth(){
+  try{
+    for(const sc of (await obs.call("GetSceneList")).scenes || []){
+      const walk = async (items, group) => { for(const it of items){
+        if(it.isGroup){ try{ await walk((await obs.call("GetGroupSceneItemList", {sceneName:it.sourceName})).sceneItems || [], it.sourceName); }catch(e){} continue; }
+        if((it.sourceName === ui.ssNames.projector || it.sourceName === ui.ssNames.laptop) && it.sceneItemEnabled)
+          await obs.call("SetSceneItemEnabled", {sceneName:group || sc.sceneName, sceneItemId:it.sceneItemId, sceneItemEnabled:false});
+      } };
+      await walk((await obs.call("GetSceneItemList", {sceneName:sc.sceneName})).sceneItems || []);
+    }
+  }catch(e){ toast(`Couldn't hide the slideshow sources in OBS: ${e.message}`); }
+}
 // One at a time: a change made while one is running is done straight after it (the latest choice wins)
 let ssBusy = null, ssAgain = null;
 async function ssApplySources(vis = true, off = false){
@@ -8026,6 +8124,10 @@ async function ssTplApplyItem(sceneName, it, force){
   let did = false;
   if(force || tfIsNew(await tfGet(sceneName, it.sceneItemId))){
     await obs.call("SetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId, sceneItemTransform:e.tf}); did = true;
+    // What was measured in this scene before (the gap beside the camera, the 16:9 place, a saved "16:9 on 4:3"
+    // original) came from the old position: measured again from the copied one
+    try{ localStorage.removeItem(ssGapKey(sceneName)); localStorage.removeItem(ssBoxKey(sceneName)); }catch(err){}
+    const o = ssOrigLoad(); if(o[ssOrigKey(sceneName, it.sceneItemId)]){ delete o[ssOrigKey(sceneName, it.sceneItemId)]; ssOrigSave(o); }
   }
   if(e.inner && it.sourceType === "OBS_SOURCE_TYPE_SCENE"){
     try{ const p = await ssPicInside(it.sourceName);
@@ -8063,9 +8165,9 @@ obs.on("SceneItemCreated", async d => {
 setInterval(() => { if(ui.collection === ssTplFrom()) ssTplCapture(); }, 30000);
 $("ssBtn").addEventListener("click", () => { $("ssOverlay").hidden = false; ssEditor($("ssPanelEd")); });
 $("ndiOk").addEventListener("click", () => { $("ndiBanner").hidden = true; });
-$("ssDone").addEventListener("click", () => { $("ssOverlay").hidden = true; });
+$("ssDone").addEventListener("click", () => { if(ssReady()) $("ssOverlay").hidden = true; });
 // Forgotten when the livestream ends
-obs.on("StreamStateChanged", d => { if(!d.outputActive){ if(sl.open) slClose(); if(ss.on) ssSet({on:false}); sl.cfg.link = ""; slSave(); } });
+obs.on("StreamStateChanged", d => { if(!d.outputActive){ if(sl.open) slClose(); if(ss.on) ssSet({on:false}, true); sl.cfg.link = ""; slSave(); } });
 /* The projector's feed: the OBS plug-in counts the frames actually arriving from the NDI source (a still slide still
    arrives as frames; a stopped feed doesn't, even if OBS keeps showing the last picture). Every 2 seconds while it's
    in use; a banner if it stops while a Slideshow scene is on Program. */
@@ -8170,7 +8272,8 @@ const camScene = n => BUTTONS.flatMap(b => b.group).find(x => new RegExp(`^cam(e
 function previewOtherCamera(){
   const c1 = camScene(1), c2 = camScene(2);
   const other = ui.program && ui.program === c1 ? c2 : ui.program && ui.program === c2 ? c1 : null;
-  if(!other) return;
+  if(!other || (other === c2 && ui.cam2Found === false)) return;   // Camera 2 with no video isn't put in Preview
+  if(other === c2 && ui.cam2Found === false) return;   // no second camera in this collection
   // OBS first sets Preview to the Program scene; this follows right after
   setTimeout(() => { if(ui.studio && ui.preview !== other) obs.call("SetCurrentPreviewScene", {sceneName:other}).catch(() => {}); }, 150);
 }
@@ -8192,6 +8295,7 @@ obs.on("CurrentSceneCollectionChanged", async d => {
   await loadAudio();
   ot.showing = false; ui.lt.showing = "";
   await otSync();
+  ui.cam2Found = null; cam2Check();
   setTimeout(() => { ssCollMoving = false; ssTplSync(); }, 1500);   // once OBS has finished loading it
 });
 obs.on("InputMuteStateChanged", d => { if(d.inputName !== srcAudio()) return; ui.muted = d.inputMuted; renderMute(); if(!ui.muted) lastSoundAt = Date.now(); });
@@ -8660,6 +8764,7 @@ async function syncAll(){
   await otSync();
   syncStartTitle();
   ssCollMoving = false; ssTplSync();
+  cam2Check();
 }
 /* ---------------- Phone remote ----------------
    Desktop app: main.js runs a small web server on the church network (phone.js). Phones see what this page
