@@ -1750,6 +1750,8 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <span class="path">Shown when the slideshow comes from the projector; hidden when it's played on this laptop.</span></div>
             <div class="field"><label class="label" for="setSsLap">This laptop's slideshow</label><input id="setSsLap" data-now autocomplete="off" spellcheck="false">
               <span class="path">Shown when the slideshow is played on this laptop; hidden when it comes from the projector. Sources with exactly these names are switched in every scene, in every scene collection.</span></div>
+            <div class="field"><label class="label" for="setSsVid">The camera beside the slideshow</label><input id="setSsVid" data-now autocomplete="off" spellcheck="false">
+              <span class="path">In the Slideshow scenes, the slideshow is sized to this source's height and lined up with its top and bottom, keeping the gap between them as it is set up in OBS. A Slideshow scene without it keeps the slideshow's size.</span></div>
           </div>
           <div class="set-section">
             <h4>Played on this laptop</h4>
@@ -2675,7 +2677,7 @@ const isSlideScene = n => /\b(slide ?shows?|slides|presentation|powerpoint)\b/i.
 /* Slideshow for this service (the top bar's slideshow button, or Go Live): on or off, 4:3 or 16:9, and whether it comes
    from the projector (NDI) or is played on this laptop. Forgotten when the livestream ends. */
 const ss = {on:false, ratio:"", src:"", feed:{state:"", fps:0}};
-ui.ssNames = (() => { try{ return {projector:"Projector", laptop:"Presentation", ...JSON.parse(localStorage.getItem("ssNames") || "{}")}; }catch(e){ return {projector:"Projector", laptop:"Presentation"}; } })();
+ui.ssNames = (() => { const d = {projector:"Projector", laptop:"Presentation", video:"Video"}; try{ return {...d, ...JSON.parse(localStorage.getItem("ssNames") || "{}")}; }catch(e){ return d; } })();
 const isBreakScene = n => /\b(live soon|we'?ll be right back|be right back|brb)\b/i.test(String(n || ""));
 function fadeCfgOf(c, scenes = []){
   const f = (c && c.fadeIn) || {};
@@ -7812,6 +7814,63 @@ function ssStrip(t, pic){
   const a = pic || (() => { const w = Math.min(W, H * 4 / 3), h = w * 3 / 4; return {x:(W - w) / 2, y:(H - h) / 2, w, h}; })();
   return {x:a.x, y:a.y, w:a.w, h:a.w * 9 / 16};
 }
+/* Sized to the camera: in each Slideshow scene, the slideshow's picture is made exactly as tall as the camera source
+   beside it ("Video", Settings → Slideshow), with the same top, evenly scaled (never stretched). The gap between them
+   stays as it was set up in OBS: it's measured the first time and remembered, so the slideshow's edge next to the
+   camera stays put whatever its shape. Projector (a scene) is sized by the picture inside it. */
+const ssGapKey = scene => `ssGap|${ui.collection}|${scene}`;
+async function ssVideoRect(sceneName, items){
+  const v = items.find(x => x.sourceName === ui.ssNames.video);
+  if(!v) return null;
+  const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:v.sceneItemId})).sceneItemTransform || {};
+  const r = tfRect(t); return rectOk(r) ? r : null;
+}
+// Where the picture of a slideshow source shows on the canvas (for a scene, the picture inside it), and how to move it
+async function ssPicRect(sceneName, it, t){
+  if(it.sourceType !== "OBS_SOURCE_TYPE_SCENE") return {rect:tfRect(t), inner:null};
+  const p = await ssPicInside(it.sourceName); if(!p) return null;
+  const pt = (await obs.call("GetSceneItemTransform", {sceneName:it.sourceName, sceneItemId:p.sceneItemId})).sceneItemTransform || {};
+  const P = tfRect(pt); if(!rectOk(P)) return null;
+  const o = tfRect(t), s = t.scaleX ?? 1;
+  return {rect:{x:o.x + (P.x - (t.cropLeft || 0)) * s, y:o.y + (P.y - (t.cropTop || 0)) * s, w:P.w * s, h:P.h * s}, inner:P};
+}
+async function ssMatchVideo(sceneName, items, report){
+  const vid = await ssVideoRect(sceneName, items);
+  if(!vid) return;
+  let gap = null; try{ gap = JSON.parse(localStorage.getItem(ssGapKey(sceneName)) || "null"); }catch(e){}
+  // The gap, measured once from the layout set up in OBS: the slideshow source's own box with its crop taken back off
+  // (the laptop source first, as it's the one set up to fill its box), so cropping never changes it
+  if(!gap){
+    const mine = items.filter(x => x.sourceName === ui.ssNames.laptop || x.sourceName === ui.ssNames.projector)
+      .sort((a, b) => (a.sourceName === ui.ssNames.laptop ? 0 : 1) - (b.sourceName === ui.ssNames.laptop ? 0 : 1));
+    for(const it of mine){
+      const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
+      if(!(t.sourceWidth > 2 && t.sourceHeight > 2)) continue;
+      const o = tfRect(t), sx = t.scaleX ?? 1, x = o.x - (t.cropLeft || 0) * sx, w = (t.sourceWidth) * sx;
+      const right = x + w / 2 >= vid.x + vid.w / 2;
+      gap = {right, px:right ? x - (vid.x + vid.w) : vid.x - (x + w)};
+      try{ localStorage.setItem(ssGapKey(sceneName), JSON.stringify(gap)); }catch(e){}
+      break;
+    }
+    if(!gap) return;
+  }
+  for(const it of items){
+    if(it.sourceName !== ui.ssNames.projector && it.sourceName !== ui.ssNames.laptop) continue;
+    const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
+    if(t.boundsType && t.boundsType !== "OBS_BOUNDS_NONE"){ report.bounded.push(`${it.sourceName} in ${sceneName}`); continue; }
+    if(t.rotation || !(t.sourceWidth > 2 && t.sourceHeight > 2)) continue;
+    const pr = await ssPicRect(sceneName, it, t); if(!pr || !rectOk(pr.rect)) continue;
+    const R = pr.rect, right = gap.right;
+    const k = vid.h / R.h, s = (t.scaleX ?? 1) * k, w = R.w * k;
+    const nx = right ? vid.x + vid.w + gap.px : vid.x - gap.px - w, ny = vid.y;
+    if(Math.abs(k - 1) < 0.0005 && Math.abs(nx - R.x) < 0.5 && Math.abs(ny - R.y) < 0.5) continue;
+    // The item's own box (for a scene, its whole canvas) moves with the picture
+    const o = tfRect(t), offX = pr.inner ? (pr.inner.x - (t.cropLeft || 0)) * s : 0, offY = pr.inner ? (pr.inner.y - (t.cropTop || 0)) * s : 0;
+    const box = {x:nx - offX, y:ny - offY, w:o.w * k, h:o.h * k};
+    await obs.call("SetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId, sceneItemTransform:{scaleX:s, scaleY:s, ...tfPos(box, t.alignment ?? 5)}});
+    report.cropped++;
+  }
+}
 async function ssPlaceOn43(sceneName, items, report){
   // The place a 16:9 slideshow has in this scene: the laptop source's box as set up (saved), else the source's own
   const boxOf = async it => { const o = ssOrigLoad()[ssOrigKey(sceneName, it.sceneItemId)];
@@ -7820,6 +7879,11 @@ async function ssPlaceOn43(sceneName, items, report){
   const lap = items.find(it => it.sourceName === ui.ssNames.laptop);
   let lapBox = lap ? await boxOf(lap) : null;
   if(rectOk(lapBox)) ssBoxSet(sceneName, lapBox); else lapBox = ssBoxGet(sceneName);
+  // With the camera beside it: as tall as the camera, its top, the remembered gap
+  const all = ((await obs.call("GetSceneItemList", {sceneName})).sceneItems || []);
+  const vid = await ssVideoRect(sceneName, all);
+  let gap = null; try{ gap = JSON.parse(localStorage.getItem(ssGapKey(sceneName)) || "null"); }catch(e){}
+  if(vid && gap){ const w = vid.h * 16 / 9; lapBox = {x:gap.right ? vid.x + vid.w + gap.px : vid.x - gap.px - w, y:vid.y, w, h:vid.h}; }
   for(const it of items){
     const t = (await obs.call("GetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId})).sceneItemTransform || {};
     // No picture yet (the laptop's slideshow window isn't open, or no NDI feed): nothing to measure, so it's left as it is
@@ -7889,8 +7953,10 @@ async function ssApplyNow(vis = true, off = false){
           }
         }
       };
-      await walk((await obs.call("GetSceneItemList", {sceneName:sc.sceneName})).sceneItems || []);
+      const top = (await obs.call("GetSceneItemList", {sceneName:sc.sceneName})).sceneItems || [];
+      await walk(top);
       if(place.length) await ssPlaceOn43(sc.sceneName, place, report);
+      else if(!off && isSlideScene(sc.sceneName)) await ssMatchVideo(sc.sceneName, top, report);
     }
   }catch(e){ return toast(`Couldn't switch the slideshow sources in OBS: ${e.message}`); }
   if(off) return report.cropped ? toast("The slideshow sources are back where they were set up in OBS.") : null;
@@ -7940,7 +8006,7 @@ obs.on("StreamStateChanged", d => { if(!d.outputActive) slAutoDone = false; });
 function slSetLink(v){ sl.cfg.link = v; slSave(); }
 // Settings → Slideshow
 function renderSlSet(){
-  $("setSsProj").value = ui.ssNames.projector; $("setSsLap").value = ui.ssNames.laptop;
+  $("setSsProj").value = ui.ssNames.projector; $("setSsLap").value = ui.ssNames.laptop; $("setSsVid").value = ui.ssNames.video;
   const scr = $("setSlScreen"); scr.innerHTML = "";
   // One monitor (the church laptop): the slideshow opens behind the controller, at 1920 × 1080, where OBS still captures it
   const mons = SL_SCREENS();
@@ -7949,9 +8015,9 @@ function renderSlSet(){
   scr.value = sl.cfg.screen && [...scr.options].some(o => o.value === sl.cfg.screen) ? sl.cfg.screen : mons.length > 1 ? scr.options[1].value : "behind";
 }
 $("setSlScreen").addEventListener("change", () => { sl.cfg.screen = $("setSlScreen").value; slSave(); });
-["setSsProj", "setSsLap"].forEach(id => $(id).addEventListener("change", () => {
-  const v = $(id).value.trim(); if(!v){ $(id).value = id === "setSsProj" ? ui.ssNames.projector : ui.ssNames.laptop; return; }
-  ui.ssNames[id === "setSsProj" ? "projector" : "laptop"] = v; try{ localStorage.setItem("ssNames", JSON.stringify(ui.ssNames)); }catch(e){}
+[["setSsProj", "projector"], ["setSsLap", "laptop"], ["setSsVid", "video"]].forEach(([id, k]) => $(id).addEventListener("change", () => {
+  const v = $(id).value.trim(); if(!v){ $(id).value = ui.ssNames[k]; return; }
+  ui.ssNames[k] = v; try{ localStorage.setItem("ssNames", JSON.stringify(ui.ssNames)); }catch(e){}
 }));
 /* Going to Ending, the Waiting slides, Live Soon or We'll Be Right Back takes a hymn, Bible passage or lower third
    off the screen (as Done would), so nothing is left over the closing or waiting slides. However Program changes. */
