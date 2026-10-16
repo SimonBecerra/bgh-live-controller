@@ -397,6 +397,26 @@ body.safe .main button:not(.safe-ok), body.safe .rail button:not(.safe-ok){opaci
 .ss-top{position:relative}
 .ss-top[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--fg)}
 .ss-dot{position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:var(--pgm);box-shadow:0 0 0 2px var(--panel)}
+/* Live translation (Hope Translator): the book button at the top turns green while translating */
+.tr-top{position:relative}
+.tr-top[aria-pressed="true"]{border-color:var(--pvw);background:var(--pvw-soft);color:var(--fg)}
+.tr-dot{position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:var(--pvw);box-shadow:0 0 0 2px var(--panel)}
+.tr-dot.busy{animation:trBlink 1s ease-in-out infinite}
+.tr-dot.warn{background:var(--warn)}
+@keyframes trBlink{50%{opacity:.25}}
+.dialog.tr-dlg{width:min(480px,calc(100vw - 32px));max-width:480px}
+.tr-body{display:flex;flex-direction:column;gap:14px}
+.tr-state{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2)}
+.tr-state svg{width:28px;height:28px;flex:none;color:var(--muted)}
+.tr-state > span{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.tr-state b{font-size:18px}
+.tr-state small{font-size:13px;color:var(--muted);line-height:1.4}
+.tr-state .tr-time{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;flex:none}
+.tr-state.on{border-color:var(--pvw);background:var(--pvw-soft)} .tr-state.on svg{color:var(--pvw)}
+.tr-state.warn{border-color:var(--warn)} .tr-state.warn svg{color:var(--warn)}
+.tr-go{width:100%;min-height:64px;font-size:18px}
+.tr-go.danger{flex:none}
+.tr-dlg .apply-row{justify-content:space-between}
 .dialog.ss-dlg{width:min(640px,calc(100vw - 32px));max-width:640px;max-height:calc(100vh - 48px);overflow-y:auto}
 .ss-ed{display:flex;flex-direction:column;gap:14px}
 .ss-switch{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:56px;padding:8px 14px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:16px;text-align:left}
@@ -1098,6 +1118,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <button class="upd-btn" id="updBtn" type="button" hidden title="Update ready: a new version of the controller is downloaded. Tap to install it." aria-label="Update ready"><i data-lucide="download"></i></button>
     <button class="safe-btn" id="safeBtn" type="button" aria-pressed="false" title="Safe mode stops accidental changes to the livestream"><i data-lucide="lock-open" class="safe-ico"></i><span class="safe-lbl">SAFE MODE</span><b class="safe-st">OFF</b></button>
     <button class="icon-btn ready-btn" id="readyBtn" type="button" aria-label="Ready check" title="Ready check"><i data-lucide="check-check"></i><span class="ready-dot" id="readyDot" hidden></span></button>
+    <button class="icon-btn tr-top" id="trBtn" type="button" aria-pressed="false" aria-label="Live translation" title="Live translation"><i data-lucide="book-type"></i><span class="tr-dot" id="trDot" hidden></span></button>
     <button class="icon-btn ss-top" id="ssBtn" type="button" aria-pressed="false" aria-label="Slideshow" title="Slideshow"><i data-lucide="presentation"></i><span class="ss-dot" id="ssDot" hidden></span></button>
     <button class="icon-btn" id="phoneBtn" type="button" aria-label="Pair a phone remote" title="Phone remote"><i data-lucide="smartphone"></i></button>
     <button class="icon-btn" id="fsBtn" aria-label="Enter fullscreen"><i data-lucide="maximize"></i></button>
@@ -1315,6 +1336,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
         <button type="button" role="tab" id="tab-alerts" data-page="alerts" aria-controls="page-alerts"><i data-lucide="bell"></i><span>Alerts</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-screen" data-page="screen" aria-controls="page-screen"><i data-lucide="monitor"></i><span>Screen</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-slides" data-page="slides" aria-controls="page-slides"><i data-lucide="presentation"></i><span>Slideshow</span><b class="tdot" aria-hidden="true"></b></button>
+        <button type="button" role="tab" id="tab-translation" data-page="translation" aria-controls="page-translation"><i data-lucide="book-type"></i><span>Translation</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-phone" data-page="phone" aria-controls="page-phone"><i data-lucide="smartphone"></i><span>Phone remote</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-backup" data-page="backup" aria-controls="page-backup"><i data-lucide="archive"></i><span>Backup</span><b class="tdot" aria-hidden="true"></b></button>
         <button type="button" role="tab" id="tab-help" data-page="help" aria-controls="page-help"><i data-lucide="circle-help"></i><span>About &amp; help</span><b class="tdot" aria-hidden="true"></b></button>
@@ -1778,6 +1800,31 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             </ul>
           </div>
         </section>
+        <section class="set-page" id="page-translation" data-page="translation" role="tabpanel" aria-labelledby="tab-translation" tabindex="-1" hidden>
+          <h3 class="page-h">Translation</h3>
+          <div class="set-section">
+            <h4>Hope Translator</h4>
+            <div class="field"><label class="label" for="setTrUrl">Broadcast link</label><input id="setTrUrl" data-now autocomplete="off" spellcheck="false" placeholder="https://www.hopetranslator.com/en/broadcast/channel/…">
+              <span class="path" id="setTrUrlNote">In Hope Translator, open Broadcast, choose the channel, and copy the address from the browser's address bar.</span></div>
+            <div class="btn-row"><button type="button" class="btn" id="setTrSignIn"><i data-lucide="log-in"></i>Open Hope Translator to sign in</button></div>
+            <p class="path">The controller keeps Hope Translator open in a window of its own and remembers the sign-in. The first time, open it, sign in, and choose the mixer as the microphone ("Microphone (MIXER-AUDIO)"). Closing that window only hides it.</p>
+          </div>
+          <div class="set-section">
+            <h4>With the livestream</h4>
+            <label class="check" for="setTrAuto"><input type="checkbox" id="setTrAuto" data-now>
+              <span>Start translating when the livestream starts<small>Whether it's started here, from OBS, or by a schedule.</small></span></label>
+            <label class="check" for="setTrAutoStop"><input type="checkbox" id="setTrAutoStop" data-now>
+              <span>Stop translating when the livestream ends<small>So the monthly translation minutes aren't used up after the service.</small></span></label>
+          </div>
+          <div class="set-section">
+            <h4>Starting and stopping</h4>
+            <ul class="info-list">
+              <li>The book button at the top starts and stops it, and turns green while it's translating.</li>
+              <li>The phone remote gets the same button.</li>
+              <li>Listeners join by scanning Hope Translator's QR code (its Share button), as before.</li>
+            </ul>
+          </div>
+        </section>
         <section class="set-page" id="page-phone" data-page="phone" role="tabpanel" aria-labelledby="tab-phone" tabindex="-1" hidden>
           <h3 class="page-h">Phone remote</h3>
           <div class="set-section">
@@ -2142,6 +2189,13 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <div class="ready-head"><h2 id="ssH">Slideshow</h2></div>
     <div class="ss-ed" id="ssPanelEd"></div>
     <div class="apply-row"><span class="path warn-txt" id="ssNeed" hidden>Choose a size and where it comes from.</span><button type="button" class="btn primary" id="ssDone">Done</button></div>
+  </div>
+</div>
+<div class="overlay" id="trOverlay" hidden>
+  <div class="dialog tr-dlg" role="dialog" aria-modal="true" aria-labelledby="trH">
+    <div class="ready-head"><h2 id="trH">Live translation</h2></div>
+    <div class="tr-body" id="trBody" aria-live="polite"></div>
+    <div class="apply-row"><button type="button" class="btn" id="trWin">Open Hope Translator</button><button type="button" class="btn primary" id="trDone">Done</button></div>
   </div>
 </div>
 <div class="overlay" id="phOverlay" hidden>
@@ -6234,7 +6288,7 @@ $("setVis").value = ui.defaultVis;
 /* Settings: a sidebar of categories, each its own page.
    Dots on a category: orange = needs attention, accent = unsaved changes. */
 const esc = v => String(v).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", colormatch:"Color matching", golive:"Going live", alerts:"Alerts", screen:"Screen", slides:"Slideshow", phone:"Phone remote", backup:"Backup", help:"About & help", testing:"Testing"};
+const SET_PAGES = {connection:"Connection", collections:"Scene collections", speakers:"Speakers", ontext:"On-screen text", colormatch:"Color matching", golive:"Going live", alerts:"Alerts", screen:"Screen", slides:"Slideshow", translation:"Translation", phone:"Phone remote", backup:"Backup", help:"About & help", testing:"Testing"};
 ui.setPage = (() => { try{ const p = localStorage.getItem("setPage"); return SET_PAGES[p] ? p : "connection"; }catch(e){ return "connection"; } })();
 function showSetPage(page, focusTab){
   if(!SET_PAGES[page] || !document.getElementById("tab-" + page)) page = "connection";
@@ -8784,6 +8838,119 @@ async function syncAll(){
   ssCollMoving = false; ssTplSync();
   cam2Check();
 }
+/* ---------------- Live translation ----------------
+   Hope Translator (Settings → Translation; the book button at the top). Desktop app: translator.js keeps its broadcast
+   page open in a hidden window, signed in; Start presses its Play button and Stop presses it again. The prototype pretends.
+   The phone remote has the same button. Translation doesn't need OBS, so it works while OBS is closed too. */
+const tr = {state:"off", since:0, mic:"", error:"", busy:false,
+  cfg:(() => { const d = {url:"", autoStart:false, autoStop:true}; try{ return {...d, ...(JSON.parse(localStorage.getItem("translator") || "null") || {})}; }catch(e){ return d; } })()};
+const trSave = () => { try{ localStorage.setItem("translator", JSON.stringify(tr.cfg)); }catch(e){} };
+const trApi = window.bgh && window.bgh.translator ? window.bgh.translator : null;
+const trLinkOk = u => /^https:\/\/(www\.)?hopetranslator\.com\/([a-z-]+\/)?broadcast\/channel\/[\w-]+/i.test(String(u || "").trim());
+// #proto-start
+const TR_PROTO = {signedIn:true};
+if(!trApi && !tr.cfg.url) tr.cfg.url = "https://www.hopetranslator.com/en/broadcast/channel/cjAizBKdVm";
+// #proto-end
+const trTime = () => { const s = Math.max(0, Math.floor((Date.now() - tr.since) / 1000)); return (s >= 3600 ? Math.floor(s / 3600) + ":" : "") + String(Math.floor(s / 60) % 60).padStart(s >= 3600 ? 2 : 1, "0") + ":" + String(s % 60).padStart(2, "0"); };
+function trUpdate(s){ Object.assign(tr, s); renderTr(); phSend(); }
+async function trStart(from = ""){
+  if(tr.state === "running") return {ok:true};
+  if(tr.busy) return {ok:false, error:"Translation is already starting."};
+  if(!trLinkOk(tr.cfg.url)){
+    const error = "Add the Hope Translator broadcast link in Settings → Translation first.";
+    toast(error); return {ok:false, code:"NO_LINK", error};
+  }
+  tr.busy = true; trUpdate({state:"starting", error:""});
+  let r = {ok:false, error:"The controller can't reach Hope Translator."};
+  // #proto-start
+  if(!trApi){ await sleep(1500);
+    r = TR_PROTO.signedIn ? {ok:true} : {ok:false, code:"SIGNIN", error:"Hope Translator is signed out. Open its window and sign in once."};
+    Object.assign(tr, r.ok ? {state:"running", since:Date.now()} : {state:"signin"}); }
+  // #proto-end
+  if(trApi) r = await trApi.start({url:tr.cfg.url.trim()}).catch(e => ({ok:false, error:e.message}));
+  tr.busy = false;
+  toast(r.ok ? `Live translation started${from}` : r.error);
+  trUpdate({});
+  return r;
+}
+async function trStop(from = ""){
+  if(tr.state !== "running") return {ok:true};
+  tr.busy = true; trUpdate({state:"stopping"});
+  let r = {ok:false, error:"The controller can't reach Hope Translator."};
+  // #proto-start
+  if(!trApi){ await sleep(900); r = {ok:true}; Object.assign(tr, {state:"ready", since:0}); }
+  // #proto-end
+  if(trApi) r = await trApi.stop().catch(e => ({ok:false, error:e.message}));
+  tr.busy = false;
+  toast(r.ok ? `Live translation stopped${from}` : r.error);
+  trUpdate({});
+  return r;
+}
+function trShow(){
+  // #proto-start
+  if(!trApi){ TR_PROTO.signedIn = true; if(tr.state === "signin") trUpdate({state:"ready"}); toast("Prototype: the Hope Translator window opens here, to sign in or check the microphone."); return; }
+  // #proto-end
+  trApi.show({url:trLinkOk(tr.cfg.url) ? tr.cfg.url.trim() : ""});
+}
+const TR_ICON = {check:'<path d="M20 6 9 17l-5-5"/>', warn:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  book:'<path d="M10 13h4"/><path d="M12 6v7"/><path d="M16 8V6H8v2"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>'};
+const trSvg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TR_ICON[n]}</svg>`;
+function renderTr(){
+  const on = tr.state === "running", busy = tr.state === "starting" || tr.state === "stopping", linked = trLinkOk(tr.cfg.url);
+  const warn = linked && (tr.state === "signin" || tr.state === "error");
+  $("trBtn").setAttribute("aria-pressed", on);
+  $("trDot").hidden = !(on || busy || warn);
+  $("trDot").className = "tr-dot" + (busy ? " busy" : warn ? " warn" : "");
+  $("trBtn").title = on ? `Translating · ${trTime()}` : busy ? (tr.state === "starting" ? "Starting translation…" : "Stopping translation…")
+    : tr.state === "signin" ? "Live translation: Hope Translator needs signing in" : "Live translation";
+  if($("trOverlay").hidden) return;
+  let card, go = "";
+  if(!linked){
+    card = `<div class="tr-state warn">${trSvg("warn")}<span><b>Not set up yet</b><small>Add the Hope Translator broadcast link in Settings → Translation.</small></span></div>`;
+    go = `<button type="button" class="btn primary tr-go" id="trSet">Open Settings → Translation</button>`;
+  } else if(tr.state === "signin"){
+    card = `<div class="tr-state warn">${trSvg("warn")}<span><b>Sign in needed</b><small>Hope Translator is signed out. Open it, sign in, and check the microphone is the mixer.</small></span></div>`;
+    go = `<button type="button" class="btn primary tr-go" id="trSignIn">Open Hope Translator to sign in</button>`;
+  } else if(on || tr.state === "stopping"){
+    card = `<div class="tr-state on">${trSvg("check")}<span><b>Translating</b><small>${tr.mic ? `Listening to ${esc(tr.mic)}` : "Listeners can join with Hope Translator's QR code."}</small></span><span class="tr-time" id="trTime">${trTime()}</span></div>`;
+    go = `<button type="button" class="btn danger tr-go" id="trGo" ${tr.state === "stopping" ? "disabled" : ""}>${tr.state === "stopping" ? "Stopping…" : "Stop translation"}</button>`;
+  } else {
+    card = `<div class="tr-state${tr.state === "error" ? " warn" : ""}">${trSvg(tr.state === "error" ? "warn" : "book")}<span><b>${tr.state === "starting" ? "Starting…" : "Not translating"}</b><small>${tr.state === "error" && tr.error ? esc(tr.error) : tr.state === "starting" ? "Opening Hope Translator and pressing Play." : "Start it when the service begins."}</small></span></div>`;
+    go = `<button type="button" class="btn primary tr-go" id="trGo" ${tr.state === "starting" ? "disabled" : ""}>${tr.state === "starting" ? "Starting…" : "Start translation"}</button>`;
+  }
+  $("trBody").innerHTML = card + go + (linked && tr.cfg.autoStart && !on ? `<p class="path">It also starts by itself when the livestream starts.</p>` : "");
+  const b = $("trGo"); if(b) b.addEventListener("click", () => on ? trStop() : trStart());
+  const si = $("trSignIn"); if(si) si.addEventListener("click", trShow);
+  const st = $("trSet"); if(st) st.addEventListener("click", () => { $("trOverlay").hidden = true; settingsGoTo("translation", "setTrUrl"); });
+}
+$("trBtn").addEventListener("click", () => { $("trOverlay").hidden = false; renderTr(); });
+$("trDone").addEventListener("click", () => { $("trOverlay").hidden = true; });
+$("trWin").addEventListener("click", trShow);
+$("trOverlay").addEventListener("keydown", e => { if(e.key === "Escape"){ e.preventDefault(); $("trOverlay").hidden = true; } });
+setInterval(() => { if(tr.state === "running"){ const t = $("trTime"); if(t) t.textContent = trTime(); $("trBtn").title = `Translating · ${trTime()}`; } }, 1000);
+// Settings → Translation: saved as they change
+$("setTrUrl").value = tr.cfg.url; $("setTrAuto").checked = !!tr.cfg.autoStart; $("setTrAutoStop").checked = !!tr.cfg.autoStop;
+function trUrlNote(){
+  const u = $("setTrUrl").value.trim(), bad = !!u && !trLinkOk(u);
+  $("setTrUrlNote").textContent = bad ? "That isn't a Hope Translator broadcast link. It looks like https://www.hopetranslator.com/en/broadcast/channel/…" : "In Hope Translator, open Broadcast, choose the channel, and copy the address from the browser's address bar.";
+  $("setTrUrlNote").classList.toggle("warn-txt", bad);
+}
+$("setTrUrl").addEventListener("input", () => { tr.cfg.url = $("setTrUrl").value.trim(); trSave(); trUrlNote(); renderTr(); phSend(); });
+$("setTrAuto").addEventListener("change", e => { tr.cfg.autoStart = e.target.checked; trSave(); });
+$("setTrAutoStop").addEventListener("change", e => { tr.cfg.autoStop = e.target.checked; trSave(); });
+$("setTrSignIn").addEventListener("click", trShow);
+trUrlNote();
+// With the livestream (Settings → Translation)
+obs.on("StreamStateChanged", d => {
+  if(d.outputActive && tr.cfg.autoStart && trLinkOk(tr.cfg.url)) trStart(" with the livestream");
+  if(!d.outputActive && tr.cfg.autoStop && tr.state === "running") trStop(" with the livestream");
+});
+if(trApi){
+  trApi.onState(s => { if(!tr.busy || ["signin", "error"].includes(s.state)) trUpdate(s); else Object.assign(tr, {mic:s.mic, since:s.since}); });
+  // Opened in the background now, so Start is quick and a signed-out Hope Translator shows before the service
+  trApi.status({url:trLinkOk(tr.cfg.url) ? tr.cfg.url.trim() : "", open:trLinkOk(tr.cfg.url)}).then(s => trUpdate(s)).catch(() => {});
+}
+renderTr();
 /* ---------------- Phone remote ----------------
    Desktop app: main.js runs a small web server on the church network (phone.js). Phones see what this page
    sends (state when it changes, the mic level, a small Program picture every 3 s while a phone has View program
@@ -8840,7 +9007,8 @@ function phState(){
     health:ui.stream.active ? {level:hs.level || "", text:hs.text || "", alert:hs.alert || null} : null,
     reading:ui.brProg && ui.brReading ? brChapterOf(ui.brReading) : "",
     slides:{on:ss.on, ratio:ss.ratio, src:ss.src, feed:ss.feed.state, live:isSlideScene(ui.program), open:sl.open, n:sl.n, total:sl.total, title:sl.title, link:!!slId(sl.cfg.link)},
-    battery:bat.on ? {pct:bat.pct, low:bat.pct <= 20} : null
+    battery:bat.on ? {pct:bat.pct, low:bat.pct <= 20} : null,
+    translate:{set:trLinkOk(tr.cfg.url), state:tr.state, since:tr.since, error:tr.error}
   };
 }
 function phSend(){ if(PH && PH.clients && phApi) phApi.state(phState()); }
@@ -8869,6 +9037,12 @@ function phWatch(w){
 }
 const PH_SURE = new Set(["scene", "mute", "hymn", "bible", "lt"]);
 async function phRun(cmd, a){
+  // Live translation doesn't need OBS
+  if(cmd === "tr"){
+    const r = a.on ? await trStart(" from the phone") : await trStop(" from the phone");
+    if(!r.ok) throw phErr(r.error || "Hope Translator didn't respond.", r.code || "");
+    return {};
+  }
   if(ui.connected === false || !ui.everConnected) throw phErr("The controller isn't connected to OBS right now.", "NO_OBS");
   if(ui.safe && PH_SURE.has(cmd) && !a.sure) throw phErr("Safe mode is on at the controller.", "SAFE");
   const needOt = () => { if(!ltOn()) throw phErr(`Hymns, Bible and lower thirds are off for ${ui.collection}.`, "OFF"); };

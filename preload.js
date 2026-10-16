@@ -31,6 +31,13 @@ contextBridge.exposeInMainWorld("bgh", {
     state: () => ipcRenderer.invoke("slides-state"),
     onState: fn => ipcRenderer.on("slides-state", (e, s) => fn(s))
   },
+  translator: {
+    status: q => ipcRenderer.invoke("translator-status", q),
+    start: q => ipcRenderer.invoke("translator-start", q),
+    stop: () => ipcRenderer.invoke("translator-stop"),
+    show: q => ipcRenderer.invoke("translator-show", q),
+    onState: fn => ipcRenderer.on("translator-state", (e, s) => fn(s))
+  },
   phone: {
     info: () => ipcRenderer.invoke("phone-info"),
     enable: on => ipcRenderer.invoke("phone-enable", !!on),

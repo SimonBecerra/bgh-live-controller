@@ -99,6 +99,19 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .ss-srcs .btn{min-height:60px;flex-direction:column;gap:2px;font-size:14px}
 .ss-srcs .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft,rgba(80,140,255,.15))}
 .ss-feed{font-size:13px;padding:8px 10px;border-radius:10px;border:1px solid var(--line-2)} .ss-feed.none{border-color:var(--pgm);color:var(--pgm)}
+/* Live translation: the book pill turns green while Hope Translator is translating */
+.tr-pill{cursor:pointer;font:inherit;font-size:12px;font-weight:700}
+.tr-pill svg.i{width:14px;height:14px}
+.tr-pill.on{border-color:var(--pvw);background:var(--pvw-soft);color:var(--fg)} .tr-pill.bad{border-color:var(--warn);color:var(--warn)}
+.tr-pill.busy{animation:pend 1s ease-in-out infinite}
+.tr-sheet{display:flex;flex-direction:column;gap:12px}
+.tr-sheet h3{margin:0}
+.tr-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2)}
+.tr-card > span{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.tr-card b{font-size:17px} .tr-card small{font-size:13px;color:var(--muted);line-height:1.4}
+.tr-card .tm{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.tr-card.on{border-color:var(--pvw);background:var(--pvw-soft)} .tr-card.warn{border-color:var(--warn)}
+.tr-sheet .btn{width:100%;min-height:60px}
 .reading-btn{width:100%;min-height:60px;justify-content:flex-start;text-align:left}
 .reading-btn span{display:flex;flex-direction:column;gap:2px}
 .reading-btn small{font-size:12px;font-weight:500;opacity:.85}
@@ -319,6 +332,7 @@ const ICON = {
   presentation:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>',
   flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
   square:'<rect width="18" height="18" x="3" y="3" rx="2"/>',
+  bookType:'<path d="M10 13h4"/><path d="M12 6v7"/><path d="M16 8V6H8v2"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>',
   clapperboard:'<path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'
 };
 const $ = id => document.getElementById(id);
@@ -343,6 +357,7 @@ if(PROTO){
       audio:{name:"PYLE USB Mixer", missing:false, muted:true}, autoEnd:{on:true, sec:30, left:null, kept:false},
       ltOn:true, item:null,
       lts:[{name:"Andres Bodden", sub:"", short:"Bodden", note:""}, {name:"Daniel Chung", sub:"", short:"Chung", note:""}, {name:"Simon Becerra", sub:"", short:"Becerra", note:"Host", host:true}],
+      translate:{set:true, state:"ready", since:0, error:""},
       ltUp:null, ltEnds:0, ltDur:8, books:[{id:"how", name:"Hymns of Worship", short:"HOW"}], book:"how", tr:"KJV"},
     es:null, endT0:0, endTimer:null, ltT:null,
     send(ev, data){ if(this.es) this.es._fire(ev, typeof data === "string" ? data : JSON.stringify(data)); },
@@ -399,6 +414,8 @@ if(PROTO){
           this.push(); return {ok:true}; }
         case "slide": { const g = st.slides; g.n = Math.max(1, Math.min(g.total, g.n + a.d)); this.push(); setTimeout(() => this.slidePic(), 450); return {ok:true}; }
         case "slide-open": { const g = st.slides; g.open = true; g.n = 1; g.total = 12; this.push(); return {ok:true}; }
+        case "tr": { const t = st.translate, on = !!a.on; t.state = on ? "starting" : "stopping"; this.push();
+          return new Promise(res => setTimeout(() => { Object.assign(t, on ? {state:"running", since:Date.now()} : {state:"ready", since:0}); this.push(); res({ok:true}); }, on ? 1500 : 900)); }
         case "keep": clearInterval(this.endTimer); st.autoEnd.left = null; st.autoEnd.kept = true; this.push(); return {ok:true};
         case "mute": st.audio.muted = !!a.muted; this.push(); return {ok:true};
         case "hymn-find": return {ok:true, data:HY[String(a.num)] ? {title:HY[a.num].title, verses:HY[a.num].verses.length} : null};
@@ -454,6 +471,7 @@ function connect(){
     if(S.pending && S.st.program !== (prev && prev.program)){ clearPending(); }
     render();
     if(S.ssDraw && $("ssSheet")) S.ssDraw(); else S.ssDraw = null;
+    if(S.trDraw && $("trSheet")) S.trDraw(); else S.trDraw = null;
   });
   es.addEventListener("lvl", e => { S.level = +e.data; const el = $("lvl"); if(el) el.style.width = S.level + "%"; });
   // The slide now showing, right after Back / Next: the picture in the slide bar changes and flashes
@@ -530,6 +548,7 @@ function render(){
       <span class="pill ${st.rec ? "rec" : remind ? "remind" : ""}"><i class="t"></i>${st.rec ? "REC <span id='rt'>" + fmt(now() - st.recT0) + "</span>" : "NOT REC"}</span>
       ${st.safe ? `<span class="pill safe">${ic("lock")}SAFE</span>` : ""}
       ${st.slides ? `<button class="pill ss-pill${st.slides.on ? " on" : ""}${st.slides.feed === "none" ? " bad" : ""}" id="ssPill" type="button">${ic("presentation")}${st.slides.on ? `${esc(st.slides.ratio === "169on43" ? "16:9 on 4:3" : st.slides.ratio || "?")}${st.slides.src ? " · " + (st.slides.src === "projector" ? "Projector" : "Laptop") : ""}` : "SLIDES"}</button>` : ""}
+      ${st.translate && st.translate.set ? `<button class="pill tr-pill${st.translate.state === "running" ? " on" : ""}${["signin", "error"].includes(st.translate.state) ? " bad" : ""}${["starting", "stopping"].includes(st.translate.state) ? " busy" : ""}" id="trPill" type="button" aria-label="Live translation${st.translate.state === "running" ? ": on" : ""}">${ic("bookType")}${st.translate.state === "running" ? `<span id="trt">${trClock(st.translate)}</span>` : st.translate.state === "starting" ? "…" : "OFF"}</button>` : ""}
     </div>
     <div class="tabs" role="tablist" aria-label="Remote">
       <button class="tab" role="tab" type="button" data-tab="scenes" aria-selected="${S.tab === "scenes"}">Scenes &amp; Mic</button>
@@ -621,6 +640,7 @@ function wire(){
   const on = (id, f) => { const el = $(id); if(el) el.onclick = f; };
   on("hymn", openHymn); on("bible", openBible);
   on("ssPill", openSlides);
+  on("trPill", openTranslation);
   on("ssBack", () => cmd("slide", {d:-1}).then(j => !j.ok && j.error && toast(j.error)));
   on("ssNext", () => cmd("slide", {d:1}).then(j => !j.ok && j.error && toast(j.error)));
   on("ssOpen", () => cmd("slide-open").then(j => !j.ok && j.error && toast(j.error)));
@@ -753,6 +773,32 @@ function openSlides(){
   };
   sheet(`<div id="ssSheet" class="ss-sheet"></div>`, () => { S.ssDraw = draw; draw(); });
 }
+/* Live translation: Hope Translator on the controller's computer. Start presses its Play button; Stop presses it again. */
+function trClock(t){ const s = Math.max(0, Math.floor((now() - t.since) / 1000)); return (s >= 3600 ? Math.floor(s / 3600) + ":" + String(Math.floor(s / 60) % 60).padStart(2, "0") : Math.floor(s / 60)) + ":" + String(s % 60).padStart(2, "0"); }
+function openTranslation(){
+  let busy = false;
+  const draw = () => {
+    const t = S.st.translate || {}; if(!$("trSheet")) return;
+    const on = t.state === "running", going = t.state === "starting" || t.state === "stopping" || busy;
+    const card = t.state === "signin" ? `<div class="tr-card warn"><span><b>Sign in needed</b><small>Hope Translator is signed out on the controller's computer. Sign in there once.</small></span></div>`
+      : on ? `<div class="tr-card on"><span><b>Translating</b><small>Listeners join with Hope Translator's QR code.</small></span><span class="tm" id="trSt">${trClock(t)}</span></div>`
+      : `<div class="tr-card${t.state === "error" ? " warn" : ""}"><span><b>${t.state === "starting" ? "Starting…" : t.state === "stopping" ? "Stopping…" : "Not translating"}</b><small>${t.state === "error" && t.error ? esc(t.error) : "Hope Translator, on the controller's computer."}</small></span></div>`;
+    $("trSheet").innerHTML = `<h3>Live translation</h3>${card}
+      ${t.state === "signin" ? "" : `<button class="btn ${on ? "danger" : "primary"}" id="trGo" type="button" ${going ? "disabled" : ""}>${t.state === "starting" ? "Starting…" : t.state === "stopping" ? "Stopping…" : on ? "Stop translation" : "Start translation"}</button>`}
+      <button class="btn" id="trClose" type="button">Done</button>`;
+    const go = $("trGo");
+    if(go) go.onclick = async () => {
+      if(on && !await confirmSheet("Stop the translation?", "Listeners on Hope Translator stop getting the translation.", "Stop")) return openTranslation();
+      busy = true; draw();
+      const j = await cmd("tr", {on:!on});
+      busy = false;
+      if(!$("trSheet")) openTranslation(); else draw();
+      if(j.ok) toast(on ? "Translation stopped" : "Translation started"); else if(j.error) toast(j.error);
+    };
+    $("trClose").onclick = closeSheet;
+  };
+  sheet(`<div id="trSheet" class="tr-sheet"></div>`, () => { S.trDraw = draw; draw(); });
+}
 function closeSheet(){ if(sheetClose) sheetClose(); }
 function confirmSheet(title, body, ok){
   return new Promise(res => sheet(`<h3>${esc(title)}</h3><p>${esc(body)}</p><div class="row2"><button class="btn" id="cx" type="button">Cancel</button><button class="btn primary" id="cok" type="button">${esc(ok)}</button></div>`,
@@ -871,6 +917,7 @@ setInterval(() => {
   const st = S.st; if(!st) return;
   if(st.live && $("lt")) $("lt").textContent = fmt(now() - st.liveT0);
   if(st.rec && $("rt")) $("rt").textContent = fmt(now() - st.recT0);
+  if(st.translate && st.translate.state === "running"){ if($("trt")) $("trt").textContent = trClock(st.translate); if($("trSt")) $("trSt").textContent = trClock(st.translate); }
   if(st.autoEnd.left != null) document.querySelectorAll(".end-cd").forEach(el => el.textContent = secTxt(endLeft()));
   ageTick();
 }, 500);

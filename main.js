@@ -3,7 +3,7 @@
 // choosing a monitor, reading the Schedule folder and OBS's saved scene collections, keeping the password
 // encrypted, keeping the screen awake, saving files, opening and closing OBS with the controller, the
 // "open with OBS" setting for the plug-in,
-// Bible text (bible.js), the hymn books, and the phone remote (phone.js).
+// Bible text (bible.js), the hymn books, the phone remote (phone.js), and live translation (translator.js).
 "use strict";
 const { app, BrowserWindow, ipcMain, screen, safeStorage, powerSaveBlocker, dialog, shell, Menu, net } = require("electron");
 const path = require("node:path");
@@ -531,7 +531,8 @@ function createWindow() {
   win.on("close", onWindowClose);
   // Windows is shutting down or signing out: close straight away
   win.on("session-end", () => { allowClose = true; });
-  win.on("closed", () => { win = null; });
+  // The hidden Hope Translator window doesn't keep the app open: closing the controller quits
+  win.on("closed", () => { win = null; app.quit(); });
 }
 
 app.on("second-instance", (e, argv) => {
@@ -549,9 +550,11 @@ app.whenReady().then(() => {
   createWindow();
   phone = require("./phone").setup({ ipcMain, getWin: () => win, userData, appDir: __dirname });
   slides = require("./slides").setup({ ipcMain, getWin: () => win, userData: userData(), screen });
+  translator = require("./translator").setup({ ipcMain, getWin: () => win });
   setupAppUpdates();
 });
-// The slideshow's Chrome window closes with the controller
-let slides = null;
+// The slideshow's Chrome window and the Hope Translator window close with the controller
+let slides = null, translator = null;
+app.on("before-quit", () => { if (translator) translator.close(); });
 app.on("will-quit", () => { if (slides) slides.close().catch(() => {}); });
 app.on("window-all-closed", () => app.quit());
