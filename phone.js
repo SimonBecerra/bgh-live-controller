@@ -122,6 +122,15 @@ function setup({ ipcMain, getWin, userData, appDir }) {
         res.end(html);
         return;
       }
+      // The remote's icon: Safari's bookmark / Home Screen icon and the tab's favicon (no sign-in needed, like the page)
+      const ICONS = { "/apple-touch-icon.png": "apple-touch-icon.png", "/apple-touch-icon-precomposed.png": "apple-touch-icon.png",
+        "/favicon.ico": "favicon-32.png", "/icons/favicon-32.png": "favicon-32.png", "/icons/icon-192.png": "icon-192.png", "/icons/apple-touch-icon.png": "apple-touch-icon.png" };
+      if (req.method === "GET" && ICONS[p]) {
+        const img = await fsp.readFile(path.join(appDir, "app", "icons", ICONS[p]));
+        res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff" });
+        res.end(img);
+        return;
+      }
       if (req.method === "POST" && p === "/api/pair") {
         const b = await readBody(req);
         if (Date.now() < lockUntil) return json(res, 429, { code: "LOCKED", wait: Math.ceil((lockUntil - Date.now()) / 1000) });
