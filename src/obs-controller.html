@@ -89,7 +89,7 @@ body{font-feature-settings:"cv11" 1}
 @container topbar (max-width:1020px){
   .x-long{display:none}
   #connText{display:none}
-  .upd-btn span{display:none} .upd-btn{padding:0 10px}
+  .upd-btn{width:36px;height:36px}
   .stat{padding:0 10px}
 }
 @container topbar (max-width:880px){
@@ -263,8 +263,8 @@ body.portrait .set-nav .nav-proto{margin-top:0;border-top:none}
 .rc-meter{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px;max-width:320px}
 .rc-meter i{display:block;height:100%;width:0;background:var(--pvw);transition:width .15s linear}
 /* Update ready: a new version of the controller is downloaded */
-.upd-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--fg);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;white-space:nowrap}
-.upd-btn svg{width:18px;height:18px;color:var(--accent)}
+.upd-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border-radius:999px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--accent);flex:none}
+.upd-btn svg{width:20px;height:20px;color:var(--accent)}
 .upd-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid var(--line)}
 .upd-row:first-of-type{border-top:0}
 .upd-row > div{display:grid;gap:2px;min-width:0}
@@ -1095,7 +1095,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
       </div></span></span>
     <span class="disk-note" id="diskNote" role="status" hidden><i data-lucide="hard-drive"></i><span id="diskTxt"></span></span>
     <span class="stat" id="statRec" role="status"><span class="tally"></span><span class="lbl">NOT REC<span class="x-long">ORDING</span></span><span class="tm mono" id="recTime"></span></span>
-    <button class="upd-btn" id="updBtn" type="button" hidden title="A new version of the controller is ready"><i data-lucide="download"></i><span>UPDATE READY</span></button>
+    <button class="upd-btn" id="updBtn" type="button" hidden title="Update ready: a new version of the controller is downloaded. Tap to install it." aria-label="Update ready"><i data-lucide="download"></i></button>
     <button class="safe-btn" id="safeBtn" type="button" aria-pressed="false" title="Safe mode stops accidental changes to the livestream"><i data-lucide="lock-open" class="safe-ico"></i><span class="safe-lbl">SAFE MODE</span><b class="safe-st">OFF</b></button>
     <button class="icon-btn ready-btn" id="readyBtn" type="button" aria-label="Ready check" title="Ready check"><i data-lucide="check-check"></i><span class="ready-dot" id="readyDot" hidden></span></button>
     <button class="icon-btn ss-top" id="ssBtn" type="button" aria-pressed="false" aria-label="Slideshow" title="Slideshow"><i data-lucide="presentation"></i><span class="ss-dot" id="ssDot" hidden></span></button>
@@ -3243,6 +3243,13 @@ function ssProgActive(){
   if(gl.mode === "existing"){ const b = (gl.bcList || []).find(x => x.index === gl.bc); return !!b && isSsTitle(b.title); }
   return isSsSvc(gl.svc);
 }
+/* Private Testing: a schedule / service type named "Private Testing" (or an existing broadcast titled so). A test
+   stream, so picking a speaker is optional, whatever the lower-thirds setting. */
+const isPtSvc = n => /^\s*private\s+testing\s*$/i.test(String(n || ""));
+function ptActive(){
+  if(gl.mode === "existing"){ const b = (gl.bcList || []).find(x => x.index === gl.bc); return !!b && /^\s*private\s+testing\b/i.test(b.title || ""); }
+  return isPtSvc(gl.svc);
+}
 const monthYear = iso => { const [y, m] = iso.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleDateString("en-US", {month:"long", year:"numeric"}); };
 ui.ssProg = false;   // this livestream is a Sunday School Program (for the host's lower third); forgotten when it ends
 /* Bible Reading: a schedule image named "Bible Reading". Go Live asks for the chapter (Testament → book → chapter;
@@ -3311,6 +3318,7 @@ const autoTitle = () => isSsSvc(gl.svc) ? `${SS_TEXT} | ${gl.date ? monthYear(gl
 // Sunday School: the speaker (if one is chosen) is named even when the collection has no speakers text source
 const autoDesc = () => isBrSvc(gl.svc) ? (gl.sel.length ? `${brChapterOf(gl.br) || "Chapter"} Led By:\n${speakerName(brLeadId())}\n\n${DESC_TAIL}` : DESC_TAIL)
   : isSsSvc(gl.svc) ? (gl.sel.length ? `Special Speaker: \n${formatNames(selNames(gl.sel))}\n\n${DESC_TAIL}` : DESC_TAIL)
+  : isPtSvc(gl.svc) && !gl.sel.length ? DESC_TAIL
   : ssOn() ? (gl.sel.length ? `Service Led by: \n${formatNames(selNames(gl.sel))}\n\n${DESC_TAIL}` : DESC_TAIL)
   : ui.spkMode === "off" ? DESC_TAIL : `Service Led by: \n${formatNames(selNames(gl.sel)) || "Speakers"}\n\n${DESC_TAIL}`;
 // A custom title or description (null = automatic) replaces the generated one everywhere it's used
@@ -3579,10 +3587,11 @@ function glRender(){
   renderBr(brOn);
   const titleOk = ct ? !tErr : (svcChoosable() && gl.svc && gl.date && !atErr && (!isBaptismSvc(gl.svc) || bapNames().length > 0) && (!isBrSvc(gl.svc) || !!brChapterOf(gl.br)));
   const ssp = ssProgActive();
-  const descOk = cd ? !dErr : ((ui.spkMode === "off" || ssOn() || ssp || gl.sel.length) && !adErr && (!brOn || gl.sel.length > 0));
+  const pt = ptActive();
+  const descOk = cd ? !dErr : ((ui.spkMode === "off" || ssOn() || ssp || pt || gl.sel.length) && !adErr && (!brOn || gl.sel.length > 0));
   // Lower thirds on for this collection: the speakers are needed, whichever kind of broadcast.
   // Sunday School (the theme, or a Sunday School Program): optional.
-  const spkOk = brOn ? gl.sel.length > 0 : !ltOn() || ssOn() || ssp || gl.sel.length > 0;   // Bible Reading: always a speaker
+  const spkOk = brOn ? gl.sel.length > 0 : !ltOn() || ssOn() || ssp || pt || gl.sel.length > 0;   // Bible Reading: always a speaker; Private Testing: optional
   // Sunday School Program: one special speaker, and a host can always be chosen (with lower thirds on)
   $("glSpkLbl").textContent = ssp ? "Special Speaker" : "Speakers";
   $("glHostField").hidden = !hostAllowed(ssp || brOn);
@@ -3603,12 +3612,13 @@ function glRender(){
   $("glNext").classList.toggle("primary", !ex); $("glNext").classList.toggle("danger", ex);
   renderBapCam();
   $("glNext").disabled = ex ? !(gl.bc != null && gl.bcList && spkOk && (!bap || bapNames().length > 0) && (!brOn || !!brChapterOf(gl.br))) : !(titleOk && descOk && spkOk);
-  $("glSpkHint").classList.toggle("warn-txt", ltOn() && !ssOn() && !gl.sel.length);
-  if(ltOn() && !ssOn() && !gl.sel.length) $("glSpkHint").textContent = "Choose the speakers: lower thirds are on for this scene collection.";
+  $("glSpkHint").classList.toggle("warn-txt", ltOn() && !ssOn() && !pt && !gl.sel.length);
+  if(ltOn() && !ssOn() && !gl.sel.length) $("glSpkHint").textContent = pt ? "Optional for Private Testing." : "Choose the speakers: lower thirds are on for this scene collection.";
   if(ssp) $("glSpkHint").textContent = `Optional. Named in the description as the special speaker. OBS shows "${SS_TEXT}".`;
   else if(brOn && !gl.sel.length){ $("glSpkHint").textContent = "Choose at least one speaker for a Bible Reading."; $("glSpkHint").classList.add("warn-txt"); }
   else if(brOn) $("glSpkHint").textContent = (ex ? "" : gl.sel.length === 1 && !gl.br.others ? "With one speaker the title says \u201cLed by\u201d. " : "Named in the title in the order you pick them. ")
     + (ltOn() ? (gl.sel.length === 1 ? "They get the lower third button." : "Only the person leading gets a lower third button.") : "");
+  else if(pt && !gl.sel.length) $("glSpkHint").textContent = "Optional for Private Testing.";
   else if(!(ltOn() && !ssOn() && !gl.sel.length)) $("glSpkHint").textContent = "Names appear in the order you pick them. To remove a visiting speaker, select them first.";
   renderBc();
 }
@@ -6109,7 +6119,7 @@ setInterval(() => { if($("readyOverlay").hidden && !document.hidden) readyRun(fa
 setTimeout(() => readyRun(false), 4000);
 
 /* Updates (desktop app). The controller downloads new versions of itself from GitHub in the background and installs
-   them when you tap "Update ready" (or the next time it closes). It also installs and updates the OBS plug-in:
+   them when you tap the download button at the top (or the next time it closes). It also installs and updates the OBS plug-in:
    OBS closes for a moment, the new plug-in goes in, and OBS opens again. Never while live or recording. */
 ui.appUpd = {state:"idle"}; ui.plug = null; ui.pluginUpdating = false; ui.plugPending = false;
 let plugAsked = "";
@@ -6119,7 +6129,7 @@ function renderUpdates(){
   $("updBtn").title = `Version ${u.version || ""} is ready. Tap to restart the controller and update.`;
   $("setUpdApp").textContent = !desk ? "In the desktop app, new versions download by themselves and install when you restart the controller." :
     u.enabled === false ? `Version ${u.current || ""}. Automatic updates work in the installed app.` :
-    u.state === "ready" ? `Version ${u.version} is downloaded. Tap Update ready at the top, or it installs the next time the controller closes.` :
+    u.state === "ready" ? `Version ${u.version} is downloaded. Tap the download button at the top, or it installs the next time the controller closes.` :
     u.state === "downloading" ? `Downloading version ${u.version}…` :
     u.state === "checking" ? "Checking…" :
     u.state === "error" ? `Couldn't check for updates. ${u.error || ""}` : `Version ${u.current || ""}. Up to date.`;
