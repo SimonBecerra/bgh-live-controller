@@ -3091,6 +3091,7 @@ let fbData = {title:"", desc:""};
 const normCode = (code, msg) =>
   code === "YOUTUBE_ERROR" && /BindingNotAllowed|does not allow it to be bound/i.test(msg || "") ? "BROADCAST_NOT_BINDABLE"
   : code === "YOUTUBE_ERROR" && /quota|exceeded|limit|too many/i.test(msg || "") ? "YOUTUBE_LIMIT" : code;
+function backToFront(){ if(window.bgh) window.bgh.bringToFront(); }
 function showObsFallback(code, msg, details){
   code = normCode(code, msg);
   const f = FALLBACK[code] || {problem:"The controller couldn't go live" + (msg ? ` (${msg})` : "") + ".", fix:"Go live from OBS on your main monitor."};
@@ -3100,9 +3101,11 @@ function showObsFallback(code, msg, details){
   $("fbTitle").textContent = fbData.title;
   $("fbDesc").textContent = fbData.desc;
   $("fbDesc").hidden = $("fbCopyDesc").parentElement.hidden = !fbData.desc;
-  $("fbOpen").textContent = f.obsOpen ? "Got it" : "Open OBS stream setup";
-  $("fbOpen").onclick = () => { $("fbOverlay").hidden = true; if(!f.obsOpen) openObsStream(); };
+  $("fbOpen").textContent = f.obsOpen ? "Show OBS" : "Open OBS stream setup";
+  $("fbOpen").onclick = async () => { $("fbOverlay").hidden = true; if(f.obsOpen){ try{ await vcall("ShowOBS"); }catch(e){} } else openObsStream(); };
   $("fbOverlay").hidden = false;
+  // OBS's YouTube dialog was in front: the controller comes back in front with what went wrong
+  setTimeout(() => backToFront(), 400);
 }
 function copyText(text, el){
   const done = () => toast("Copied");
@@ -6147,6 +6150,7 @@ async function checkPlugin(ask){
 }
 async function offerPlugin(){
   if(isLiveOrRec() || ui.pluginUpdating){ ui.plugPending = true; return; }   // asked again once the service is over
+  await whenNoDialog();   // never on top of another question (the controller's own update, say)
   ui.plugPending = false; plugAsked = ui.plug.latest;
   const ok = await confirmDlg("OBS plug-in update ready",
     "A new version of the BGH LIVE plug-in for OBS is ready. Updating closes OBS for a moment, puts in the new plug-in and opens OBS again." +
@@ -6171,6 +6175,27 @@ async function installPluginNow(){
 function plugAfterService(){ setTimeout(() => { if(ui.plugPending && !isLiveOrRec()) offerPlugin(); }, 2000); }
 obs.on("StreamStateChanged", plugAfterService);
 obs.on("RecordStateChanged", plugAfterService);
+/* On startup: the first check after the controller opens finds a new version → it downloads, and once it's ready
+   you're asked whether to restart and update now. Live or recording: just a note (the download button stays).
+   Waits until no other window is open in the controller. Asked once per start; later updates only show the button. */
+let updFirst = true;
+function updStartup(u){
+  if(!updFirst || !u) return;
+  if(u.state === "downloading"){ toast(`Version ${u.version} of the controller is downloading. You'll be asked when it's ready.`); return; }
+  if(u.state === "current" || u.state === "error"){ updFirst = false; return; }
+  if(u.state !== "ready") return;
+  updFirst = false;
+  whenNoDialog().then(async () => {
+    if(isLiveOrRec()) return toast(`Version ${ui.appUpd.version} is ready. Tap the download button at the top after the service to update.`);
+    const ok = await confirmDlg("Update ready",
+      `Version ${ui.appUpd.version} of the controller is downloaded. The controller closes, installs it and opens again in about 10 seconds. OBS stays open.`,
+      "Restart and update", "primary", "Later");
+    if(ok) window.bgh.appUpdate.install();
+    else toast("Update later with the download button at the top, or it installs the next time the controller closes.");
+  });
+}
+// Resolves once no dialog or panel is open in the controller (checked every second)
+const whenNoDialog = () => new Promise(res => { const t = () => [...document.querySelectorAll(".overlay")].some(o => !o.hidden) ? setTimeout(t, 1000) : res(); t(); });
 $("updBtn").addEventListener("click", async () => {
   const ok = await confirmDlg(`Update to version ${ui.appUpd.version}?`,
     "The controller closes, installs the update and opens again in about 10 seconds. " +
@@ -6186,8 +6211,8 @@ $("setUpdAppBtn").addEventListener("click", async () => {
 });
 $("setUpdPlugBtn").addEventListener("click", () => ui.plug && ui.plug.needed ? installPluginNow() : checkPlugin(false));
 if(window.bgh && window.bgh.appUpdate){
-  window.bgh.appUpdate.onChange(u => { ui.appUpd = {...ui.appUpd, ...u}; renderUpdates(); });
-  window.bgh.appUpdate.status().then(u => { ui.appUpd = {...ui.appUpd, ...u}; renderUpdates(); }).catch(() => {});
+  window.bgh.appUpdate.onChange(u => { ui.appUpd = {...ui.appUpd, ...u}; renderUpdates(); updStartup(u); });
+  window.bgh.appUpdate.status().then(u => { ui.appUpd = {...ui.appUpd, ...u}; renderUpdates(); updStartup(u); }).catch(() => {});
   setTimeout(() => checkPlugin(true), 6000);
 }
 renderUpdates();
@@ -8021,6 +8046,51 @@ async function ssHideBoth(){
     }
   }catch(e){ toast(`Couldn't hide the slideshow sources in OBS: ${e.message}`); }
 }
+/* The same slideshow in every scene. "Projector" and "Presentation" can sit in other scenes too (a Camera scene,
+   just off the edge, so a Move transition slides the slideshow in). After every change the controller makes in the
+   Slideshow scene, the other scenes' copies get the same crop and size, at the same height, so nothing jumps or
+   changes size mid-transition. A copy waiting off the edge stays just off that edge; one on screen takes the same
+   position too. The other shape's Slideshow scene keeps its own layout. */
+async function ssMirror(){
+  let W = 1920, H = 1080;
+  try{ const v = await obs.call("GetVideoSettings"); W = v.baseWidth || W; H = v.baseHeight || H; }catch(e){}
+  const scenes = ((await obs.call("GetSceneList")).scenes || []).map(x => x.sceneName);
+  const lists = {};
+  for(const n of scenes){ try{ lists[n] = (await obs.call("GetSceneItemList", {sceneName:n})).sceneItems || []; }catch(e){ lists[n] = []; } }
+  const want = ss.ratio ? sceneRatioFor(ss.ratio) : "16:9";
+  const slides = scenes.filter(n => isSlideScene(n) && slideRatioOf(n));
+  let moved = 0;
+  for(const name of [ui.ssNames.projector, ui.ssNames.laptop]){
+    // The one to copy: in the Slideshow scene of the shape in use (16:9 when none is chosen)
+    const refScene = slides.find(n => slideRatioOf(n) === want && lists[n].some(x => x.sourceName === name)) || slides.find(n => lists[n].some(x => x.sourceName === name));
+    if(!refScene) continue;
+    const refIt = lists[refScene].find(x => x.sourceName === name);
+    const r = await tfGet(refScene, refIt.sceneItemId);
+    if(!(r.sourceWidth > 2 && r.sourceHeight > 2) || (r.boundsType && r.boundsType !== "OBS_BOUNDS_NONE") || r.rotation) continue;
+    const R = tfRect(r);
+    if(!rectOk(R)) continue;
+    for(const n of scenes){
+      if(isSlideScene(n) && slideRatioOf(n)) continue;
+      for(const it of lists[n].filter(x => x.sourceName === name)){
+        const t = await tfGet(n, it.sceneItemId);
+        if((t.boundsType && t.boundsType !== "OBS_BOUNDS_NONE") || t.rotation) continue;
+        const same = ["cropTop", "cropBottom", "cropLeft", "cropRight"].every(k => (t[k] || 0) === (r[k] || 0)) && Math.abs((t.scaleX ?? 1) - (r.scaleX ?? 1)) < 1e-4 && Math.abs((t.scaleY ?? 1) - (r.scaleY ?? 1)) < 1e-4;
+        const O = tfRect(t);
+        const offR = O.x >= W - 0.5, offL = O.x + O.w <= 0.5, offB = O.y >= H - 0.5, offT = O.y + O.h <= 0.5;
+        // Off the edge: stays just off that edge, at the slideshow's height (or across, for top / bottom)
+        const x = offR ? Math.max(O.x, W) : offL ? Math.min(O.x + O.w, 0) - R.w : (offT || offB) ? R.x : R.x;
+        const y = offB ? Math.max(O.y, H) : offT ? Math.min(O.y + O.h, 0) - R.h : R.y;
+        if(same && Math.abs(O.x - x) < 0.5 && Math.abs(O.y - y) < 0.5) continue;
+        const al = t.alignment ?? 5;
+        await obs.call("SetSceneItemTransform", {sceneName:n, sceneItemId:it.sceneItemId, sceneItemTransform:{
+          cropTop:r.cropTop || 0, cropBottom:r.cropBottom || 0, cropLeft:r.cropLeft || 0, cropRight:r.cropRight || 0,
+          scaleX:r.scaleX ?? 1, scaleY:r.scaleY ?? 1, ...tfPos({x, y, w:R.w, h:R.h}, al)}});
+        moved++;
+      }
+    }
+  }
+  return moved;
+}
 // One at a time: a change made while one is running is done straight after it (the latest choice wins)
 let ssBusy = null, ssAgain = null;
 async function ssApplySources(vis = true, off = false){
@@ -8037,6 +8107,10 @@ async function ssApplyNow(vis = true, off = false){
   const on43 = !off && ss.ratio === "169on43";
   try{
     const scenes = (await obs.call("GetSceneList")).scenes || [];
+    // Sources also in a Slideshow scene: their copies in other scenes are matched to it afterwards (ssMirror)
+    const inSlides = new Set();
+    for(const sc of scenes) if(isSlideScene(sc.sceneName) && slideRatioOf(sc.sceneName))
+      for(const it of (await obs.call("GetSceneItemList", {sceneName:sc.sceneName})).sceneItems || []) inSlides.add(it.sourceName);
     for(const sc of scenes){
       const place = [];   // "16:9 on 4:3": the slideshow sources in the 16:9 Slideshow scene, placed together afterwards
       const walk = async (items, group) => {
@@ -8057,6 +8131,7 @@ async function ssApplyNow(vis = true, off = false){
             if(!ssOrigLoad()[ssOrigKey(scene, it.sceneItemId)] && it.sourceType !== "OBS_SOURCE_TYPE_SCENE") await ssCropItem(scene, it, kind, {cropped:0, bounded:[], rotated:[]}, "16:9");
             place.push(it); continue;
           }
+          if(!group && !isSlideScene(sc.sceneName) && inSlides.has(it.sourceName)) continue;   // matched afterwards
           await ssRestore(scene, it.sceneItemId);   // back from "16:9 on 4:3": the saved place first, then the usual crop
           if(it.sourceType !== "OBS_SOURCE_TYPE_SCENE") await ssCropItem(scene, it, kind, report);
           if(kind === "laptop" && isSlideScene(sc.sceneName) && slideRatioOf(sc.sceneName) === "16:9" && ss.ratio === "16:9"){
@@ -8069,6 +8144,7 @@ async function ssApplyNow(vis = true, off = false){
       if(place.length) await ssPlaceOn43(sc.sceneName, place, report);
       else if(!off && isSlideScene(sc.sceneName)) await ssMatchVideo(sc.sceneName, top, report);
     }
+    await ssMirror();   // the same crop and size in every other scene
   }catch(e){ return toast(`Couldn't switch the slideshow sources in OBS: ${e.message}`); }
   if(off) return report.cropped ? toast("The slideshow sources are back where they were set up in OBS.") : null;
   if(!shown) return toast(`No source called "${show}" was found in ${ui.collection}. Check the names in Settings → Slideshow.`);
