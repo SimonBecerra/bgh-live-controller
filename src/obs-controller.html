@@ -561,6 +561,10 @@ select{min-height:52px;appearance:none;background-image:linear-gradient(45deg,tr
 .sheet-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .step-tag{font-size:13px;color:var(--muted)}
 .sheet-foot{display:flex;gap:10px;justify-content:flex-end}
+/* Always on screen: a long sheet scrolls behind its buttons */
+.sheet > .gl-step > .sheet-foot, .sheet > .sheet-foot{position:sticky;bottom:-24px;z-index:3;background:var(--panel);margin-bottom:-24px;padding:14px 0 24px;box-shadow:0 -10px 14px -10px rgba(0,0,0,.6)}
+.pv-extra{display:flex;flex-direction:column;gap:18px;margin-top:8px;padding-top:16px;border-top:1px solid var(--line)}
+.pv-extra:empty{display:none}
 .sheet-foot .btn{min-width:150px;flex:none}
 .choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .vis-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
@@ -601,13 +605,13 @@ select{min-height:52px;appearance:none;background-image:linear-gradient(45deg,tr
 .details.single{grid-template-columns:minmax(0,1fr)}
 .d-form{display:flex;flex-direction:column;gap:18px;min-width:0}
 .svc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.svc{min-height:56px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);padding:8px 14px;font-weight:600;font-size:15px;text-align:left}
+.svc{min-height:46px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);padding:8px 14px;font-weight:600;font-size:15px;text-align:left}
 .svc[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
 .sheet input{background:var(--bg);border:1px solid var(--line-2);border-radius:8px;padding:10px 14px;font-size:18px;width:100%;box-sizing:border-box;color:var(--fg);min-height:54px}
 .link-btn{background:none;border:none;color:var(--accent);font-weight:600;font-size:14px;padding:4px 2px;min-height:32px}
 .d-preview{display:flex;flex-direction:column;gap:8px;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px}
 .pv-title{font-size:20px;font-weight:600;line-height:1.3;overflow-wrap:anywhere;margin-bottom:6px}
-.pv-desc{white-space:pre-wrap;font-size:14px;line-height:1.5;height:280px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line);padding-top:10px;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere}
+.pv-desc{white-space:pre-wrap;font-size:14px;line-height:1.5;height:170px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line);padding-top:10px;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere}
 .pv-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .pv-lbl{display:flex;align-items:baseline;gap:8px}
 .pv-tag{font-size:12px;color:var(--muted)}
@@ -1967,6 +1971,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
           <div class="pv-desc" id="glPvDesc" tabindex="0"></div>
           <textarea id="glDescIn" class="pv-desc pv-in" maxlength="5000" hidden></textarea>
           <span class="pv-help" id="glDescHelp" hidden></span>
+          <div class="pv-extra" id="glPvExtra"></div>
         </div>
       </div>
       <div class="sheet-foot"><button class="btn" data-gl-close>Cancel</button><button class="btn primary" id="glNext">Next: Visibility</button></div>
@@ -2767,6 +2772,7 @@ setInterval(() => { if(ui.connected !== false && ui.everConnected && obs.connect
 const isBapCam = n => /^baptism cam(era)?$/i.test(String(n || "").trim());
 function bapCamShown(b){
   if(b.group.includes(ui.program) || (ui.studio && b.group.includes(ui.preview))) return true;
+  if(ui.frontFound === true) return true;   // video is arriving from the "Front Camera" source
   if(ui.schMode === "off" || !srcImage()) return true;
   if(ui.files.length && !ui.files.some(p => isBaptismSvc(noExt(base(p))))) return true;
   if(!$("glOverlay").hidden && bapActive()) return true;
@@ -2839,6 +2845,52 @@ async function cam2Poll(){
   else if(was === false) toast(`${CAM2_SOURCE} has video again: ${camScene(2) || "Camera 2"} is back.`);
 }
 setInterval(cam2Poll, 3000);
+/* Baptism Cam: its button also shows by itself while video is arriving from the "Front Camera" source (counted by
+   the plug-in, as for Camera 2), on the controller and the phone. Shown as soon as frames arrive; hidden again after
+   two checks in a row with none (unless the Baptism schedule is picked). A camera set to "Deactivate when not
+   showing" sends nothing while it's off screen, so there the source being in the collection is enough; likewise if
+   the plug-in can't count. */
+const FRONT_SOURCE = "Front Camera";
+ui.frontFound = null; ui.frontExists = null;
+let frontZero = 0, frontBusy = false;
+async function frontCheck(){
+  try{ ui.frontExists = ((await obs.call("GetInputList")).inputs || []).some(i => i.inputName === FRONT_SOURCE); }catch(e){ ui.frontExists = null; }
+  frontZero = 0;
+  if(!ui.frontExists) frontSet(false, true); else frontPoll();
+}
+function frontSet(found, quiet){
+  if(found === ui.frontFound) return;
+  const b = BUTTONS.find(x => x.bapCam), was = b ? sceneShown(b) : false;
+  ui.frontFound = found; renderBapCam();
+  const now = b ? sceneShown(b) : false;
+  if(quiet || !b || was === now) return;
+  toast(now ? `${FRONT_SOURCE} detected: the ${b.label} button is back.` : `No video from ${FRONT_SOURCE}, so the ${b.label} button is hidden.`);
+}
+async function frontPoll(){
+  if(!ui.frontExists || frontBusy) return;
+  frontBusy = true;
+  let r = null;
+  // #proto-start
+  r = {ok:true, fps:FRONT_PROTO.on ? 30 : 0, showing:false};
+  // #proto-end
+  // #real try{ r = await vcall("GetSourceFrames", {sourceName:FRONT_SOURCE}); }catch(e){ r = e.code === "NOT_CONNECTED" ? undefined : null; }
+  frontBusy = false;
+  if(r === undefined) return;
+  if(!r || r.ok === false){ frontZero = 0; return frontSet(true); }   // can't count: it's in the collection
+  if(r.started || r.fps < 0) return;
+  if(r.fps > 0){ frontZero = 0; return frontSet(true); }
+  if(++frontZero < 2) return;
+  let idle = false;
+  if(!r.showing){ try{ idle = !!((await obs.call("GetInputSettings", {inputName:FRONT_SOURCE})).inputSettings || {}).deactivate_when_not_showing; }catch(e){} }
+  frontSet(idle);
+}
+setInterval(frontPoll, 3000);
+obs.on("InputCreated", d => { if(d.inputName === FRONT_SOURCE) frontCheck(); });
+obs.on("InputRemoved", d => { if(d.inputName === FRONT_SOURCE) frontCheck(); });
+obs.on("InputNameChanged", d => { if(d.inputName === FRONT_SOURCE || d.oldInputName === FRONT_SOURCE) frontCheck(); });
+// #proto-start
+const FRONT_PROTO = {on:false};
+// #proto-end
 // #proto-start
 const CAM2_PROTO = {off:false};
 // #proto-end
@@ -3603,6 +3655,10 @@ function glRender(){
   $("glCustTitle").hidden = !svcChoosable();
   if(!svcChoosable() && !tErr) $("glTitleHelp").textContent = `${(gl.customTitle || "").length} / 100 · This scene collection has no schedule set up, so write the title here.`;
   const ex = gl.mode === "existing";
+  // New broadcast: Slideshow and Hymn book sit under the title and description, so the page fits on the screen.
+  // Existing broadcast (no title and description here): back with the other fields.
+  { const dest = ex ? $("glForm") : $("glPvExtra");
+    ["glSsField", "glHbField"].forEach(id => { if($(id).parentElement !== dest) dest.appendChild($(id)); }); }
   $("glModeNew").setAttribute("aria-selected", !ex); $("glModeEx").setAttribute("aria-selected", ex);
   // Existing broadcast: only the broadcast list; speakers, service type and date are hidden
   $("glPreview").hidden = ex; $("glExisting").hidden = !ex;
@@ -8382,6 +8438,7 @@ obs.on("CurrentSceneCollectionChanged", async d => {
   ot.showing = false; ui.lt.showing = "";
   await otSync();
   ui.cam2Found = null; cam2Check();
+  ui.frontFound = null; frontCheck();
   // Slideshow mode doesn't carry over to another collection: it's off until it's turned on again. Anything
   // "16:9 on 4:3" moved in this collection earlier is put back where it was set up.
   const ssWasOn = ss.on;
@@ -8858,7 +8915,7 @@ async function syncAll(){
   await otSync();
   syncStartTitle();
   ssCollMoving = false; ssTplSync();
-  cam2Check();
+  cam2Check(); frontCheck();
 }
 /* ---------------- Phone remote ----------------
    Desktop app: main.js runs a small web server on the church network (phone.js). Phones see what this page
