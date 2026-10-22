@@ -685,7 +685,7 @@ function scBtn(s){
 // Seconds left before the stream ends by itself, counted on from the last update
 function endLeft(){ const ae = S.st.autoEnd; return Math.max(0, ae.left - Math.floor((Date.now() - S.stAt) / 1000)); }
 function hymnHTML(it){
-  const sub = it.intro ? "Number on screen · Next brings in the words" : `${esc(it.label)}${it.pages > 1 ? ` (${it.page} of ${it.pages})` : ""} · ${it.i + 1} of ${it.n}`;
+  const sub = it.intro ? "Number on screen · Next brings in the words" : `${esc(it.label)}${it.pages > 1 ? ` (${it.page} of ${it.pages})` : ""}${it.part === "chorus" && /^verse /i.test(it.label) ? " · Chorus" : it.part === "final" ? " · Final chorus" : ""} · ${it.i + 1} of ${it.n}`;
   return `<div class="now">
       <div class="now-h"><div><h2>${esc(it.title)}</h2><div class="sub">${sub}</div></div><span class="tag ${it.showing ? "" : "off"}">${it.showing ? "On screen" : "Hidden"}</span></div>
       <div class="lines">${it.lines.map(esc).join("<br>")}${it.next ? `<button class="next" id="nextPv" type="button" aria-label="Show the next part"><b>Next</b>${esc(it.next.join(" / "))}</button>` : `<div class="next"><b>Last</b>Tap Done when it ends</div>`}</div>

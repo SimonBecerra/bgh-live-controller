@@ -4066,7 +4066,7 @@ $("qcApply").addEventListener("click", async () => {
    A verse may start with its number on a line of its own ("2" or "2."); otherwise verses are numbered in order. */
 const HYMN_CREDIT = /^(words|music|tune|meter|metre|author|composer|arranger|arr\.?|copyright)\s*:\s*(.*)$/i;
 const HYMN_HEAD = /^hymn\s+(\d+[a-z]?)\s*(?:[:.\-–—]\s*(.*))?$/i;
-const HYMN_LABEL = /^(chorus|refrain|verse\s*\d+|\d+)\s*[:.]?$/i;
+const HYMN_LABEL = /^(final\s+chorus|final\s+refrain|chorus|refrain|verse\s*\d+|\d+)\s*[:.]?$/i;
 
 function parseHymnBook(text){
   const lines = String(text || "").replace(/^﻿/, "").split(/\r\n|\r|\n/);
@@ -4081,6 +4081,7 @@ function parseHymnBook(text){
       body = body.slice(1);
       const w = m[1].toLowerCase();
       if(w === "chorus" || w === "refrain"){ kind = "chorus"; label = w === "chorus" ? "Chorus" : "Refrain"; }
+      else if(/^final/.test(w)){ kind = "final"; label = /refrain/.test(w) ? "Final refrain" : "Final chorus"; }
       else label = "Verse " + w.replace(/\D/g, "");
     }
     if(!body.length){ warn(blockLine, `"${label}" has no words under it.`); block = null; return; }
@@ -4143,7 +4144,7 @@ function hymnBookText(book){
   book.hymns.forEach(h => {
     out.push("", "", `Hymn ${h.number}: ${h.title}`);
     (h.credits || []).forEach(c => out.push(c));
-    h.verses.forEach(v => { out.push("", v.kind === "chorus" ? v.label : v.label.replace(/^Verse /, "")); v.lines.forEach(l => out.push(l)); });
+    h.verses.forEach(v => { out.push("", v.kind === "verse" ? v.label.replace(/^Verse /, "") : v.label); v.lines.forEach(l => out.push(l)); });
   });
   return out.join("\r\n") + "\r\n";
 }
@@ -4152,24 +4153,65 @@ function hymnBookText(book){
 const hymnNumKey = n => { const m = String(n).match(/^(\d+)(.*)$/); return m ? [parseInt(m[1], 10), m[2]] : [Infinity, String(n)]; };
 const byHymnNumber = (a, b) => { const x = hymnNumKey(a.number), y = hymnNumKey(b.number); return x[0] - y[0] || x[1].localeCompare(y[1]); };
 
+/* How a hymn's choruses are sung:
+   - "one": one chorus (typed once, or the same words typed again), repeated after every verse, with its own button
+   - "each": two or more choruses with different words: each one belongs to the verse above it and is sung after it
+     (no Chorus button: it's part of that verse)
+   - "none": no chorus
+   A "Final chorus" (typed above it) is sung once, after the last verse, as part of that verse; with a repeating chorus
+   too, it takes the repeating chorus's place after the last verse. */
+const chorusWords = v => v.lines.join(" ").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+function hymnChorusMode(hymn){
+  const ch = hymn.verses.filter(v => v.kind === "chorus");
+  if(!ch.length) return "none";
+  return new Set(ch.map(chorusWords)).size > 1 ? "each" : "one";
+}
 /* What goes on screen, in order. Each verse is split into pages of up to `perPage` lines (0 = the whole verse),
-   as evenly as possible (6 lines at 4 per page show as 3 and 3, not 4 and 2).
-   With `repeatChorus`, the chorus follows every verse (as it's sung) instead of appearing once where it's written. */
+   as evenly as possible (6 lines at 4 per page show as 3 and 3, not 4 and 2). A chorus that belongs to a verse
+   (a different chorus after each verse, or the Final chorus) carries that verse's label, so Next runs on through it
+   and the verse's button goes to the start of the verse; its pages follow the verse's in one count, never sharing
+   a page with the verse. `part` says which: "verse", "chorus" or "final".
+   With `repeatChorus`, a single chorus follows every verse (as it's sung) instead of appearing once where it's written. */
 function hymnSlides(hymn, {perPage = 2, repeatChorus = true} = {}){
-  const chorus = hymn.verses.find(v => v.kind === "chorus");
+  const mode = hymnChorusMode(hymn);
   const verses = hymn.verses.filter(v => v.kind === "verse");
-  const order = repeatChorus && chorus && verses.length
-    ? verses.flatMap(v => [v, chorus])
-    : hymn.verses;
+  const final = hymn.verses.find(v => v.kind === "final");
+  const lastVerse = verses[verses.length - 1];
+  // Groups: one button each, made of one or more blocks shown one after another
+  const groups = [];
+  const add = (label, block, part) => {
+    let g = groups[groups.length - 1];
+    if(!g || g.label !== label){ g = {label, kind:part === "verse" ? "verse" : block.kind, blocks:[]}; groups.push(g); }
+    g.blocks.push({block, part});
+  };
+  if(mode === "each" || (mode === "none" && verses.length) || (mode === "one" && !repeatChorus)){
+    // As written: a chorus (other than a single repeating one) and the Final chorus join the verse above them
+    let cur = "";
+    hymn.verses.forEach(v => {
+      if(v.kind === "verse"){ cur = v.label; add(v.label, v, "verse"); }
+      else if(v.kind === "chorus" && mode === "one") add(v.label, v, "chorus");   // repeating turned off: where it's written, its own button
+      else add(cur || (verses[0] || v).label, v, v.kind === "final" ? "final" : "chorus");
+    });
+  } else if(mode === "one"){
+    const chorus = hymn.verses.find(v => v.kind === "chorus");
+    if(!verses.length) add(chorus.label, chorus, "chorus");
+    verses.forEach(v => {
+      add(v.label, v, "verse");
+      if(v === lastVerse && final) add(v.label, final, "final");
+      else add(chorus.label, chorus, "chorus");
+    });
+  } else hymn.verses.forEach(v => add(v.label, v, v.kind === "final" ? "final" : "verse"));
   const slides = [];
-  order.forEach((v, vi) => {
-    const L = v.lines.length, pages = perPage > 0 ? Math.ceil(L / perPage) : 1;
-    const size = Math.ceil(L / pages);
-    for(let p = 0; p < pages; p++){
-      slides.push({verseIndex:vi, label:v.label, kind:v.kind, lines:v.lines.slice(p * size, (p + 1) * size), from:p * size, page:p + 1, pages});
-    }
+  groups.forEach((g, vi) => {
+    const parts = [];
+    g.blocks.forEach(({block, part}) => {
+      const L = block.lines.length, pages = perPage > 0 ? Math.ceil(L / perPage) : 1, size = Math.ceil(L / pages);
+      for(let p = 0; p < pages; p++) parts.push({part, kind:block.kind, lines:block.lines.slice(p * size, (p + 1) * size), from:p * size});
+    });
+    const shown = parts.filter(x => x.lines.length);
+    shown.forEach((x, i) => slides.push({verseIndex:vi, label:g.label, kind:g.kind, part:x.part, lines:x.lines, from:x.from, page:i + 1, pages:shown.length}));
   });
-  return slides.filter(s => s.lines.length);
+  return slides;
 }
 
 // The file offered by Settings → On-screen text → Get the template (also the prototype's sample book)
@@ -4190,6 +4232,9 @@ const HYMN_TEMPLATE = `# HYMN BOOK TEMPLATE for the BGH LIVE Controller
 #      and the verses are numbered in order.
 #   6. Write "Chorus" (or "Refrain") on its own line above the chorus. Type the chorus once;
 #      the controller repeats it after every verse.
+#      A different chorus after each verse? Type each one under its verse, each with "Chorus" above it.
+#      They're shown at the end of their verse, with no separate Chorus button.
+#      A chorus sung only once, at the very end? Write "Final chorus" above it, after the last verse.
 #
 # Tip: do a few hymns, import the file to check it, then keep going. Importing the file again
 # replaces the book and keeps its logo.
@@ -5158,10 +5203,11 @@ function renderHy(){
   });
   else if(!h) res.innerHTML = `<p class="bc-msg err">There's no hymn ${esc(hy.num)} in ${esc(b.name)}.</p>`;
   else {
-    const verses = h.verses.filter(v => v.kind === "verse").length, chorus = h.verses.some(v => v.kind === "chorus");
+    const verses = h.verses.filter(v => v.kind === "verse").length, cmode = hymnChorusMode(h), fin = h.verses.some(v => v.kind === "final");
+    const chorus = (cmode === "each" ? ", a different chorus after each verse" : cmode === "one" ? " and a chorus" : "") + (fin ? `${cmode === "one" ? "," : ""} and a final chorus` : "");
     res.innerHTML = `<div class="hy-title"><span class="hy-title-n"></span><span class="hy-title-t"></span></div><p class="bc-msg"></p>`;
     res.querySelector(".hy-title-n").textContent = h.number; res.querySelector(".hy-title-t").textContent = h.title;
-    res.querySelector(".bc-msg").textContent = `${verses} verse${verses === 1 ? "" : "s"}${chorus ? " and a chorus" : ""}. Enter puts the hymn number on the stream; Start then brings in the words.`;
+    res.querySelector(".bc-msg").textContent = `${verses} verse${verses === 1 ? "" : "s"}${chorus}. Enter puts the hymn number on the stream; Start then brings in the words.`;
   }
   $("hyEnter").disabled = !h;
 }
@@ -5185,12 +5231,12 @@ async function loadHymn(){
     allLines:[...new Set(h.verses.flatMap(v => v.lines))], rows:Math.max(1, ...parts.map(p => p.lines.length))};
   const slides = [{...base, key:`h:${b.id}:${h.number}:intro`, intro:true, label:"", lines:[], page:1, pages:1},
     ...parts.map((s, i) => ({
-      ...base, key:`h:${b.id}:${h.number}:${i}`, label:s.label, lines:s.lines, from:s.from, page:s.page, pages:s.pages}))];
+      ...base, key:`h:${b.id}:${h.number}:${i}`, label:s.label, part:s.part, lines:s.lines, from:s.from, page:s.page, pages:s.pages}))];
   $("hyOverlay").hidden = true;
   await otLoad({kind:"hymn", hymn:h, title:`${b.short || b.name} ${h.number} · ${h.title}`, short:`Hymn ${h.number}`, slides,
     reopen:{book:b.id, num:h.number},
     sub:i => { const s = slides[i]; return s.intro ? "Hymn number on the stream · Start brings in the words"
-      : `${s.label}${s.pages > 1 ? ` (part ${s.page} of ${s.pages})` : ""} · ${i} of ${slides.length - 1}`; }}, 0, true);
+      : `${s.label}${s.pages > 1 ? ` (part ${s.page} of ${s.pages})` : ""}${s.part === "chorus" && /^verse /i.test(s.label) ? " · Chorus" : s.part === "final" ? " · Final chorus" : ""} · ${i} of ${slides.length - 1}`; }}, 0, true);
 }
 $("hyEnter").addEventListener("click", loadHymn);
 
@@ -5445,13 +5491,21 @@ $("hbFile").addEventListener("change", async e => {
   hbOpen({id:old ? old.id : "hb" + Date.now().toString(36), name:book.name || (old && old.name) || f.name.replace(/\.[^.]+$/, ""),
     short:book.short || (old && old.short) || "", logo:old ? old.logo : "", icon:old ? (old.icon || "") : "", hymns:book.hymns, file:f.name}, warnings, old);
 });
+// Which hymns use the other chorus rules, so a hymn typed the wrong way is easy to spot
+function hbChorusNote(hymns){
+  const list = arr => arr.length > 6 ? arr.slice(0, 6).join(", ") + ` and ${arr.length - 6} more` : arr.join(", ");
+  const each = hymns.filter(h => hymnChorusMode(h) === "each").map(h => h.number);
+  const fin = hymns.filter(h => h.verses.some(v => v.kind === "final")).map(h => h.number);
+  return (each.length ? ` A different chorus after each verse: ${each.length === 1 ? "hymn" : "hymns"} ${list(each)}.` : "")
+    + (fin.length ? ` A final chorus at the end: ${fin.length === 1 ? "hymn" : "hymns"} ${list(fin)}.` : "");
+}
 function hbOpen(draft, warnings, replacing){
   hbDraft = draft;
   $("hbTitle").textContent = replacing ? `Update ${replacing.name}` : bookById(draft.id) ? `Edit ${draft.name}` : "Add hymn book";
   const verses = draft.hymns.reduce((n, h) => n + h.verses.length, 0);
   $("hbSum").textContent = `${draft.hymns.length} hymn${draft.hymns.length === 1 ? "" : "s"} and ${verses} verses` +
     (draft.hymns.length ? `, numbered ${draft.hymns.slice().sort(byHymnNumber)[0].number} to ${draft.hymns.slice().sort(byHymnNumber).pop().number}` : "") +
-    (replacing ? `. This replaces the ${replacing.hymns.length} hymns saved now.` : ".");
+    (replacing ? `. This replaces the ${replacing.hymns.length} hymns saved now.` : ".") + hbChorusNote(draft.hymns);
   $("hbName").value = draft.name; $("hbShort").value = draft.short || "";
   hbRenderLogo();
   const w = $("hbWarns"); w.innerHTML = "";
@@ -8985,7 +9039,7 @@ function phItem(){
     verses:it.slides.map(x => x.v), seen:[...it.seen]};
   const nx = it.slides[ot.i + 1];
   return {kind:"hymn", title:it.title, short:it.short, i:ot.i, n:it.slides.length, showing:!!ot.showing,
-    intro:!!s.intro, label:s.label || "", page:s.page || 1, pages:s.pages || 1,
+    intro:!!s.intro, label:s.label || "", part:s.part || "", page:s.page || 1, pages:s.pages || 1,
     lines:s.intro ? [s.book || "", `Hymn ${s.number || ""}`] : (s.lines || []),
     next:nx ? (nx.lines || []) : null,
     labels:[...new Set(it.slides.filter(x => !x.intro).map(x => x.label))]};
