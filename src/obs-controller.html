@@ -6997,12 +6997,18 @@ $("setCmReset").addEventListener("click", async () => {
   catch(e){ cm.err = `Couldn't reset: ${e.message}`; }
   await cmLoad();
 });
-$("setCmMatch").addEventListener("click", async () => {
+$("setCmMatch").addEventListener("click", () => cmMatch(false));
+/* Match Colors, from the button here or from the phone (which asks its own question while live). Pictures of the
+   matched camera are taken just before, and of both cameras once the new colors have faded in; with the report
+   they go to the phones (shown on a phone with its Color match sheet open). */
+async function cmMatch(fromPhone){
   const target = $("setCmTarget").value, reference = $("setCmRef").value;
-  if(!target || !reference) return;
-  if(ui.stream.active && !(await confirmDlg("Match colors while live?",
+  if(!target || !reference || cm.busy) return;
+  if(!fromPhone && ui.stream.active && !(await confirmDlg("Match colors while live?",
     `Viewers will see ${target}'s colors change, fading in over about a second, if it's on screen.`, "Match Colors", "primary", "Cancel"))) return;
-  cm.err = ""; cm.busy = true; cmRender();
+  const phones = !!(PH && PH.clients && phApi);
+  const before = phones ? await cmShot(target) : "";
+  cm.err = ""; cm.busy = true; cmRender(); phSend && phSend();
   try{
     const set = await vcall("SetColorMatch", {target, reference, mode:$("setCmMode").value, strength:Number($("setCmStrength").value), enabled:true});
     if(set.ok === false) throw Object.assign(new Error(set.message || set.code), {code:set.code});
@@ -7015,7 +7021,47 @@ $("setCmMatch").addEventListener("click", async () => {
   }
   cm.busy = false;
   await cmLoad();
-});
+  phSend && phSend();
+  if(phones) cmReportToPhones(target, reference, before);
+}
+// A small picture of one camera as OBS shows it (with its color correction)
+async function cmShot(name){
+  try{ const r = await withTimeout(obs.call("GetSourceScreenshot", {sourceName:name, imageFormat:"jpg", imageWidth:640, imageHeight:360, imageCompressionQuality:70}), 4000);
+    return (r && r.imageData) || ""; }catch(e){ return ""; }
+}
+// What the correction does, in plain words, at the match strength in use
+function cmChanges(m){
+  const c = m && m.correction; if(!c) return [];
+  const k = (m.strength ?? 100) / 100, L = x => Math.log(Math.max(1e-4, x)) * k;
+  const out = [], sz = (v, a, b) => Math.abs(v) < a ? "" : Math.abs(v) < b ? "a little " : "";
+  const warm = L(c.r / c.b);
+  if(Math.abs(warm) >= 0.03) out.push({what:"White balance", how:warm > 0 ? `${Math.abs(warm) < 0.08 ? "A little warmer" : "Warmer"}: more red, less blue` : `${Math.abs(warm) < 0.08 ? "A little cooler" : "Cooler"}: more blue, less red`});
+  const tint = L(c.g) - (L(c.r) + L(c.b)) / 2;
+  if(Math.abs(tint) >= 0.02) out.push({what:"Tint", how:tint > 0 ? (Math.abs(tint) < 0.06 ? "A touch more green" : "More green") : (Math.abs(tint) < 0.06 ? "A touch less green" : "Less green (more magenta)")});
+  const gain = (c.r + c.g + c.b) / 3, bright = L(gain) + L((c.mid || 0.5) / 0.5);
+  if(Math.abs(bright) >= 0.03) out.push({what:"Brightness", how:bright > 0 ? (bright < 0.1 ? "Slightly brighter in the mid-tones" : "Brighter") : (bright > -0.1 ? "Slightly darker in the mid-tones" : "Darker")});
+  const contrast = L(((c.high ?? 0.75) - (c.low ?? 0.25)) / 0.5);
+  if(Math.abs(contrast) >= 0.04) out.push({what:"Contrast", how:contrast > 0 ? (contrast < 0.1 ? "A little more contrast" : "More contrast") : (contrast > -0.1 ? "A little softer contrast" : "Softer contrast")});
+  const sat = Math.round(((c.saturation ?? 1) - 1) * k * 100);
+  if(Math.abs(sat) >= 3) out.push({what:"Saturation", how:sat > 0 ? `Colors a little richer (+${sat}%)` : `Colors a little softer (${sat}%)`});
+  if(!out.length && m.applied) out.push({what:"Changes", how:"Very small: the cameras were already close"});
+  return out;
+}
+async function cmReportToPhones(target, reference, before){
+  const m = cmMatchFor(target), ok = !cm.err && !!m && m.state === "matched";
+  if(ok) await sleep(1300);   // the new colors fade in over about a second
+  const [ref, after] = await Promise.all([cmShot(reference), cmShot(target)]);
+  const rep = {at:Date.now(), ok, ref:reference, target, confidence:m ? m.confidence || 0 : 0,
+    message:cm.err || (m && m.message) || "", changes:ok ? cmChanges(m) : [], imgs:ref || after ? {ref, before, after} : null};
+  try{ phApi.cm(rep); }catch(e){}
+}
+// For the phone: the Color match bar shows only while this page is open
+function cmPhone(){
+  if($("setOverlay").hidden || $("page-colormatch").hidden || !cm.status || cm.status.offline || cm.status.missing || cm.status.failed) return null;
+  const m = cmMatchFor($("setCmTarget").value);
+  return {ref:$("setCmRef").value, target:$("setCmTarget").value, mode:$("setCmMode").value, strength:Number($("setCmStrength").value),
+    busy:!!(cm.busy || (m && m.busy))};
+}
 
 /* Settings are read-only while live or recording, until "Change settings anyway" is confirmed.
    Export, the close X and the prototype-only tools stay usable. */
@@ -8954,7 +9000,7 @@ function phState(){
     live:!!ui.stream.active, liveT0:ui.stream.active ? ui.stream.t0 : 0,
     rec:!!ui.rec.active, recT0:ui.rec.active ? ui.rec.t0 : 0,
     viewers:ui.stream.active && vw.cfg.on && vw.state === "count" ? vw.now : null,
-    safe:!!ui.safe, program:ui.program || "",
+    safe:!!ui.safe, program:ui.program || "", cm:cmPhone(),
     scenes:BUTTONS.map((b, i) => ({b, k:sceneSlot(i)})).filter(x => sceneShown(x.b)).sort((x, y) => x.k - y.k).map(({b}) => {
       const on = b.group.includes(ui.program);
       return {label:b.label, icon:b.icon, on, mic:micOf(b.scene), ending:isEnding(b.label) || isEnding(b.scene),
@@ -9027,6 +9073,14 @@ async function phRun(cmd, a){
     }
     case "slide": { if(!sl.open) throw phErr("The slideshow isn't open."); await slStep(a.d > 0 ? 1 : -1); return {}; }
     case "slide-open": { await slOpen(); return {}; }
+    case "cm-match": {   // the phone's Color match: only while Settings → Color matching is open here
+      const c = cmPhone();
+      if(!c) throw phErr("Open Settings → Color matching on the controller first.", "CM_CLOSED");
+      if(!c.ref || !c.target) throw phErr("Choose both cameras in Settings → Color matching on the controller.");
+      if(a.target && a.target !== c.target) throw phErr(`The controller is now set to match ${c.target}. Check it and try again.`);
+      if(!c.busy) cmMatch(true);   // the report comes back by itself when it's done
+      return {};
+    }
     case "keep": {   // Ending tapped again on the phone: stay on Ending, but don't end the stream by itself
       if(!autoEnd) return {};
       cancelAutoEnd(); ui.autoEndSkip = ui.program;
