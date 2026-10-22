@@ -1058,6 +1058,8 @@ body.compact .lt-chip{min-height:42px}
 .hb-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
 .hb-row > div{flex:1;min-width:160px;display:flex;flex-direction:column;gap:2px;font-size:15px}
 .hb-row small{color:var(--muted);font-size:13px}
+.hb-row.hb-hidden .hb-logo,.hb-row.hb-hidden > div b{opacity:.45}
+.hb-row .btn[data-a="hide"] svg{width:16px;height:16px}
 .hb-row .btn{flex:none;min-height:46px;font-size:14px}
 .hb-logo{width:48px;height:48px;border-radius:8px;object-fit:contain;flex:none;background:var(--panel-2)}
 .hb-overlay{z-index:36}
@@ -3556,8 +3558,8 @@ $("glHere").addEventListener("click", async () => {
   gl.host = {on:false, id:""};
   hostPicker("gl", gl.host, h => { gl.host = h; });
   // Hymn book for this service (only asked when there's more than one)
-  gl.hymnBook = ui.ot.book;
-  $("glHbField").hidden = ui.hymnBooks.length < 2 || !ltOn();   // no on-screen text for this collection: no hymn book to ask about
+  bookInUseOk(); gl.hymnBook = ui.ot.book;
+  $("glHbField").hidden = shownBooks().length < 2 || !ltOn();   // no on-screen text for this collection: no hymn book to ask about
   const pickHb = id => { gl.hymnBook = id; bookChips($("glHb"), gl.hymnBook, pickHb); };
   pickHb(gl.hymnBook);
   $("glSvc").innerHTML = "";
@@ -5037,6 +5039,15 @@ const hymnStore = {
 };
 ui.hymnBooks = [];
 const bookById = id => ui.hymnBooks.find(b => b.id === id);
+/* Hidden hymn books (Settings → On-screen text → Hide): still loaded, but not offered on the Hymn screen, in Go Live
+   or on the phone until shown again. Kept by id with the on-screen settings, so updating a book from its file
+   keeps it hidden. */
+const bookHidden = b => !!b && (ui.ot.hiddenBooks || []).includes(b.id);
+const shownBooks = () => ui.hymnBooks.filter(b => !bookHidden(b));
+// The book in use: the chosen one if it's shown, otherwise the first shown book (or none)
+function bookInUseOk(){
+  if(!bookById(ui.ot.book) || bookHidden(bookById(ui.ot.book))){ const f = shownBooks()[0]; ui.ot.book = f ? f.id : ""; saveOt(); }
+}
 async function loadHymnBooks(){
   let list = null;
   try{ list = await hymnStore.list(); }catch(e){}
@@ -5046,7 +5057,7 @@ async function loadHymnBooks(){
   if(!list.some(b => b.id === "sample2")) list = list.concat({id:"sample2", ...parseHymnBook(SAMPLE_BOOK_2).book, icon:sampleLogo("GS", "#1f3a5f", "#ffffff"), logo:sampleWideLogo("GOSPEL", "SONGS")});
   // #proto-end
   ui.hymnBooks = (list || []).sort((a, b) => a.name.localeCompare(b.name));
-  if(!bookById(ui.ot.book)){ ui.ot.book = ui.hymnBooks[0] ? ui.hymnBooks[0].id : ""; saveOt(); }
+  bookInUseOk();
   if(!$("setOverlay").hidden) renderHbList();
 }
 // #proto-start
@@ -5161,7 +5172,7 @@ const bookLogoWide = b => b && b.logo ? `<img class="hb-wide" alt="" src="${esc(
 const bookLogo = bookIcon;
 function bookChips(el, selected, onPick){
   el.innerHTML = "";
-  ui.hymnBooks.forEach(b => {
+  shownBooks().forEach(b => {
     const c = document.createElement("button");
     c.type = "button"; c.className = "book-chip"; c.setAttribute("aria-pressed", b.id === selected);
     c.innerHTML = bookLogo(b) + `<span class="bk-name"></span>`;
@@ -5177,13 +5188,14 @@ const hyBook = () => bookById(hy.book);
 const hyHymn = () => { const b = hyBook(); return b && hy.num ? b.hymns.find(h => h.number === hy.num.toUpperCase()) : null; };
 function openHymn(reopen){
   closeOtMenus("hymn");
+  bookInUseOk();
   hy.book = (reopen && reopen.book) || ui.ot.book; hy.num = reopen ? reopen.num : "";
   renderHy(); $("hyOverlay").hidden = false;
 }
 function renderHy(){
-  const books = ui.hymnBooks, b = hyBook(), h = hyHymn();
+  const books = shownBooks(), b = hyBook(), h = hyHymn();
   $("hyNote").hidden = !!books.length;
-  $("hyNote").textContent = "There are no hymn books yet. Add one in Settings → On-screen text.";
+  $("hyNote").textContent = ui.hymnBooks.length ? "Every hymn book is hidden. Show one in Settings → On-screen text." : "There are no hymn books yet. Add one in Settings → On-screen text.";
   $("hyBooksField").hidden = books.length < 2;
   bookChips($("hyBooks"), hy.book, id => { hy.book = id; renderHy(); });
   $("hyBookTag").textContent = b ? b.name : "";
@@ -5450,15 +5462,18 @@ $("bbChange").addEventListener("click", () => { bb.mode = "pick"; bb.testament =
 
 /* ---------------- Settings → On-screen text: hymn books ---------------- */
 function renderHbList(){
+  bookInUseOk();
   const el = $("hbList"); el.innerHTML = "";
   if(!ui.hymnBooks.length) el.innerHTML = `<span class="path">No hymn books yet.</span>`;
   ui.hymnBooks.forEach(b => {
-    const row = document.createElement("div"); row.className = "hb-row";
+    const hid = bookHidden(b);
+    const row = document.createElement("div"); row.className = "hb-row" + (hid ? " hb-hidden" : "");
     row.innerHTML = bookLogo(b, "hb-logo") + `<div><b></b><small></small></div>
+      <button type="button" class="btn" data-a="hide" aria-pressed="${hid}" title="${hid ? "Offer this book on the Hymn screen, in Go Live and on the phone again" : "Keep this book, but don't offer it on the Hymn screen, in Go Live or on the phone"}"><i data-lucide="${hid ? "eye" : "eye-off"}"></i>${hid ? "Show" : "Hide"}</button>
       <button type="button" class="btn" data-a="edit">Edit</button><button type="button" class="btn" data-a="update">Update from file</button>
       <button type="button" class="btn" data-a="export" data-keep>Export text</button><button type="button" class="btn spk-rm" data-a="remove">Remove</button>`;
     row.querySelector("b").textContent = b.name;
-    row.querySelector("small").textContent = `${b.hymns.length} hymn${b.hymns.length === 1 ? "" : "s"}${b.short ? " · " + b.short : ""}${b.id === ui.ot.book ? " · in use now" : ""}`;
+    row.querySelector("small").textContent = `${hid ? "Hidden · " : ""}${b.hymns.length} hymn${b.hymns.length === 1 ? "" : "s"}${b.short ? " · " + b.short : ""}${b.id === ui.ot.book && !hid ? " · in use now" : ""}`;
     row.querySelectorAll("button").forEach(x => x.addEventListener("click", () => hbAction(x.dataset.a, b, x)));
     el.appendChild(row);
   });
@@ -5466,6 +5481,13 @@ function renderHbList(){
   if(!$("setOverlay").hidden && $("setForm").classList.contains("locked")) lockSettings(true);
 }
 async function hbAction(a, b, btn){
+  if(a === "hide"){
+    const l = new Set(ui.ot.hiddenBooks || []), hide = !l.has(b.id);
+    hide ? l.add(b.id) : l.delete(b.id);
+    ui.ot.hiddenBooks = [...l]; saveOt(); bookInUseOk();
+    renderHbList(); renderOt(); phSend && phSend();
+    return toast(hide ? `${b.name} is hidden: it isn't offered on the Hymn screen, in Go Live or on the phone.` : `${b.name} can be chosen again.`);
+  }
   if(a === "edit") return hbOpen({...b}, []);
   if(a === "update"){ hbUpdating = b; $("hbFile").value = ""; $("hbFile").click(); return; }
   if(a === "export") return saveText(`${b.name}.txt`, hymnBookText(b));
@@ -9068,7 +9090,7 @@ function phState(){
       ...(host ? [{name:host.name, sub:host.subtitle || "", short:ltShort(host.name, [host.name]), note:"Host", host:true}] : [])] : [],
     ltUp:ui.lt.showing ? {name:ui.lt.showing, sub:ui.lt.subtitle || ""} : null,
     ltEnds:phLtEnds(), ltDur:ui.lt.duration || 8,
-    books:ui.hymnBooks.map(b => ({id:b.id, name:b.name, short:b.short || ""})), book:ui.ot.book || "",
+    books:shownBooks().map(b => ({id:b.id, name:b.name, short:b.short || ""})), book:ui.ot.book || "",
     tr:ot.trSession || ui.ot.bbTr || "KJV",
     health:ui.stream.active ? {level:hs.level || "", text:hs.text || "", alert:hs.alert || null} : null,
     reading:ui.brProg && ui.brReading ? brChapterOf(ui.brReading) : "",
@@ -9146,7 +9168,8 @@ async function phRun(cmd, a){
       await obs.call("SetInputMute", {inputName:srcAudio(), inputMuted:!!a.muted}); return {};
     }
     case "hymn-find": {
-      const b = bookById(a.book), num = String(a.num || "").trim().toUpperCase();
+      const b = bookById(a.book); if(bookHidden(b)) return null;
+      const num = String(a.num || "").trim().toUpperCase();
       const h = b && num ? b.hymns.find(x => x.number === num) : null;
       return h ? {title:h.title, verses:h.verses.length} : null;
     }
@@ -9154,6 +9177,7 @@ async function phRun(cmd, a){
       needOt();
       if(ui.lt.showing) throw phErr("A lower third is showing. Hymns wait until it's gone.");
       const b = bookById(a.book), num = String(a.num || "").trim().toUpperCase();
+      if(bookHidden(b)) throw phErr(`${b.name} is hidden on the controller. Show it in Settings → On-screen text.`);
       if(!b || !b.hymns.find(x => x.number === num)) throw phErr(`There's no hymn ${num} in that book.`);
       hy.book = b.id; hy.num = num;
       await loadHymn(); return {};
