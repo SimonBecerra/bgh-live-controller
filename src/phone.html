@@ -73,6 +73,46 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r);background:var(--warn-soft);border:1px solid var(--warn);color:var(--fg);font-size:14px;line-height:1.4}
 .banner svg.i{color:var(--warn);margin-top:1px}
 .ss-sheet{display:flex;flex-direction:column;gap:10px}
+/* Color match: only while Settings → Color matching is open on the controller */
+.cm-bar{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 14px;border-radius:var(--r);border:1px solid var(--accent);background:var(--accent-soft);color:var(--fg);font:inherit;text-align:left;cursor:pointer;flex:none}
+.cm-bar svg.i{width:22px;height:22px;color:var(--accent);flex:none}
+.cm-bar b{display:block;font-size:15px}.cm-bar small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.cm-bar .go{margin-left:auto;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--accent)}
+.cm-bar.busy .go::after{content:"";display:inline-block;width:10px;height:10px;margin-left:6px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-1px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cm-sheet{display:flex;flex-direction:column;gap:12px}
+.cm-sheet h3{margin:0;display:flex;align-items:center;gap:8px}.cm-sheet h3 svg.i{color:var(--accent)}
+.cm-cams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.cm-cam{padding:9px 11px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);min-width:0}
+.cm-cam span{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cm-cam b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm-arrow{color:var(--dim);font-size:18px}
+.cm-sheet .cm-go{min-height:56px;width:100%;font-size:16px}
+.cm-sheet .cm-go svg.i{width:20px;height:20px}
+.cm-sheet .cm-go.confirm{background:var(--warn);border-color:var(--warn);color:#111}
+.cm-measure{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--line-2);font-size:14px;color:var(--muted)}
+.cm-measure i{width:16px;height:16px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex:none}
+.cm-rep{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:14px;border:1px solid var(--line-2);background:var(--bg)}
+.cm-head{display:flex;gap:10px;align-items:flex-start}.cm-head svg.i{width:22px;height:22px;flex:none;color:var(--pvw)}
+.cm-rep.bad .cm-head svg.i{color:var(--warn)}
+.cm-head b{display:block;font-size:15px}.cm-head span{display:block;font-size:13px;color:var(--muted);line-height:1.4;margin-top:2px}
+.cm-conf{display:flex;flex-direction:column;gap:5px}
+.cm-conf-top{display:flex;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--muted)}
+.cm-conf-top b{color:var(--fg);font-variant-numeric:tabular-nums}
+.cm-meter{height:8px;border-radius:99px;background:var(--panel-2);overflow:hidden}.cm-meter i{display:block;height:100%;border-radius:99px;background:var(--pvw)}
+.cm-meter.mid i{background:var(--warn)}.cm-meter.low i{background:var(--pgm)}
+.cm-changes{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.cm-changes li{display:flex;gap:8px;font-size:14px;line-height:1.35}.cm-changes li b{min-width:86px;color:var(--muted);font-weight:600}
+.cm-pics{display:grid;grid-template-columns:1fr;gap:10px}
+.cm-pic{display:flex;flex-direction:column;gap:5px;min-width:0}
+.cm-pic img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);background:#000;display:block}
+.cm-pic .cap{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:12px;font-weight:700;color:var(--muted);min-height:26px}
+.cm-ab{display:inline-flex;border:1px solid var(--line-2);border-radius:99px;overflow:hidden}
+.cm-ab button{font:inherit;font-size:11px;font-weight:700;padding:3px 8px;background:none;border:0;color:var(--muted);cursor:pointer}
+.cm-ab button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.cm-when{font-size:12px;color:var(--dim)}
+.cm-big{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px}
+.cm-big img{max-width:100%;max-height:80%;border-radius:8px}.cm-big span{color:#fff;font-weight:700}
 .ss-sheet h3{margin:0}
 .ss-sheet > .btn{width:100%;min-height:52px}
 .ss-sheet .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -289,6 +329,8 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
   <button class="btn" type="button" data-pt="lt">Lower thirds on / off for this collection</button>
   <button class="btn" type="button" data-pt="reading">Bible Reading (John 3) on / off</button>
   <button class="btn" type="button" data-pt="battery">Laptop on battery / plugged in</button>
+  <button class="btn" type="button" data-pt="cm">Color matching page open / closed (on the controller)</button>
+  <button class="btn" type="button" data-pt="cmfail">Next color match: not confident</button>
   <button class="btn" type="button" data-pt="unpair">Start again at pairing</button>
 </aside></div>
 <div id="sheetRoot"></div>
@@ -319,6 +361,10 @@ const ICON = {
   presentation:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>',
   flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
   square:'<rect width="18" height="18" x="3" y="3" rx="2"/>',
+  palette:'<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
+  wand:'<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>',
+  check:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
   clapperboard:'<path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'
 };
 const $ = id => document.getElementById(id);
@@ -340,6 +386,7 @@ if(PROTO){
       scenes:[["Waiting","hourglass","off","Title Slide"],["Live Soon","timer","off",""],["Camera 1","video","on",""],["Slideshow 4:3","presentation","on",""],["Camera 2","video","on",""],["Slideshow 16:9","presentation","on",""],["Ending","flag","off",""]]
         .map(([label, icon, mic, sub]) => ({label, icon, mic, sub, on:label === "Waiting", ending:label === "Ending"})),
       slides:{on:false, ratio:"", src:"", feed:"", live:false, open:false, n:0, total:0, title:"", link:true},
+      cm:{ref:"Camera 1", target:"Camera 2", mode:"once", strength:100, busy:false},
       audio:{name:"PYLE USB Mixer", missing:false, muted:true}, autoEnd:{on:true, sec:30, left:null, kept:false},
       ltOn:true, item:null,
       lts:[{name:"Andres Bodden", sub:"", short:"Bodden", note:""}, {name:"Daniel Chung", sub:"", short:"Chung", note:""}, {name:"Simon Becerra", sub:"", short:"Becerra", note:"Host", host:true}],
@@ -378,6 +425,24 @@ if(PROTO){
       else { const john = /^john 3$/i.test(it.name), vv = john ? JOHN3 : Array.from({length:24}, (_, i) => `Verse ${i + 1} of ${it.name} (the prototype only has John 3 written out).`);
         this.st.item = {kind:"verse", title:`${it.name} · KJV`, tr:"KJV", i:it.i, started:it.started, showing:it.started, ref:it.started ? `${it.name}:${it.i + 1}` : "", text:it.started ? vv[it.i] || "" : "", verses:vv.map((_, i) => i + 1), seen:[...it.seen]}; }
     },
+    // Pretend camera pictures: the same speaker at the lectern; Camera 2 starts cool and dim
+    camPic(kind){
+      const c = document.createElement("canvas"); c.width = 480; c.height = 270; const g = c.getContext("2d");
+      const wide = kind === "ref";
+      const w = g.createLinearGradient(0, 0, 0, 270); w.addColorStop(0, "#dcd6cf"); w.addColorStop(1, "#c9c2ba"); g.fillStyle = w; g.fillRect(0, 0, 480, 270);
+      g.fillStyle = "#5b3b2c"; g.fillRect(wide ? 120 : 80, 18, wide ? 240 : 320, 70); g.fillStyle = "#e9e1d3"; g.fillRect(wide ? 130 : 92, 26, wide ? 220 : 296, 54);
+      g.fillStyle = "#b9707a"; [0, 1, 2].forEach(i => { g.beginPath(); g.arc((wide ? 175 : 150) + i * (wide ? 65 : 90), 53, 9, 0, 7); g.fill(); });
+      const cx = wide ? 240 : 250, sc = wide ? 1 : 1.25;
+      g.fillStyle = "#24272e"; g.beginPath(); g.ellipse(cx, 270, 92 * sc, 110 * sc, 0, Math.PI, 0); g.fill();
+      g.fillStyle = "#f2f2f2"; g.beginPath(); g.moveTo(cx - 16 * sc, 165); g.lineTo(cx + 16 * sc, 165); g.lineTo(cx, 215); g.fill();
+      g.fillStyle = "#e0ad8f"; g.beginPath(); g.ellipse(cx, 128, 30 * sc, 38 * sc, 0, 0, 7); g.fill();
+      g.fillStyle = "#cfcfcf"; g.beginPath(); g.ellipse(cx, 98, 30 * sc, 14 * sc, 0, Math.PI, 0); g.fill();
+      g.fillStyle = "#3b2f2a"; g.fillRect(cx - 70 * sc, 225, 140 * sc, 45); g.fillStyle = "#111"; g.fillRect(cx - 3, 160, 6, 70);
+      if(kind === "before"){ g.globalCompositeOperation = "multiply"; g.fillStyle = "#a9c4e6"; g.fillRect(0, 0, 480, 270); g.globalCompositeOperation = "source-over"; g.fillStyle = "rgba(0,30,10,.10)"; g.fillRect(0, 0, 480, 270); }
+      if(kind === "after"){ g.fillStyle = "rgba(255,240,230,.03)"; g.fillRect(0, 0, 480, 270); }
+      g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(8, 238, 104, 24); g.fillStyle = "#fff"; g.font = "600 13px system-ui"; g.fillText(kind === "ref" ? "Camera 1" : "Camera 2", 16, 255);
+      return c.toDataURL("image/jpeg", .8);
+    },
     frame(){
       if(!this.view_on) return;
       const c = document.createElement("canvas"); c.width = 320; c.height = 180; const g = c.getContext("2d");
@@ -399,6 +464,24 @@ if(PROTO){
           this.push(); return {ok:true}; }
         case "slide": { const g = st.slides; g.n = Math.max(1, Math.min(g.total, g.n + a.d)); this.push(); setTimeout(() => this.slidePic(), 450); return {ok:true}; }
         case "slide-open": { const g = st.slides; g.open = true; g.n = 1; g.total = 12; this.push(); return {ok:true}; }
+        case "cm-match": {
+          if(!st.cm) return {ok:false, error:"Open Settings → Color matching on the controller first."};
+          if(st.cm.busy) return {ok:true};
+          const before = this.camPic(this.cmMatched ? "after" : "before");
+          st.cm.busy = true; this.push();
+          setTimeout(() => {
+            const bad = this.cmFail; this.cmFail = false;
+            const ref = this.camPic("ref"), after = bad ? before : this.camPic("after");
+            if(!bad) this.cmMatched = true;
+            if(st.cm) st.cm.busy = false;
+            this.send("cm", bad
+              ? {at:Date.now(), ok:false, ref:"Camera 1", target:"Camera 2", confidence:41, message:"Not confident enough (41): the two cameras see too little of the same things. The colors weren't changed.", changes:[], imgs:{ref, before, after:before}}
+              : {at:Date.now(), ok:true, ref:"Camera 1", target:"Camera 2", confidence:86, message:"Matched (confidence 86). Skin tones helped.",
+                 changes:[{what:"White balance", how:"Warmer: more red, less blue"}, {what:"Tint", how:"A touch less green"}, {what:"Brightness", how:"Slightly brighter in the mid-tones"}, {what:"Saturation", how:"Colors a little richer (+6%)"}],
+                 imgs:{ref, before, after}});
+            this.push();
+          }, 1800);
+          return {ok:true}; }
         case "keep": clearInterval(this.endTimer); st.autoEnd.left = null; st.autoEnd.kept = true; this.push(); return {ok:true};
         case "mute": st.audio.muted = !!a.muted; this.push(); return {ok:true};
         case "hymn-find": return {ok:true, data:HY[String(a.num)] ? {title:HY[a.num].title, verses:HY[a.num].verses.length} : null};
@@ -454,12 +537,15 @@ function connect(){
     if(S.pending && S.st.program !== (prev && prev.program)){ clearPending(); }
     render();
     if(S.ssDraw && $("ssSheet")) S.ssDraw(); else S.ssDraw = null;
+    if(S.cmDraw && $("cmSheet")) S.cmDraw(); else S.cmDraw = null;
   });
   es.addEventListener("lvl", e => { S.level = +e.data; const el = $("lvl"); if(el) el.style.width = S.level + "%"; });
   // The slide now showing, right after Back / Next: the picture in the slide bar changes and flashes
   es.addEventListener("slide", e => { const d = JSON.parse(e.data); S.slideImg = d.img; S.slideAt = d.at;
     const img = $("ssThumb"); if(img){ img.src = d.img; img.classList.remove("fresh"); void img.offsetWidth; img.classList.add("fresh"); } else if(document.querySelector(".ss-bar")) render(); });
   es.addEventListener("frame", e => { const d = JSON.parse(e.data); S.pvImg = d.img; S.pvAt = d.at; const img = document.querySelector(".pv img"); if(img) img.src = S.pvImg; else if(document.querySelector(".pv")) render(); ageTick(); });
+  // Color match: the report and pictures, sent once a match is done
+  es.addEventListener("cm", e => { S.cmRep = JSON.parse(e.data); S.cmShow = "after"; if(S.cmDraw && $("cmSheet")) S.cmDraw(); else if(S.st && S.st.cm) openCm(); });
   es.addEventListener("unpaired", () => unpair("This phone was removed in the controller's Settings. Pair it again to use it."));
   es.onopen = () => { S.connected = true; render(); };
   es.onerror = async () => {
@@ -546,6 +632,7 @@ function render(){
     : !st.obs ? `<div class="banner">${ic("wifi")}<div><b>The controller can't reach OBS.</b> Check OBS is open on the computer.</div></div>`
     : st.health && st.health.alert ? `<div class="banner bad">${ic("wifi")}<div><b>Stream trouble.</b> ${esc(st.health.alert)}</div></div>` : ""}
   ${S.connected && st.battery ? `<div class="banner${st.battery.low ? " bad" : ""}">${ic("info")}<div><b>The laptop is on battery (${st.battery.pct}%).</b> Plug in its charger.</div></div>` : ""}
+  ${S.connected && st.cm ? cmBar(st) : ""}
   ${S.pvOn ? `<div class="pv${S.tab === "onscreen" ? " small" : ""}">${S.pvImg ? `<img src="${S.pvImg}" alt="What's on Program: ${esc(st.program)}">` : ""}<span class="pv-tag">PROGRAM</span><span class="pv-age" id="pvAge"></span></div>` : ""}
   <div class="body ctl">${S.tab === "scenes" ? scenesHTML(st) : onScreenHTML(st)}</div>`;
   wire();
@@ -621,6 +708,7 @@ function wire(){
   const on = (id, f) => { const el = $(id); if(el) el.onclick = f; };
   on("hymn", openHymn); on("bible", openBible);
   on("ssPill", openSlides);
+  on("cmBar", openCm);
   on("ssBack", () => cmd("slide", {d:-1}).then(j => !j.ok && j.error && toast(j.error)));
   on("ssNext", () => cmd("slide", {d:1}).then(j => !j.ok && j.error && toast(j.error)));
   on("ssOpen", () => cmd("slide-open").then(j => !j.ok && j.error && toast(j.error)));
@@ -753,6 +841,59 @@ function openSlides(){
   };
   sheet(`<div id="ssSheet" class="ss-sheet"></div>`, () => { S.ssDraw = draw; draw(); });
 }
+/* Color match. The bar shows only while Settings → Color matching is open on the controller (state.cm); it matches
+   the camera chosen there to its reference, exactly as Match Colors on the controller does. The report comes back
+   with pictures of both cameras (the matched one after, and before, the match). */
+function cmBar(st){
+  const c = st.cm;
+  return `<button class="cm-bar${c.busy ? " busy" : ""}" id="cmBar" type="button">${ic("palette")}<span><b>Color match</b><small>${c.target ? `${esc(c.target)} → ${esc(c.ref || "reference?")}` : "Choose the cameras on the controller"}</small></span><span class="go">${c.busy ? "MEASURING" : "OPEN"}</span></button>`;
+}
+const cmConfWord = n => n >= 75 ? "High" : n >= 50 ? "Fair" : "Low";
+function cmReport(r){
+  const n = Math.max(0, Math.min(100, r.confidence || 0)), when = new Date(r.at).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+  const show = S.cmShow === "before" ? "before" : "after";
+  return `<div class="cm-rep${r.ok ? "" : " bad"}">
+    <div class="cm-head">${ic(r.ok ? "check" : "alert")}<div><b>${r.ok ? `${esc(r.target)} matched to ${esc(r.ref)}` : `${esc(r.target)} wasn't changed`}</b><span>${esc(r.message || "")}</span></div></div>
+    <div class="cm-conf"><div class="cm-conf-top"><span>CONFIDENCE</span><b>${n} / 100 · ${cmConfWord(n)}</b></div><div class="cm-meter ${n >= 75 ? "" : n >= 50 ? "mid" : "low"}"><i style="width:${n}%"></i></div></div>
+    ${r.changes && r.changes.length ? `<ul class="cm-changes">${r.changes.map(c => `<li><b>${esc(c.what)}</b><span>${esc(c.how)}</span></li>`).join("")}</ul>` : ""}
+    ${r.imgs ? `<div class="cm-pics">
+      <div class="cm-pic"><div class="cap">${esc(r.ref)}</div><img src="${r.imgs.ref}" alt="${esc(r.ref)}" data-big="ref"></div>
+      <div class="cm-pic"><div class="cap"><span>${esc(r.target)}</span>${r.imgs.before ? `<span class="cm-ab" role="group" aria-label="Before or after"><button type="button" data-ab="before" aria-pressed="${show === "before"}">Before</button><button type="button" data-ab="after" aria-pressed="${show === "after"}">After</button></span>` : ""}</div><img src="${r.imgs[show] || r.imgs.after}" alt="${esc(r.target)} ${show} the match" data-big="${show}"></div>
+    </div>` : ""}
+    <span class="cm-when">${r.ok ? "Matched" : "Measured"} at ${esc(when)}. Tap a picture to see it bigger.</span>
+  </div>`;
+}
+function openCm(){
+  let sure = false;
+  const draw = () => {
+    if(!$("cmSheet")) return;
+    const c = S.st && S.st.cm, r = S.cmRep, live = S.st && S.st.live;
+    const mine = r && c && r.target === c.target;
+    $("cmSheet").innerHTML = `<h3>${ic("palette")}Color match</h3>
+      ${!c ? `<p class="hint warn">Color matching was closed on the controller. Open Settings → Color matching there to match again.</p>` : `
+      <div class="cm-cams"><div class="cm-cam"><span>Reference</span><b>${esc(c.ref || "Not chosen")}</b></div><span class="cm-arrow">←</span><div class="cm-cam"><span>Matching</span><b>${esc(c.target || "Not chosen")}</b></div></div>
+      ${c.busy ? `<div class="cm-measure"><i></i>Measuring ${esc(c.ref)} and ${esc(c.target)}… a second or two.</div>`
+        : `<button class="btn primary cm-go${sure ? " confirm" : ""}" id="cmGo" type="button"${c.ref && c.target ? "" : " disabled"}>${ic("wand")}${sure ? `Viewers will see ${esc(c.target)} change · tap to match` : mine ? "Match again" : "Match Colors"}</button>`}
+      ${!c.ref || !c.target ? `<p class="hint">Choose both cameras in Settings → Color matching on the controller.</p>` : `<p class="hint">${c.mode === "continuous" ? "Continuous: keeps following lighting changes after this." : "One-time match"} · strength ${c.strength ?? 100}%. Change these on the controller.</p>`}`}
+      ${r && (mine || !c) ? cmReport(r) : ""}
+      <button class="btn" id="cmClose" type="button">Done</button>`;
+    const go = $("cmGo");
+    if(go) go.onclick = async () => {
+      if(live && !sure){ sure = true; draw(); return; }   // live: a second tap, so a change on air is on purpose
+      sure = false;
+      const res = await cmd("cm-match", {target:c.target});
+      if(res && res.ok === false) toast(res.error || "Couldn't match the colors.");
+    };
+    document.querySelectorAll("#cmSheet [data-ab]").forEach(b => b.onclick = () => { S.cmShow = b.dataset.ab; draw(); });
+    document.querySelectorAll("#cmSheet [data-big]").forEach(im => im.onclick = () => {
+      const d = document.createElement("div"); d.className = "cm-big";
+      d.innerHTML = `<img src="${im.src}" alt=""><span>${esc(im.alt)}</span>`;
+      d.onclick = () => d.remove(); document.body.appendChild(d);
+    });
+    $("cmClose").onclick = closeSheet;
+  };
+  sheet(`<div id="cmSheet" class="cm-sheet"></div>`, () => { S.cmDraw = draw; draw(); });
+}
 function closeSheet(){ if(sheetClose) sheetClose(); }
 function confirmSheet(title, body, ok){
   return new Promise(res => sheet(`<h3>${esc(title)}</h3><p>${esc(body)}</p><div class="row2"><button class="btn" id="cx" type="button">Cancel</button><button class="btn primary" id="cok" type="button">${esc(ok)}</button></div>`,
@@ -884,6 +1025,8 @@ document.querySelectorAll("[data-pt]").forEach(b => b.onclick = () => {
     lt(){ st.ltOn = !st.ltOn; },
     reading(){ st.reading = st.reading ? "" : "John 3"; },
     battery(){ st.battery = st.battery ? null : {pct:64, low:false}; },
+    cm(){ st.cm = st.cm ? null : {ref:"Camera 1", target:"Camera 2", mode:"once", strength:100, busy:false}; toast(st.cm ? "Color matching opened on the controller (pretend)" : "Color matching closed on the controller (pretend)"); },
+    cmfail(){ P.cmFail = true; toast("The next match won't be confident enough (pretend)"); },
     unpair(){ try{ localStorage.removeItem("bghRemoteToken"); }catch(e){} S.token = ""; render(); }})[b.dataset.pt]();
   P.push();
 });
