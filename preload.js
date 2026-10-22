@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld("bgh", {
     level: l => ipcRenderer.send("phone-level", l),
     frame: dataUrl => ipcRenderer.send("phone-frame", dataUrl),
     slide: dataUrl => ipcRenderer.send("phone-slide", dataUrl),
+    cm: report => ipcRenderer.send("phone-cm", report),
     reply: r => ipcRenderer.send("phone-reply", r),
     onCmd: fn => ipcRenderer.on("phone-cmd", (e, c) => fn(c)),
     onWatch: fn => ipcRenderer.on("phone-watch", (e, w) => fn(w)),

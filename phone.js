@@ -268,6 +268,18 @@ function setup({ ipcMain, getWin, userData, appDir }) {
     lastSlide = JSON.stringify({ img: dataUrl, at: Date.now() });
     broadcast("slide", lastSlide);
   });
+  // Color match: the report and pictures of both cameras, for every phone (shown where the Color match sheet is open)
+  ipcMain.on("phone-cm", (e, r) => {
+    if (!r || typeof r !== "object") return;
+    const img = v => typeof v === "string" && v.startsWith("data:image/") && v.length < 400000 ? v : "";
+    const clean = {
+      at: Number(r.at) || Date.now(), ok: !!r.ok, ref: String(r.ref || "").slice(0, 120), target: String(r.target || "").slice(0, 120),
+      confidence: Math.max(0, Math.min(100, Number(r.confidence) || 0)), message: String(r.message || "").slice(0, 400),
+      changes: (Array.isArray(r.changes) ? r.changes : []).slice(0, 8).map(c => ({ what: String(c.what || "").slice(0, 40), how: String(c.how || "").slice(0, 120) })),
+      imgs: r.imgs ? { ref: img(r.imgs.ref), before: img(r.imgs.before), after: img(r.imgs.after) } : null
+    };
+    broadcast("cm", JSON.stringify(clean));
+  });
   ipcMain.on("phone-reply", (e, r) => {
     const p = r && pending.get(r.id);
     if (!p) return;

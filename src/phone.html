@@ -545,7 +545,9 @@ function connect(){
     const img = $("ssThumb"); if(img){ img.src = d.img; img.classList.remove("fresh"); void img.offsetWidth; img.classList.add("fresh"); } else if(document.querySelector(".ss-bar")) render(); });
   es.addEventListener("frame", e => { const d = JSON.parse(e.data); S.pvImg = d.img; S.pvAt = d.at; const img = document.querySelector(".pv img"); if(img) img.src = S.pvImg; else if(document.querySelector(".pv")) render(); ageTick(); });
   // Color match: the report and pictures, sent once a match is done
-  es.addEventListener("cm", e => { S.cmRep = JSON.parse(e.data); S.cmShow = "after"; if(S.cmDraw && $("cmSheet")) S.cmDraw(); else if(S.st && S.st.cm) openCm(); });
+  es.addEventListener("cm", e => { S.cmRep = JSON.parse(e.data); S.cmShow = "after";
+    if(S.cmDraw && $("cmSheet")) S.cmDraw(); else if(S.cmAsked && S.st && S.st.cm) openCm();   // asked from this phone: show it
+    S.cmAsked = false; });
   es.addEventListener("unpaired", () => unpair("This phone was removed in the controller's Settings. Pair it again to use it."));
   es.onopen = () => { S.connected = true; render(); };
   es.onerror = async () => {
@@ -881,8 +883,9 @@ function openCm(){
     if(go) go.onclick = async () => {
       if(live && !sure){ sure = true; draw(); return; }   // live: a second tap, so a change on air is on purpose
       sure = false;
+      S.cmAsked = true;
       const res = await cmd("cm-match", {target:c.target});
-      if(res && res.ok === false) toast(res.error || "Couldn't match the colors.");
+      if(res && res.ok === false){ S.cmAsked = false; toast(res.error || "Couldn't match the colors."); }
     };
     document.querySelectorAll("#cmSheet [data-ab]").forEach(b => b.onclick = () => { S.cmShow = b.dataset.ab; draw(); });
     document.querySelectorAll("#cmSheet [data-big]").forEach(im => im.onclick = () => {
