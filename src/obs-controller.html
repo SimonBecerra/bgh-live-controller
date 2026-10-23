@@ -8293,6 +8293,21 @@ setInterval(async () => {
   if(ui.inTransition && Date.now() - ui.inTransition < 5000) return;
   try{ ssBusy = ssMirror(); await ssBusy; }catch(e){} finally { ssBusy = null; }
 }, 4000);
+/* A slideshow source in a Slideshow scene set to Bounds "Fit": OBS fits whatever is left after cropping into the box,
+   so the crop can't change its shape and the size can't be matched to the camera. It's turned into the same
+   picture without Bounds (same size, same place), once; from then on it's cropped and sized as usual. Other Bounds
+   types (stretching) are left alone and reported. */
+async function ssUnbound(sceneName, it, report){
+  const t = await tfGet(sceneName, it.sceneItemId);
+  if(t.boundsType !== "OBS_BOUNDS_SCALE_INNER" || !(t.sourceWidth > 2 && t.sourceHeight > 2) || t.rotation) return false;
+  const R = tfRect(t), h0 = t.sourceHeight - (t.cropTop || 0) - (t.cropBottom || 0);
+  if(!rectOk(R) || !(h0 > 2)) return false;
+  const sc = R.h / h0, al = t.alignment ?? 5;
+  await obs.call("SetSceneItemTransform", {sceneName, sceneItemId:it.sceneItemId, sceneItemTransform:{
+    boundsType:"OBS_BOUNDS_NONE", scaleX:sc, scaleY:sc, ...tfPos(R, al)}});
+  (report.unbound ||= []).push(`${it.sourceName} in ${sceneName}`);
+  return true;
+}
 // One at a time: a change made while one is running is done straight after it (the latest choice wins)
 let ssBusy = null, ssAgain = null;
 async function ssApplySources(vis = true, off = false){
@@ -8334,6 +8349,7 @@ async function ssApplyNow(vis = true, off = false){
           if(it.sceneItemEnabled !== on) await obs.call("SetSceneItemEnabled", {sceneName:scene, sceneItemId:it.sceneItemId, sceneItemEnabled:on});
           on ? shown++ : hidden++;
           const kind = it.sourceName === ui.ssNames.projector ? "projector" : "laptop";
+          if(isSlideScene(sc.sceneName) && slideRatioOf(sc.sceneName) && !ssOrigLoad()[ssOrigKey(scene, it.sceneItemId)]) await ssUnbound(scene, it, report);
           // A scene (like "Projector" holding the NDI source): its size is the whole canvas, so the picture inside is cropped instead
           if(it.sourceType === "OBS_SOURCE_TYPE_SCENE"){ if(!report.inner[it.sourceName]){ report.inner[it.sourceName] = true; await ssCropInside(it.sourceName, kind, report); } }
           if(on43 && isSlideScene(sc.sceneName) && slideRatioOf(sc.sceneName) === "16:9"){
@@ -8356,12 +8372,14 @@ async function ssApplyNow(vis = true, off = false){
     }
     await ssMirror();   // the same crop and size in every other scene
   }catch(e){ return toast(`Couldn't switch the slideshow sources in OBS: ${e.message}`); }
+  if(report.unbound && report.unbound.length) toast(`${report.unbound[0]}${report.unbound.length > 1 ? ` and ${report.unbound.length - 1} more` : ""}: Bounds "Fit" changed to No bounds (same size and place), so the slideshow can be cropped and sized.`);
   if(off) return report.cropped ? toast("The slideshow sources are back where they were set up in OBS.") : null;
   if(!shown) return toast(`No source called "${show}" was found in ${ui.collection}. Check the names in Settings → Slideshow.`);
   if(report.bounded.length) return toast(`Not changed: ${report.bounded[0]} has a Bounds setting that could stretch it. In OBS, open its Edit Transform and set Bounds to Automatic (or Fit).`);
   if(report.rotated.length) return toast(`Not cropped: ${report.rotated[0]} is rotated.`);
   if(report.waiting.includes(show)) return toast(`"${show}" has no picture right now, so it was left as it is. It's ${on43 ? "placed" : "cropped"} as soon as its picture arrives.`);
   const cropTxt = ss.ratio ? (ss.ratio === "169on43" ? " The top 16:9 part fills the 16:9 slideshow's place." : ss.src === "projector" && ss.ratio === "16:9" ? " Cropped the black bars off the top and bottom." : ss.src === "laptop" && ss.ratio === "4:3" ? " Cropped the black bars off the sides." : " No cropping needed.") : "";
+  if(report.unbound && report.unbound.length) return;   // its own message stays up
   toast(vis ? `Showing "${show}"${hidden ? `, hid "${hide}"` : ""} in the slideshow scenes.${cropTxt}` : cropTxt.trim() || `${ss.ratio}: no crop needed.`);
 }
 /* The layout template. The Slideshow scenes' "Projector" and "Presentation" sources are set up once, in one scene
