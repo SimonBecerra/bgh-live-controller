@@ -7966,6 +7966,7 @@ function ssEditor(el){
     <div class="ss-q"><span class="label">Where it comes from</span><div class="ss-srcs">
       <button type="button" class="ss-src" data-src="projector" aria-pressed="${proj}"><i data-lucide="projector"></i><span>From the projector<small>Its live feed (NDI)</small></span></button>
       <button type="button" class="ss-src" data-src="laptop" aria-pressed="${lap}"><i data-lucide="laptop"></i><span>Played on this laptop<small>Google Slides</small></span></button></div></div>
+    ${ss.src && ui.ssMirrorInfo && (ui.ssMirrorInfo.matched.length || ui.ssMirrorInfo.skipped.length) ? `<span class="path">${ui.ssMirrorInfo.matched.length ? `Same size and crop in ${esc(ui.ssMirrorInfo.matched.join(", "))} too.` : ""}${ui.ssMirrorInfo.skipped.length ? ` Not matched: ${esc(ui.ssMirrorInfo.skipped.join("; "))}.` : ""}</span>` : ""}
     ${proj ? `<div class="ss-feed ${ss.feed.state}" aria-live="polite"><i class="d"></i><span>${ss.feed.state === "live" ? `<b>Projector feed: live</b> · ${ss.feed.fps} fps`
       : ss.feed.state === "none" ? `<b>No picture from the projector.</b> Check the projector laptop is on, its NDI output is running, and it's on the church network.`
       : ss.feed.state === "idle" ? "The projector's feed is checked while a Slideshow scene is on."
@@ -8237,6 +8238,7 @@ async function ssMirror(){
   for(const n of scenes){ try{ lists[n] = (await obs.call("GetSceneItemList", {sceneName:n})).sceneItems || []; }catch(e){ lists[n] = []; } }
   const want = ss.ratio ? sceneRatioFor(ss.ratio) : "16:9";
   const slides = scenes.filter(n => isSlideScene(n) && slideRatioOf(n));
+  const info = {matched:new Set(), skipped:[]};
   let moved = 0;
   for(const name of [ui.ssNames.projector, ui.ssNames.laptop]){
     // The one to copy: in the Slideshow scene of the shape in use (16:9 when none is chosen)
@@ -8244,31 +8246,53 @@ async function ssMirror(){
     if(!refScene) continue;
     const refIt = lists[refScene].find(x => x.sourceName === name);
     const r = await tfGet(refScene, refIt.sceneItemId);
-    if(!(r.sourceWidth > 2 && r.sourceHeight > 2) || (r.boundsType && r.boundsType !== "OBS_BOUNDS_NONE") || r.rotation) continue;
+    if(!(r.sourceWidth > 2 && r.sourceHeight > 2) || r.rotation) continue;
     const R = tfRect(r);
     if(!rectOk(R)) continue;
     for(const n of scenes){
       if(isSlideScene(n) && slideRatioOf(n)) continue;
       for(const it of lists[n].filter(x => x.sourceName === name)){
         const t = await tfGet(n, it.sceneItemId);
-        if((t.boundsType && t.boundsType !== "OBS_BOUNDS_NONE") || t.rotation) continue;
-        const same = ["cropTop", "cropBottom", "cropLeft", "cropRight"].every(k => (t[k] || 0) === (r[k] || 0)) && Math.abs((t.scaleX ?? 1) - (r.scaleX ?? 1)) < 1e-4 && Math.abs((t.scaleY ?? 1) - (r.scaleY ?? 1)) < 1e-4;
+        if(t.rotation){ info.skipped.push(`${name} in ${n} is rotated`); continue; }
         const O = tfRect(t);
-        const offR = O.x >= W - 0.5, offL = O.x + O.w <= 0.5, offB = O.y >= H - 0.5, offT = O.y + O.h <= 0.5;
-        // Off the edge: stays just off that edge, at the slideshow's height (or across, for top / bottom)
-        const x = offR ? Math.max(O.x, W) : offL ? Math.min(O.x + O.w, 0) - R.w : (offT || offB) ? R.x : R.x;
+        // Where it waits: off an edge (for a Move transition) stays just off that edge, at the slideshow's height
+        // (or across, for top / bottom); on screen takes the same place as in the Slideshow scene
+        const has = rectOk(O);
+        const offR = has && O.x >= W - 0.5, offL = has && O.x + O.w <= 0.5, offB = has && O.y >= H - 0.5, offT = has && O.y + O.h <= 0.5;
+        const x = offR ? Math.max(O.x, W) : offL ? Math.min(O.x + O.w, 0) - R.w : R.x;
         const y = offB ? Math.max(O.y, H) : offT ? Math.min(O.y + O.h, 0) - R.h : R.y;
-        if(same && Math.abs(O.x - x) < 0.5 && Math.abs(O.y - y) < 0.5) continue;
-        const al = t.alignment ?? 5;
-        await obs.call("SetSceneItemTransform", {sceneName:n, sceneItemId:it.sceneItemId, sceneItemTransform:{
-          cropTop:r.cropTop || 0, cropBottom:r.cropBottom || 0, cropLeft:r.cropLeft || 0, cropRight:r.cropRight || 0,
-          scaleX:r.scaleX ?? 1, scaleY:r.scaleY ?? 1, ...tfPos({x, y, w:R.w, h:R.h}, al)}});
+        // Everything that sets its size is copied (crop, scale, Bounds and its alignment, the position's
+        // alignment), then it's moved by the difference, so it's exactly the same picture in another place
+        const tf = {cropTop:r.cropTop || 0, cropBottom:r.cropBottom || 0, cropLeft:r.cropLeft || 0, cropRight:r.cropRight || 0,
+          scaleX:r.scaleX ?? 1, scaleY:r.scaleY ?? 1, alignment:r.alignment ?? 5, rotation:0,
+          boundsType:r.boundsType || "OBS_BOUNDS_NONE", boundsAlignment:r.boundsAlignment ?? 0,
+          positionX:(r.positionX || 0) + (x - R.x), positionY:(r.positionY || 0) + (y - R.y)};
+        if(r.boundsWidth >= 1) tf.boundsWidth = r.boundsWidth;
+        if(r.boundsHeight >= 1) tf.boundsHeight = r.boundsHeight;
+        info.matched.add(n);
+        const same = Object.keys(tf).every(k => typeof tf[k] === "number" ? Math.abs((t[k] ?? (k.startsWith("scale") ? 1 : 0)) - tf[k]) < (k.startsWith("scale") ? 1e-4 : 0.5) : (t[k] || "OBS_BOUNDS_NONE") === tf[k]);
+        if(same) continue;
+        await obs.call("SetSceneItemTransform", {sceneName:n, sceneItemId:it.sceneItemId, sceneItemTransform:tf});
         moved++;
       }
     }
   }
+  const was = JSON.stringify(ui.ssMirrorInfo || null);
+  ui.ssMirrorInfo = {matched:[...info.matched], skipped:info.skipped};
+  if(JSON.stringify(ui.ssMirrorInfo) !== was && (!$("ssOverlay").hidden || !$("glOverlay").hidden)) ssRender();
   return moved;
 }
+/* While slideshow mode is on, the copies in other scenes are checked every few seconds, so a change made in OBS
+   to the Slideshow scene's source (or to a copy) is matched too. Never during a transition: a Move transition
+   is animating those very sources. */
+ui.inTransition = 0;
+obs.on("SceneTransitionStarted", () => { ui.inTransition = Date.now(); });
+obs.on("SceneTransitionEnded", () => { ui.inTransition = 0; });
+setInterval(async () => {
+  if(!ss.on || !ss.src || ssBusy || ui.connected === false || !ui.everConnected) return;
+  if(ui.inTransition && Date.now() - ui.inTransition < 5000) return;
+  try{ ssBusy = ssMirror(); await ssBusy; }catch(e){} finally { ssBusy = null; }
+}, 4000);
 // One at a time: a change made while one is running is done straight after it (the latest choice wins)
 let ssBusy = null, ssAgain = null;
 async function ssApplySources(vis = true, off = false){
