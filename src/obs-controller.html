@@ -8024,7 +8024,7 @@ async function ssSet(ch, quiet){
   if((ch.src && ch.src !== was.src) || (ch.ratio && ch.ratio !== was.ratio && ss.src)) await ssApplySources(!!ch.src && ch.src !== was.src);
   if(ch.on === false){ if(sl.open) slClose(); if(ssOrigAll().length) await ssApplySources(false, true); }   // off: everything back where it was
   slAutoOpen();
-  if(ss.on && ss.ratio && !BUTTONS.some(b => b.slide && slideShown(b) && !b.group.includes(ui.program))) toast(`There's no Slideshow ${sceneRatioFor(ss.ratio)} scene in ${ui.collection}.`);
+  if(ss.on && ss.ratio && !BUTTONS.some(b => b.slide && slideRatioOf(b.scene) === sceneRatioFor(ss.ratio))) toast(`There's no Slideshow ${sceneRatioFor(ss.ratio)} scene in ${ui.collection}.`);
 }
 /* Sources: in every scene of the loaded collection, the chosen kind is shown and the other hidden (their eye in OBS),
    and both are cropped to the slideshow's shape:
@@ -8296,7 +8296,15 @@ setInterval(async () => {
 // One at a time: a change made while one is running is done straight after it (the latest choice wins)
 let ssBusy = null, ssAgain = null;
 async function ssApplySources(vis = true, off = false){
-  if(ssBusy){ ssAgain = [vis, off]; return ssBusy; }
+  if(ssBusy){
+    // Busy (the last change, or the regular check of the other scenes): this runs as soon as that's done. If
+    // another change comes first, the latest one wins.
+    const mine = ssAgain = [vis, off];
+    while(ssBusy){ try{ await ssBusy; }catch(e){} await sleep(30); }   // a real pause, so whoever is busy can finish
+    if(ssAgain !== mine) return;   // already done, or replaced by a later change
+    ssAgain = null;
+    return ssApplySources(vis, off);
+  }
   ssBusy = ssApplyNow(vis, off);
   try{ await ssBusy; } finally { ssBusy = null; }
   if(ssAgain){ const a = ssAgain; ssAgain = null; return ssApplySources(...a); }
