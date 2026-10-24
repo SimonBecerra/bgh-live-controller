@@ -149,6 +149,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .hint{font-size:12px;color:var(--muted)}
+.banner .yt-go{display:flex;width:100%;margin-top:8px;min-height:44px}
 .hint.warn{color:var(--warn, #f5b041)}
 .off .ctl{opacity:.4;pointer-events:none}
 
@@ -633,6 +634,7 @@ function render(){
   ${!S.connected ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the controller.</b> Check this phone is on the church Wi-Fi. It reconnects by itself.</div></div>`
     : !st.obs ? `<div class="banner">${ic("wifi")}<div><b>The controller can't reach OBS.</b> Check OBS is open on the computer.</div></div>`
     : st.health && st.health.alert ? `<div class="banner bad">${ic("wifi")}<div><b>Stream trouble.</b> ${esc(st.health.alert)}</div></div>` : ""}
+  ${S.connected && st.ytStart ? `<div class="banner bad">${ic("eye")}<div><b>Viewers can't see the stream yet.</b> ${st.ytStart === "waiting" ? "YouTube isn't receiving the video yet. Check the internet, or OBS." : "This broadcast doesn't start by itself."}<button class="btn danger yt-go" id="ytGo" type="button">Start broadcast</button></div></div>` : ""}
   ${S.connected && st.battery ? `<div class="banner${st.battery.low ? " bad" : ""}">${ic("info")}<div><b>The laptop is on battery (${st.battery.pct}%).</b> Plug in its charger.</div></div>` : ""}
   ${S.connected && st.cm ? cmBar(st) : ""}
   ${S.pvOn ? `<div class="pv${S.tab === "onscreen" ? " small" : ""}">${S.pvImg ? `<img src="${S.pvImg}" alt="What's on Program: ${esc(st.program)}">` : ""}<span class="pv-tag">PROGRAM</span><span class="pv-age" id="pvAge"></span></div>` : ""}
@@ -711,6 +713,7 @@ function wire(){
   on("hymn", openHymn); on("bible", openBible);
   on("ssPill", openSlides);
   on("cmBar", openCm);
+  on("ytGo", async () => { const r = await cmd("yt-start"); toast(r && r.ok !== false ? "Starting the YouTube broadcast…" : (r && r.error) || "Couldn't start it. Press Start Broadcast in OBS."); });
   on("ssBack", () => cmd("slide", {d:-1}).then(j => !j.ok && j.error && toast(j.error)));
   on("ssNext", () => cmd("slide", {d:1}).then(j => !j.ok && j.error && toast(j.error)));
   on("ssOpen", () => cmd("slide-open").then(j => !j.ok && j.error && toast(j.error)));

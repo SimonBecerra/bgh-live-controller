@@ -2093,6 +2093,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
 <div class="top-banners">
 <div class="health-banner bat-banner" id="batBanner" role="alert" hidden><i data-lucide="battery-low"></i><div><b id="batBannerH">On battery</b><span id="batBannerTxt"></span></div><button type="button" class="btn" id="batOk">OK</button></div>
 <div class="health-banner" id="ndiBanner" role="alert" hidden><i data-lucide="projector"></i><div><b>No picture from the projector</b><span> The slideshow's live feed (NDI) has stopped. Check the projector laptop is on and its NDI output is running.</span></div><button type="button" class="btn" id="ndiOk">OK</button></div>
+<div class="health-banner" id="ytBanner" role="alert" hidden><i data-lucide="youtube"></i><div><b>Viewers can't see the stream yet</b><span id="ytBannerTxt"></span></div><button type="button" class="btn primary" id="ytStart">Start broadcast</button></div>
 <div class="health-banner" id="healthBanner" role="alert" hidden><i data-lucide="triangle-alert"></i><div><b>Stream trouble</b><span id="healthBannerTxt"></span></div><button type="button" class="btn" id="healthOk">OK</button></div>
 </div>
 <div class="end-banner" id="endBanner" role="alert" hidden><i data-lucide="timer"></i><span id="endBannerTxt"></span><button type="button" class="btn" id="endKeep">Keep streaming</button></div>
@@ -4959,6 +4960,7 @@ async function otSync(){
 obs.on("VendorEvent", ev => {
   if(!ev || ev.vendorName !== "church-controller" || !ev.eventData) return;
   const d = ev.eventData;
+  if(ev.eventType === "BroadcastLive") ytLive(d);
   if(ev.eventType === "ColorMatchChanged") cmChanged();
   if(ev.eventType === "LowerThirdChanged"){
     ltApply(d);
@@ -5740,6 +5742,44 @@ $("batOk").addEventListener("click", () => { bat.dismissed = true; $("batBanner"
   }catch(e){}
 })();
 $("healthOk").addEventListener("click", () => { hs.dismissed = true; $("healthBanner").hidden = true; });
+/* A YouTube broadcast scheduled with auto-start off: OBS streams to it, but it stays in YouTube's preview (viewers
+   see nothing) until "Start Broadcast" is pressed in OBS. Going live on an existing broadcast from here, the
+   plug-in presses it once YouTube is receiving the video (a "BroadcastLive" event says how it went). However the
+   stream was started, while live the controller asks every 3 seconds; still not started after 15 seconds: a banner
+   here and on the phone, with a button that starts it. */
+const yt = {since:0, state:"none", asked:0};
+function ytRender(){
+  const need = ui.stream.active && (yt.state === "ready" || yt.state === "waiting") && yt.since && Date.now() - yt.since > 15000;
+  $("ytBanner").hidden = !need;
+  if(need) $("ytBannerTxt").textContent = yt.state === "waiting"
+    ? " The stream is going to YouTube, but YouTube isn't receiving it yet, so the broadcast can't start. Check the internet, or look at OBS."
+    : " The video is reaching YouTube, but this broadcast doesn't start by itself. Press Start broadcast (the same as Start Broadcast in OBS).";
+  $("ytStart").disabled = Date.now() - yt.asked < 5000;
+}
+async function ytPoll(){
+  if(!ui.stream.active || ui.connected === false){ if(yt.state !== "none" || yt.since){ yt.state = "none"; yt.since = 0; ytRender(); } return; }
+  let st = "none";
+  // #proto-start
+  st = window.YT_PROTO || "none";
+  // #proto-end
+  // #real try{ st = (await vcall("GetBroadcastState")).state || "none"; }catch(e){ return; }
+  if(st === "ready" || st === "waiting"){ if(!yt.since) yt.since = Date.now(); }
+  else yt.since = 0;
+  yt.state = st; ytRender();
+}
+setInterval(ytPoll, 3000);
+obs.on("StreamStateChanged", () => { yt.since = 0; yt.state = "none"; ytRender(); });
+async function ytStartNow(){
+  yt.asked = Date.now(); ytRender();
+  try{ await vcall("StartBroadcastNow"); toast("Starting the YouTube broadcast…"); }
+  catch(e){ toast(`Couldn't start the broadcast: ${e.message}. Press Start Broadcast in OBS.`); }
+  setTimeout(ytPoll, 2500);
+}
+$("ytStart").addEventListener("click", ytStartNow);
+function ytLive(d){
+  if(d.ok){ yt.since = 0; yt.state = "live"; ytRender(); toast("The YouTube broadcast started: viewers can see the stream now."); }
+  else { if(!yt.since) yt.since = Date.now() - 15001; yt.state = d.code === "NOT_RECEIVING" ? "waiting" : "ready"; ytRender(); }
+}
 
 /* OBS's own frame rate and CPU, every 2 seconds: shown on the chip when not live (if OBS falls behind),
    and in the chip's details. The desktop app reports the controller's own share and the whole computer's. */
@@ -9143,6 +9183,7 @@ function phState(){
     books:shownBooks().map(b => ({id:b.id, name:b.name, short:b.short || ""})), book:ui.ot.book || "",
     tr:ot.trSession || ui.ot.bbTr || "KJV",
     health:ui.stream.active ? {level:hs.level || "", text:hs.text || "", alert:hs.alert || null} : null,
+    ytStart:!$("ytBanner").hidden ? (yt.state === "waiting" ? "waiting" : "ready") : "",
     reading:ui.brProg && ui.brReading ? brChapterOf(ui.brReading) : "",
     slides:{on:ss.on, ratio:ss.ratio, src:ss.src, feed:ss.feed.state, live:isSlideScene(ui.program), open:sl.open, n:sl.n, total:sl.total, title:sl.title, link:!!slId(sl.cfg.link)},
     battery:bat.on ? {pct:bat.pct, low:bat.pct <= 20} : null
@@ -9199,6 +9240,7 @@ async function phRun(cmd, a){
     }
     case "slide": { if(!sl.open) throw phErr("The slideshow isn't open."); await slStep(a.d > 0 ? 1 : -1); return {}; }
     case "slide-open": { await slOpen(); return {}; }
+    case "yt-start": { if(!ui.stream.active) throw phErr("The stream isn't running."); await ytStartNow(); return {}; }
     case "cm-match": {   // the phone's Color match: only while Settings → Color matching is open here
       const c = cmPhone();
       if(!c) throw phErr("Open Settings → Color matching on the controller first.", "CM_CLOSED");
