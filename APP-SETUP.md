@@ -112,9 +112,10 @@ screen, it's just the full controller.
 
 - The first time it opens, Simple mode remembers that screen as the touchscreen, so a projector or TV plugged in later
   never gets it. To change it, use **Settings → Screen → The touchscreen for Simple mode**.
-- **Go Live** and everything in **Menu** (Slideshow, Ready check, Phone remote, Scene collection, Settings) bring the
-  full controller onto the touchscreen. It goes back to the main monitor when that's closed, or tap
-  **Back to Simple mode** at the top. **Menu → Full controller** keeps it there until you tap that button.
+- **Go Live** and everything in **Menu** (Slideshow, Ready check, Phone remote, Scene collection, Settings) open on
+  the touchscreen on their own, as part of Simple mode. They're the controller's own screens, so a change made from
+  either place is the same change. Close, Cancel or Done goes back to Simple mode. **Menu → Full controller** shows
+  the whole controller there, with **Back to Simple mode** at the top.
 - Unplug the touchscreen and Simple mode closes; plug it back in and it opens again.
 - To turn it off, untick **Settings → Screen → Simple mode on the touchscreen**.
 
