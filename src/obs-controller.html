@@ -803,6 +803,13 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
 .sil-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--warn)}
 .inline-row{display:flex;align-items:center;gap:10px}
 .sm-hide{display:none!important}
+/* Go Live opened from Simple mode: nothing of the full controller shows behind it, in Simple mode's colours */
+body.sm-solo{--bg:#0c0f13; --panel:#141920; --panel-2:#1b222b; --line:#29323d; --line-2:#36414e; --fg:#e7ecf2; --muted:#8a96a6; --dim:#5d6876;
+  --accent:#3b8cff; --accent-ink:#ffffff; --accent-soft:rgba(59,140,255,.16); --pgm:#e5484d; --pgm-soft:rgba(229,72,77,.16); --pvw:#2fbf71; --pvw-soft:rgba(47,191,113,.15); --warn:#f5a524;
+  background:var(--bg); color:var(--fg); color-scheme:dark}
+body.sm-solo .app,body.sm-solo .top-banners,body.sm-solo .safe-banner,body.sm-solo .end-banner{visibility:hidden}
+body.sm-solo .overlay:not(.dock){background:var(--bg)}
+body.sm-solo #overlay,body.sm-solo #pickOverlay{background:rgba(4,6,9,.72)}
 .sm-proto-btn{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;align-items:center;gap:8px;min-height:42px;padding:0 14px;border-radius:12px;border:1px dashed var(--warn);background:var(--panel);color:var(--fg);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .sm-proto-btn svg{width:18px;height:18px;color:var(--warn)}
 .sm-proto{position:fixed;inset:0;z-index:55;background:#0c0f13}
@@ -9483,7 +9490,11 @@ function smStatus(s){
 const smOverlayUp = () => [...document.querySelectorAll(".overlay:not(.dock)")].some(o => !o.hidden);
 async function smHere(what, open){
   if(SM && SM.open && smTarget()){
-    SM.swap = what; $("smBack").hidden = false;
+    SM.swap = what;
+    // Go Live from Simple mode: only the Go Live screens show, in Simple mode's look, as part of it.
+    // Cancel or finishing goes back; the "Back to Simple mode" bar is for everything else in the menu.
+    document.body.classList.toggle("sm-solo", what === "golive");
+    $("smBack").hidden = what === "golive";
     // #proto-start
     if(!window.bgh) $("smProto").hidden = true;
     // #proto-end
@@ -9495,7 +9506,7 @@ async function smHere(what, open){
 }
 function smBack(gone){
   if(!SM) return;
-  clearInterval(SM.swapT); SM.swap = null; $("smBack").hidden = true;
+  clearInterval(SM.swapT); SM.swap = null; $("smBack").hidden = true; document.body.classList.remove("sm-solo");
   // #proto-start
   if(!window.bgh && SM.open) $("smProto").hidden = false;
   // #proto-end
