@@ -9491,10 +9491,13 @@ const smOverlayUp = () => [...document.querySelectorAll(".overlay:not(.dock)")].
 async function smHere(what, open){
   if(SM && SM.open && smTarget()){
     SM.swap = what;
-    // Go Live from Simple mode: only the Go Live screens show, in Simple mode's look, as part of it.
-    // Cancel or finishing goes back; the "Back to Simple mode" bar is for everything else in the menu.
-    document.body.classList.toggle("sm-solo", what === "golive");
-    $("smBack").hidden = what === "golive";
+    // Go Live, Settings and the menu (Slideshow, Ready check, Phone remote, Scene collection) from Simple mode: only that
+    // screen shows, in Simple mode's look, as part of it. It's the controller's own screen, so a change made in either
+    // place is the same change. Its own Close / Cancel / Done goes back. Only "Full controller" shows the whole controller,
+    // with the "Back to Simple mode" bar.
+    const solo = what !== "full";
+    document.body.classList.toggle("sm-solo", solo);
+    $("smBack").hidden = solo;
     // #proto-start
     if(!window.bgh) $("smProto").hidden = true;
     // #proto-end
