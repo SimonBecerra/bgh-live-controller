@@ -3674,7 +3674,7 @@ function glRender(){
   $("glPreview").hidden = ex; $("glExisting").hidden = !ex;
   // Existing broadcast: only the speakers stay (when lower thirds are on); schedule and date come from YouTube
   $("glForm").hidden = ex && !ltOn() && !bap && !brOn;
-  $("glSvcField").hidden = ex || ui.schMode === "off"; $("glDateField").hidden = ex;
+  $("glSvcField").hidden = ex || ui.schMode === "off"; $("glDateField").hidden = ex || glFromSimple();
   $("glGrid").classList.toggle("single", ex && !ltOn());
   $("glStepTag").hidden = ex;
   $("glNext").textContent = ex ? "Go Live" : "Next: Visibility";
@@ -9370,6 +9370,8 @@ if(phApi){
    what's happening and runs its taps through the same functions as the buttons here. Go Live, Settings and the menu
    bring this window over onto the touchscreen until they're closed. */
 var SM = null;
+// Go Live opened from Simple mode: always today, so no Date field
+const glFromSimple = () => !!(SM && SM.swap === "golive");
 const smApi = window.bgh && window.bgh.simple ? window.bgh.simple : null;
 // Which screen Simple mode goes on: the touchscreen chosen in Settings → Screen (remembered the first time Simple mode
 // opens). Before that: the only other screen, or the only touchscreen. Nothing when unsure, so it never opens on a projector or TV.
