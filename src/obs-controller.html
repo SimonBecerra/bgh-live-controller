@@ -803,6 +803,11 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
 .sil-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--warn)}
 .inline-row{display:flex;align-items:center;gap:10px}
 .sm-hide{display:none!important}
+.sm-proto-btn{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;align-items:center;gap:8px;min-height:42px;padding:0 14px;border-radius:12px;border:1px dashed var(--warn);background:var(--panel);color:var(--fg);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.sm-proto-btn svg{width:18px;height:18px;color:var(--warn)}
+.sm-proto{position:fixed;inset:0;z-index:55;background:#0c0f13}
+.sm-proto iframe{width:100%;height:100%;border:0;display:block}
+.sm-proto-x{position:absolute;left:12px;bottom:12px;min-height:36px;padding:0 12px;border-radius:10px;border:1px dashed var(--warn);background:rgba(20,25,32,.92);color:#e7ecf2;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .sm-back{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;height:56px;padding:0 24px;border-radius:999px;border:2px solid var(--accent);background:var(--accent);color:#fff;font:inherit;font-size:18px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer}
 .sm-back svg{width:22px;height:22px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:600;max-width:calc(100% - 32px);z-index:11}
@@ -2168,6 +2173,11 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
+<button type="button" class="sm-proto-btn" id="smProtoBtn" data-proto><i data-lucide="tablet-smartphone"></i>Prototype: second screen (Simple mode)</button>
+<div class="sm-proto" id="smProto" data-proto hidden>
+  <iframe id="smProtoFrame" title="Simple mode, as on the second screen"></iframe>
+  <button type="button" class="sm-proto-x" id="smProtoX">Prototype: back to the full controller</button>
+</div>
 <button type="button" class="sm-back" id="smBack" hidden><i data-lucide="tablet-smartphone"></i>Back to Simple mode</button>
 
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
@@ -9378,10 +9388,45 @@ if(phApi){
 var SM = null;
 // Go Live opened from Simple mode: always today, so no Date field
 const glFromSimple = () => !!(SM && SM.swap === "golive");
-const smApi = window.bgh && window.bgh.simple ? window.bgh.simple : null;
+let smApi = window.bgh && window.bgh.simple ? window.bgh.simple : null;
+// #proto-start
+/* Prototype: Simple mode in this page, as if on a second screen. Simple mode (simple.html, in a frame) talks to this page
+   through the same calls the desktop app uses, so it drives the pretend OBS here. */
+if(!window.bgh){
+  const L = {state:[], level:[], frame:[], pframe:[], toast:[]}, pend = {}, last = {state:null, frame:""};
+  let cmdFn = null, statusFn = null, seq = 0;
+  window.bghSimpleProto = {
+    hello: async () => ({state:last.state, frame:last.frame}),
+    cmd: (cmd, args) => new Promise(res => { const id = ++seq; pend[id] = res; if(cmdFn) cmdFn({id, cmd, args}); }),
+    onState: f => L.state.push(f), onLevel: f => L.level.push(f), onFrame: f => L.frame.push(f), onPframe: f => L.pframe.push(f), onToast: f => L.toast.push(f)
+  };
+  const show = on => { $("smProto").hidden = !on; if(on && !$("smProtoFrame").src) $("smProtoFrame").src = "simple.html"; };
+  smApi = {
+    open: async () => { show(true); if(statusFn) statusFn({open:true, displayId:-1}); return {open:true}; },
+    close: async () => { show(false); if(statusFn) statusFn({open:false, displayId:null}); return {open:false}; },
+    status: async () => ({open:false, displayId:null}),
+    focus: async () => { show(true); return true; },
+    state: s => { last.state = s; L.state.forEach(f => f(s)); },
+    level: l => L.level.forEach(f => f(l)),
+    frame: d => { last.frame = d; L.frame.forEach(f => f(d)); },
+    pframe: d => L.pframe.forEach(f => f(d)),
+    toast: t => L.toast.forEach(f => f(t)),
+    reply: r => { const p = pend[r.id]; if(p){ delete pend[r.id]; p({ok:!!r.ok, data:r.data, error:r.error, code:r.code}); } },
+    onCmd: f => { cmdFn = f; }, onStatus: f => { statusFn = f; }
+  };
+  // The pretend Program and Preview pictures, a few times a second while Simple mode is showing
+  setInterval(() => {
+    if(!SM || !SM.open || SM.swap) return;
+    try{ smApi.frame(cvP.canvas.toDataURL("image/jpeg", .7)); if(ui.studio) smApi.pframe(cvV.canvas.toDataURL("image/jpeg", .7)); }catch(e){}
+  }, 300);
+}
+// #proto-end
 // Which screen Simple mode goes on: the touchscreen chosen in Settings → Screen (remembered the first time Simple mode
 // opens). Before that: the only other screen, or the only touchscreen. Nothing when unsure, so it never opens on a projector or TV.
 function smTarget(scr = ui.screen){
+  // #proto-start
+  if(!window.bgh) return SM && SM.open ? {id:-1, label:"Simple mode"} : null;
+  // #proto-end
   if(!(window.bgh && window.bgh.simple) || scr.simple === false || protoDisplays.length < 2) return null;
   const others = protoDisplays.filter(d => !d.primary), m = matchTarget(scr.target);
   if(m.kind === "found" && !m.d.primary) return m.d;
@@ -9439,6 +9484,9 @@ const smOverlayUp = () => [...document.querySelectorAll(".overlay:not(.dock)")].
 async function smHere(what, open){
   if(SM && SM.open && smTarget()){
     SM.swap = what; $("smBack").hidden = false;
+    // #proto-start
+    if(!window.bgh) $("smProto").hidden = true;
+    // #proto-end
     try{ await place(); await window.bgh.bringToFront(); }catch(e){}
     clearInterval(SM.swapT);
     if(what !== "full"){ let quiet = 0; SM.swapT = setInterval(() => { quiet = smOverlayUp() ? 0 : quiet + 1; if(quiet >= 3) smBack(); }, 500); }
@@ -9448,6 +9496,9 @@ async function smHere(what, open){
 function smBack(gone){
   if(!SM) return;
   clearInterval(SM.swapT); SM.swap = null; $("smBack").hidden = true;
+  // #proto-start
+  if(!window.bgh && SM.open) $("smProto").hidden = false;
+  // #proto-end
   place();
   if(!gone && SM.open) smApi.focus();
 }
@@ -9516,6 +9567,10 @@ if(smApi){
     smSend();
   });
 }
+// #proto-start
+$("smProtoBtn").addEventListener("click", () => { if(smApi) smApi.open(); });
+$("smProtoX").addEventListener("click", () => { if(smApi) smApi.close(); });
+// #proto-end
 $("smBack").addEventListener("click", () => {
   // Closing Go Live or Settings this way is the same as their own Close or Cancel
   if(SM && SM.swap === "golive" && !$("glOverlay").hidden){ closeGoLive(); forgetBap(); }

@@ -285,7 +285,11 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const api = window.bghSimple || null;
+let api = window.bghSimple || null;
+// #proto-start
+// Prototype: inside the controller prototype's "second screen", the controller page plays the desktop app's part
+if(!api && window.parent !== window) try{ api = window.parent.bghSimpleProto || null; }catch(e){}
+// #proto-end
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[c]));
 const ICON = {
   mic:'<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>',
