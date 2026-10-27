@@ -44,3 +44,10 @@ if(/PROTO_CTL|data-pt=/.test(phone)) throw new Error("Build stopped: the phone p
 if(/https?:\/\/(?!www\.w3\.org)/.test(phone.replace(/<!--[\s\S]*?-->/g, ""))) throw new Error("Build stopped: the phone page loads something from the internet");
 writeFileSync(join(out, "phone.html"), phone);
 console.log(`app/phone.html built: ${phEls} prototype-only elements and ${phBlocks} code blocks removed.`);
+
+// Simple mode: the second window on the touchscreen (simple.js)
+const { html: simple, elements: smEls, blocks: smBlocks } = stripPrototype(readFileSync(join(root, "src", "simple.html"), "utf8"));
+if(/PROTO_SM/.test(simple)) throw new Error("Build stopped: the Simple mode page still has prototype-only code");
+if(/https?:\/\/(?!www\.w3\.org)/.test(simple.replace(/<!--[\s\S]*?-->/g, ""))) throw new Error("Build stopped: the Simple mode page loads something from the internet");
+writeFileSync(join(out, "simple.html"), simple);
+console.log(`app/simple.html built: ${smEls} prototype-only elements and ${smBlocks} code blocks removed.`);
