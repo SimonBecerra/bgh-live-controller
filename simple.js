@@ -59,6 +59,11 @@ function setup({ ipcMain, getWin, appDir }) {
     if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/") || dataUrl.length > 1500000) return;
     lastFrame = dataUrl; toSimple("simple-frame", dataUrl);
   });
+  // Studio Mode: the Preview picture
+  ipcMain.on("simple-pframe", (e, dataUrl) => {
+    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/") || dataUrl.length > 1500000) return;
+    toSimple("simple-pframe", dataUrl);
+  });
   ipcMain.on("simple-toast", (e, text) => toSimple("simple-toast", String(text || "").slice(0, 300)));
   ipcMain.on("simple-reply", (e, r) => {
     const p = r && pending.get(r.id);

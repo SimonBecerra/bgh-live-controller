@@ -99,8 +99,16 @@ the pill then shows a dash and tapping it says why.
 ## Simple mode on the touchscreen
 
 With two screens plugged in, the full controller stays on the main monitor and the touchscreen shows **Simple mode**:
-the Program picture, the mic bar, big scene buttons, Go Live and Record (with End and Stop built in), Safe mode,
-and Hymn, Bible and Names. With only one screen, it's just the full controller.
+the mic bar, Go Live and Record (with End and Stop built in), Studio Mode, Safe mode and Menu along the top; the
+Program picture with Hymn, Bible and the lower thirds under it; and big scene buttons on the right. With only one
+screen, it's just the full controller.
+
+- **Hymn** and **Bible** open in the box under Program: the hymn book (tap its icon to choose another) and keypad,
+  or the translation, book and chapter. While a hymn or passage is open, the scene buttons get smaller and it takes
+  the right side: the words on screen now and the next ones, verse buttons, Back, Hide/Show, Next and Done.
+- **Lower thirds:** tap a name to show it; tap it again to take it off.
+- **Studio Mode** (the split-square button): a tapped scene goes into Preview; **CUT** sends it live.
+- When hymns, Bible and lower thirds are off for the scene collection, Program sits in the middle by itself.
 
 - The first time it opens, Simple mode remembers that screen as the touchscreen, so a projector or TV plugged in later
   never gets it. To change it, use **Settings → Screen → The touchscreen for Simple mode**.

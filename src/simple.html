@@ -10,8 +10,9 @@
      It has no connection to OBS: the controller on the main monitor sends what's happening, and runs every tap
      through its own functions, so the rules are the same as on the controller and the phone remote. -->
 <style>
-/* Layout: a 1920×1080 screen ("Big tiles"), scaled to fit the touchscreen. Top bar · Program picture, mic and
-   notices on the left · scene tiles and the on-screen buttons on the right. Dark, like the controller. */
+/* Layout: a 1920×1080 screen scaled to fit the touchscreen. Top bar (with the mic) · Program (and Preview in Studio
+   Mode) with Hymn, Bible and the lower thirds under it · scene tiles on the right, which shrink while a hymn or
+   passage is open so it can take that side. Dark, like the controller. */
 :root{
   --bg:#0c0f13; --panel:#141920; --panel-2:#1b222b; --line:#29323d; --line-2:#36414e;
   --fg:#e7ecf2; --muted:#8a96a6; --dim:#5d6876;
@@ -38,16 +39,24 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
 /* top bar */
 .top{display:flex;align-items:center;gap:16px;height:72px;flex:none}
-.logo{display:flex;align-items:center;gap:14px;min-width:0}
+.logo{display:flex;align-items:center;gap:14px;min-width:0;flex:none}
 .logo .badge{width:56px;height:56px;border-radius:12px;background:var(--brand);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex:none}
 .logo b{font-family:var(--f-brand);font-size:34px;letter-spacing:.04em}
-.coll{font-size:20px;color:var(--muted);margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
+.coll{font-size:20px;color:var(--muted);margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
 .coll.bad{color:var(--warn)}
-.grow{flex:1}
-.safeBtn{display:flex;align-items:center;justify-content:center;height:64px;width:64px;padding:0;box-sizing:border-box;border-radius:14px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--muted)}
-.safeBtn svg{width:28px;height:28px}
-.safeBtn[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-soft);color:var(--accent)}
-.out{display:flex;align-items:center;gap:12px;height:64px;padding:0 24px;border-radius:999px;border:2px solid var(--line-2);background:var(--panel-2);font-weight:800;font-size:21px;letter-spacing:.06em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mic{flex:1;min-width:0;margin:0 12px 0 20px;box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;height:64px;padding:0 22px;border-radius:14px;border:2px solid var(--ok);background:var(--ok-soft);text-align:left}
+.mic svg{width:30px;height:30px;color:var(--ok)}
+.mic .meter{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden}
+.mic .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ok) 70%,var(--warn) 88%,var(--pgm));transition:width 90ms linear}
+.mic b{font-size:22px;letter-spacing:.06em;white-space:nowrap}
+.mic[aria-pressed="true"]{border-color:var(--pgm);background:var(--pgm-soft)}
+.mic[aria-pressed="true"] svg,.mic[aria-pressed="true"] b{color:var(--pgm-ink)}
+.mic:disabled{border-color:var(--line-2);background:var(--panel)}
+.mic:disabled svg,.mic:disabled b{color:var(--muted)}
+.sq{display:flex;align-items:center;justify-content:center;height:64px;width:64px;padding:0;box-sizing:border-box;border-radius:14px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--muted);flex:none}
+.sq svg{width:28px;height:28px}
+.sq[aria-pressed="true"],.sq[aria-expanded="true"]{border:2px solid var(--accent);background:var(--accent-soft);color:var(--accent)}
+.out{display:flex;align-items:center;gap:12px;height:64px;padding:0 24px;border-radius:999px;border:2px solid var(--line-2);background:var(--panel-2);font-weight:800;font-size:21px;letter-spacing:.06em;font-variant-numeric:tabular-nums;white-space:nowrap;flex:none}
 .out .dot{width:12px;height:12px;border-radius:50%;background:var(--dim)}
 .out .cap{display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:999px;font-size:16px;letter-spacing:.06em}
 .out .cap svg{width:14px;height:14px}
@@ -63,8 +72,6 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .out.wait .dot{background:var(--warn);animation:blink 1s infinite}
 .out.remind{border-color:var(--warn);color:var(--warn)}
 @keyframes blink{50%{opacity:.3}}
-.menuBtn{display:flex;align-items:center;gap:12px;height:64px;padding:0 26px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel-2);font-size:22px;font-weight:600}
-.menuBtn[aria-expanded="true"]{border:2px solid var(--accent);background:var(--accent-soft)}
 .menu{position:absolute;top:104px;right:32px;width:480px;box-sizing:border-box;padding:12px;border-radius:18px;border:1px solid var(--line-2);background:var(--panel);box-shadow:0 24px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:4px;z-index:20}
 .menu button{display:flex;align-items:center;gap:16px;height:72px;padding:0 18px;border-radius:12px;border:none;background:transparent;font-size:22px;font-weight:600;text-align:left}
 .menu button:active{background:var(--panel-2)}
@@ -73,38 +80,57 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
 /* body */
 .main{flex:1;display:flex;gap:32px;min-height:0}
-.left{width:1100px;display:flex;flex-direction:column;gap:20px;flex:none;min-height:0}
-.mon{position:relative;width:1100px;height:619px;border-radius:16px;border:3px solid var(--pgm);overflow:hidden;background:#000;flex:none;box-sizing:border-box}
-.mon img{display:block;width:100%;height:100%;object-fit:contain}
-.mon .tag{position:absolute;top:16px;left:16px;padding:6px 14px;border-radius:8px;background:var(--pgm);color:#fff;font-weight:800;font-size:18px;letter-spacing:.08em;max-width:900px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mon .wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:26px;font-weight:600}
-.mic{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:20px;height:72px;padding:0 24px;border-radius:14px;border:2px solid var(--ok);background:var(--ok-soft);text-align:left;flex:none}
-.mic svg{width:30px;height:30px;color:var(--ok)}
-.mic .meter{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden}
-.mic .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ok) 70%,var(--warn) 88%,var(--pgm));transition:width 90ms linear}
-.mic b{font-size:22px;letter-spacing:.06em}
-.mic[aria-pressed="true"]{border-color:var(--pgm);background:var(--pgm-soft)}
-.mic[aria-pressed="true"] svg,.mic[aria-pressed="true"] b{color:var(--pgm-ink)}
-.mic:disabled{border-color:var(--line-2);background:var(--panel)}
-.mic:disabled svg,.mic:disabled b{color:var(--muted)}
-.notes{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;overflow:hidden}
-.bn{display:flex;align-items:center;gap:16px;min-height:72px;padding:12px 20px;box-sizing:border-box;border-radius:14px;border:1px solid var(--line-2);background:var(--panel);font-size:20px;line-height:1.35}
-.bn svg{width:28px;height:28px;color:var(--muted)}
+.left{width:1180px;display:flex;flex-direction:column;gap:20px;flex:none;min-height:0}
+.left.centered{justify-content:center}
+.left.centered .onscr{display:none}
+.mons{display:flex;gap:16px;flex:none}
+.mon{position:relative;width:1180px;height:664px;border-radius:16px;border:3px solid var(--pgm);overflow:hidden;background:#000;flex:none;box-sizing:border-box}
+.mons.studio .mon{flex:1 1 0;min-width:0;width:auto;height:auto;aspect-ratio:16/9}
+.mon img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain}
+.mon .tag{position:absolute;top:16px;left:16px;padding:6px 14px;border-radius:8px;background:var(--pgm);color:#fff;font-weight:800;font-size:18px;letter-spacing:.08em;max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mons.studio .mon .tag{top:10px;left:10px;font-size:15px;padding:4px 10px}
+.mon.pv{border-color:var(--ok)}
+.mon.pv .tag{background:var(--ok)}
+.mon .wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:24px;font-weight:600}
+.cut{flex:none;height:84px;border-radius:16px;border:none;background:var(--ok);color:#06210f;font-size:30px;font-weight:800;letter-spacing:.08em;display:flex;align-items:center;justify-content:center;gap:16px}
+.cut span{font-size:18px;font-weight:600;letter-spacing:0;color:rgba(6,33,15,.75)}
+/* notices sit at the bottom of the Program picture */
+.notes{position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:10px;z-index:2}
+.bn{display:flex;align-items:center;gap:16px;min-height:68px;padding:10px 18px;box-sizing:border-box;border-radius:14px;border:1px solid var(--line-2);background:rgba(20,25,32,.94);font-size:19px;line-height:1.35}
+.bn svg{width:26px;height:26px;color:var(--muted)}
 .bn b{color:var(--fg)}
 .bn .t{flex:1;min-width:0;color:var(--muted)}
-.bn.bad{border-color:var(--pgm);background:var(--pgm-soft)}
+.bn.bad{border-color:var(--pgm);background:rgba(60,18,22,.95)}
 .bn.bad svg{color:var(--pgm-ink)}
-.bn.warn{border-color:var(--warn);background:var(--warn-soft)}
+.bn.warn{border-color:var(--warn);background:rgba(55,40,10,.95)}
 .bn.warn svg{color:var(--warn)}
-.bn .btn{height:56px;padding:0 22px;font-size:20px;flex:none}
-.ssbar{display:grid;grid-template-columns:120px minmax(0,1fr) 120px;gap:12px;height:88px;flex:none}
+.bn .btn{height:52px;padding:0 20px;font-size:19px;flex:none}
+.ssbar{display:grid;grid-template-columns:110px minmax(0,1fr) 110px;gap:10px;height:76px}
 .ssbar .btn{height:auto}
-.ssbar .mid{display:flex;align-items:center;gap:16px;padding:0 18px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel);min-width:0}
-.ssbar .mid img{height:64px;border-radius:6px}
-.ssbar .mid b{font-size:22px;white-space:nowrap}
-.ssbar .mid span{font-size:18px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ssbar .mid{display:flex;align-items:center;gap:16px;padding:0 18px;border-radius:14px;border:1px solid var(--line-2);background:rgba(20,25,32,.94);min-width:0}
+.ssbar .mid b{font-size:21px;white-space:nowrap}
+.ssbar .mid span{font-size:17px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.right{flex:1;display:flex;flex-direction:column;gap:20px;min-width:0}
+/* under Program: Hymn, Bible and the lower thirds */
+.onscr{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;min-height:0}
+.osrow{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:80px;flex:none}
+.osrow button{display:flex;align-items:center;justify-content:center;gap:12px;border-radius:16px;border:1px solid var(--line-2);background:var(--panel);font-size:26px;font-weight:700}
+.lbl{font-size:15px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.ltrow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:12px;height:92px;flex:none}
+.ltb{position:relative;display:flex;align-items:center;gap:12px;padding:0 16px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel-2);text-align:left;overflow:hidden;min-width:0}
+.ltb svg{width:26px;height:26px;color:var(--muted);flex:none}
+.ltb .t{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ltb b{font-size:21px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ltb small{font-size:14px;color:var(--muted);font-weight:600;white-space:nowrap}
+.ltb[aria-pressed="true"]{border:2px solid var(--pgm);background:var(--pgm-soft)}
+.ltb[aria-pressed="true"] svg,.ltb[aria-pressed="true"] small{color:var(--pgm-ink)}
+.ltb .bar{position:absolute;left:0;bottom:0;height:5px;background:var(--pgm);animation:cd linear forwards}
+@keyframes cd{from{width:100%}to{width:0}}
+.waitnote{display:flex;align-items:center;gap:12px;height:92px;padding:0 20px;box-sizing:border-box;border-radius:14px;border:1px dashed var(--line-2);font-size:19px;color:var(--muted);flex:none}
+.waitnote svg{width:24px;height:24px}
+
+/* right: scene tiles */
+.right{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
 .tiles{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;min-height:0}
 .tile{display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 64px 0 28px;border-radius:18px;border:2px solid var(--line-2);background:var(--panel-2);text-align:left;font-size:32px;font-weight:700;position:relative;min-width:0;overflow:hidden}
 .tile .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -113,52 +139,100 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .tile .mi.off{color:var(--pgm)}
 .tile[aria-pressed="true"]{border:3px solid var(--pgm);background:var(--pgm-soft);color:#fff;font-weight:800}
 .tile[aria-pressed="true"] small{color:var(--pgm-ink);font-weight:700;letter-spacing:.04em}
+.tile.pvw{border:3px solid var(--ok);background:var(--ok-soft)}
+.tile.pvw small{color:var(--ok);font-weight:700;letter-spacing:.08em}
 .tile.pending{border-color:var(--warn)}
-.nowbar{display:flex;align-items:center;gap:14px;padding:0 4px;font-size:20px;color:var(--muted);min-height:30px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nowbar b{color:var(--fg)}
-.nowbar .up{padding:3px 10px;border-radius:6px;background:var(--pgm);color:#fff;font-weight:800;font-size:15px;letter-spacing:.08em}
-.nowbar .up.off{background:var(--panel-2);color:var(--muted)}
-.ons{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:16px;height:96px;flex:none}
-.ons button{display:flex;align-items:center;justify-content:center;gap:12px;border-radius:16px;border:1px solid var(--line-2);background:var(--panel);font-size:26px;font-weight:700}
-.ons .next{background:var(--accent);border-color:var(--accent);color:#fff;font-size:30px}
-.ons .done{color:var(--pgm-ink);border-color:var(--pgm)}
-.ons .off{grid-column:1/-1;font-size:20px;color:var(--muted);display:flex;align-items:center;padding:0 20px;border:1px dashed var(--line-2);border-radius:16px}
+.tiles.compact{flex:none;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none!important;grid-auto-rows:84px;gap:12px}
+.tiles.compact .tile{font-size:22px;padding:0 44px 0 18px;border-radius:14px}
+.tiles.compact .tile small{display:none}
+.tiles.compact .tile .mi{top:12px;right:12px;width:20px;height:20px}
+
+/* the hymn or passage that's open */
+.otnow{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;padding:20px;box-sizing:border-box;border-radius:18px;border:1px solid var(--line-2);background:var(--panel)}
+.ot-top{display:flex;align-items:center;gap:14px;min-width:0;flex:none}
+.ot-tag{padding:5px 12px;border-radius:8px;background:var(--pgm);color:#fff;font-weight:800;font-size:15px;letter-spacing:.08em;flex:none}
+.ot-tag.off{background:var(--panel-2);color:var(--muted)}
+.ot-t{display:flex;flex-direction:column;min-width:0}
+.ot-t b{font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-t span{font-size:17px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-vs{display:flex;flex-wrap:wrap;gap:8px;flex:none}
+.ot-vs.nums{max-height:172px;overflow-y:auto;align-content:flex-start}
+.ot-vs button{min-width:60px;height:52px;padding:0 14px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-size:19px;font-weight:700}
+.ot-vs button[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.ot-vs button.seen{color:var(--muted)}
+.ot-ly{flex:1;min-height:0;overflow:hidden;padding:16px 20px;border-radius:12px;background:var(--bg);border:1px solid var(--line);font-size:25px;line-height:1.45}
+.ot-ly small{display:block;font-size:16px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
+.ot-ly .dim{color:var(--dim);font-size:20px}
+.ot-split{flex:1;min-height:0;display:grid;grid-template-rows:1fr 1fr;border-radius:12px;border:1px solid var(--line);overflow:hidden}
+.ot-half{display:flex;flex-direction:column;justify-content:center;gap:8px;padding:12px 20px;min-height:0;overflow:hidden;text-align:left;font-size:25px;line-height:1.4}
+.ot-half b{font-size:14px;font-weight:800;letter-spacing:.1em}
+.ot-half.now{background:var(--bg)}
+.ot-half.now b{color:var(--pgm-ink)}
+.ot-half.now b.off{color:var(--muted)}
+.ot-half.now.intro span{font-family:var(--f-brand);font-size:30px}
+.ot-half.nx{border:none;border-top:1px dashed var(--line-2);background:var(--panel-2);color:var(--muted);font-family:inherit}
+.ot-half.nx b{color:var(--accent)}
+.ot-half.nx.last{cursor:default}
+.ot-half.nx.last b{color:var(--muted)}
+.ot-ctrl{display:grid;grid-template-columns:100px 150px 1fr;gap:12px;height:84px;flex:none}
+.ot-ctrl button{border-radius:14px;border:1px solid var(--line-2);background:var(--panel-2);font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+.ot-ctrl .show{background:var(--pgm);border-color:var(--pgm);color:#fff}
+.ot-ctrl .hide{border:2px solid var(--pgm);color:var(--pgm-ink)}
+.ot-done{height:70px;flex:none;border-radius:14px;border:1px solid var(--line-2);background:transparent;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+
+/* the Hymn and Bible screens take the place of Hymn, Bible and the lower thirds, under Program */
+.left{position:relative}
+.dock{position:absolute;left:0;bottom:0;width:1180px;height:244px;max-height:100%;z-index:25;box-sizing:border-box;background:var(--bg);display:grid;grid-template-columns:104px minmax(0,1fr) 210px;gap:18px}
+.bkcol{position:relative;display:flex;min-height:0}
+.bk1{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;border-radius:14px;border:2px solid var(--line-2);background:var(--panel-2)}
+.bk1[aria-expanded="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.bkpop{position:absolute;left:0;bottom:calc(100% + 12px);width:460px;max-height:620px;overflow-y:auto;z-index:30;padding:10px;box-sizing:border-box;border-radius:16px;border:1px solid var(--line-2);background:var(--panel);box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:6px}
+.bkpop button{display:flex;align-items:center;gap:16px;min-height:76px;padding:0 14px 0 10px;border-radius:12px;border:none;background:transparent;text-align:left;font-size:21px}
+.bkpop button[aria-selected="true"]{background:var(--accent-soft)}
+.bkpop button svg{margin-left:auto;width:26px;height:26px;color:var(--accent)}
+.bico{width:64px;height:64px;border-radius:10px;flex:none;object-fit:contain;display:flex;align-items:center;justify-content:center;background:var(--panel);border:1px solid var(--line-2);font-family:var(--f-brand);font-weight:700;font-size:18px;color:var(--muted);box-sizing:border-box}
+.bkpop .bico{width:54px;height:54px;font-size:16px}
+.trb{display:flex;align-items:center;justify-content:center;min-width:64px;height:64px;padding:0 6px;box-sizing:border-box;border-radius:10px;background:var(--bg);border:1px solid var(--line-2);font-size:17px;font-weight:800}
+.bkpop .trb{min-width:72px;height:50px;font-size:15px}
+.dk-pad{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}
+.dk-head{display:flex;align-items:center;gap:14px;height:56px;flex:none;min-width:0}
+.dk-head h2{margin:0;font-size:26px}
+.hy-num{width:170px;flex:none;height:56px;box-sizing:border-box;border-radius:12px;border:2px solid var(--accent);background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
+.hy-num.empty{font-size:19px;font-weight:500;color:var(--dim);border-color:var(--line-2)}
+.hy-res{flex:1;min-width:0;font-size:19px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hy-res b{color:var(--fg)}
+.hy-res .err{color:var(--pgm-ink)}
+.kp{flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:1fr 1fr;gap:10px;min-height:0}
+.kp button{border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);font-size:30px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.kp .sm{font-size:18px;color:var(--muted)}
+.dk-act{display:flex;flex-direction:column;gap:12px}
+.dk-act .enter{flex:1;border-radius:14px;border:none;background:var(--pgm);color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px}
+.dk-act .enter:disabled{opacity:.35}
+.dk-act .cancel{height:76px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel-2);font-size:24px;font-weight:700}
+.dk-act .reading{flex:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:0 16px;border-radius:14px;border:none;background:var(--accent);color:#fff;font-size:22px;font-weight:700;text-align:left}
+.dk-act .reading small{font-size:14px;font-weight:600;opacity:.85}
+.dk-act .spacer{flex:1}
+.seg2{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;border-radius:12px;background:var(--panel);border:1px solid var(--line-2);width:440px;box-sizing:border-box}
+.seg2 button{height:42px;border-radius:9px;border:none;background:transparent;font-size:18px;font-weight:700}
+.seg2 button[aria-selected="true"]{background:var(--accent);color:#fff}
+.crumb{display:flex;align-items:center;gap:6px;height:52px;padding:0 16px 0 8px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);font-size:18px;font-weight:700}
+.crumb svg{width:22px;height:22px}
+.bkname{font-size:24px}
+.bgrid{flex:1;min-height:0;overflow-y:auto;display:grid;gap:8px;align-content:start}
+.bgrid.books{grid-template-columns:repeat(8,minmax(0,1fr));grid-auto-rows:52px}
+.bgrid.nums{grid-template-columns:repeat(10,minmax(0,1fr));grid-auto-rows:52px}
+.bgrid button{border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-size:19px;font-weight:700}
 
 /* sheets and the confirm dialog */
-.scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:30}
-.sheet{width:860px;max-height:1000px;box-sizing:border-box;padding:32px;border-radius:24px;background:var(--panel);border:1px solid var(--line-2);display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
-.sheet.wide{width:1400px}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:40}
+.sheet{width:860px;box-sizing:border-box;padding:32px;border-radius:24px;background:var(--panel);border:1px solid var(--line-2);display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
 .sheet h2{margin:0;font-size:34px;text-wrap:balance}
 .sheet p{margin:0;font-size:22px;color:var(--muted);line-height:1.45}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .btn{height:84px;border-radius:16px;border:1px solid var(--line-2);background:var(--panel-2);font-size:24px;font-weight:700}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.danger{background:var(--pgm);border-color:var(--pgm);color:#fff}
-.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.keys button{height:84px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel-2);font-size:32px;font-weight:700;font-variant-numeric:tabular-nums}
-.num{height:90px;border-radius:14px;border:1px solid var(--line-2);background:var(--bg);display:flex;align-items:center;padding:0 24px;font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
-.num span{font-size:22px;font-weight:600;color:var(--muted);margin-left:20px;overflow:hidden;text-overflow:ellipsis}
-.num span.err{color:var(--pgm-ink)}
-.chips{display:flex;flex-wrap:wrap;gap:12px}
-.chips button{min-height:76px;padding:8px 26px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel-2);font-size:24px;font-weight:700}
-.chips button small{display:block;font-size:15px;font-weight:600;color:var(--muted);letter-spacing:.06em}
-.chips button[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-soft)}
-.chips button.up{border:2px solid var(--pgm);background:var(--pgm-soft)}
-.chips button.seen{color:var(--muted)}
-.chips.scroll{max-height:560px;overflow:auto}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px;border-radius:14px;background:var(--bg);border:1px solid var(--line-2)}
-.seg button{height:64px;border-radius:10px;border:none;background:transparent;font-size:22px;font-weight:700}
-.seg button[aria-selected="true"]{background:var(--accent);color:#fff}
-.grid{display:grid;gap:10px;max-height:520px;overflow:auto}
-.grid.books{grid-template-columns:repeat(7,minmax(0,1fr))}
-.grid.nums{grid-template-columns:repeat(10,minmax(0,1fr))}
-.grid button{height:72px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);font-size:22px;font-weight:700}
-.pickh{display:flex;align-items:center;gap:18px;font-size:24px}
-.pickh .link{height:56px;padding:0 18px 0 8px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);display:flex;align-items:center;gap:6px;font-size:20px;font-weight:700}
-.pickh span{color:var(--muted);font-size:20px}
-.reading{display:flex;align-items:center;gap:16px;height:84px;padding:0 24px;border-radius:16px;border:none;background:var(--accent);color:#fff;font-size:24px;font-weight:700;text-align:left}
-.reading small{display:block;font-size:16px;font-weight:600;opacity:.85}
-.toast{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);padding:16px 28px;border-radius:999px;background:var(--fg);color:var(--bg);font-weight:700;font-size:22px;z-index:40;max-width:1400px;text-align:center}
+.toast{position:absolute;left:50%;top:112px;transform:translateX(-50%);padding:16px 28px;border-radius:999px;background:var(--fg);color:var(--bg);font-weight:700;font-size:22px;z-index:50;max-width:1400px;text-align:center}
 </style>
 </head>
 <body>
@@ -166,11 +240,16 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
   <header class="top">
     <div class="logo"><div class="badge">LIVE</div><b>BGH</b><span class="coll" id="coll">Connecting…</span></div>
-    <div class="grow"></div>
+    <button type="button" class="mic" id="mic" aria-pressed="false">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true" id="micIco"></svg>
+      <span class="meter"><i id="lvl"></i></span>
+      <b id="micTxt"></b>
+    </button>
     <button type="button" class="out" id="liveBtn"></button>
     <button type="button" class="out" id="recBtn"></button>
-    <button type="button" class="safeBtn" id="safeBtn" aria-pressed="false" aria-label="Safe mode"></button>
-    <button type="button" class="menuBtn" id="menuBtn" aria-expanded="false" aria-controls="menu">Menu<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+    <button type="button" class="sq" id="studioBtn" aria-pressed="false" aria-label="Studio Mode" title="Studio Mode: tap a scene to put it in Preview, then CUT to send it live"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/></svg></button>
+    <button type="button" class="sq" id="safeBtn" aria-pressed="false" aria-label="Safe mode"></button>
+    <button type="button" class="sq" id="menuBtn" aria-expanded="false" aria-controls="menu" aria-label="Menu" title="Menu"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
   </header>
 
   <nav class="menu" id="menu" aria-label="Menu" hidden>
@@ -184,19 +263,18 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
   </nav>
 
   <div class="main">
-    <div class="left">
-      <div class="mon"><img id="pgm" alt="" hidden><span class="wait" id="pgmWait">Waiting for a picture from OBS…</span><span class="tag" id="pgmTag">PROGRAM</span></div>
-      <button type="button" class="mic" id="mic" aria-pressed="false">
-        <svg class="i" viewBox="0 0 24 24" aria-hidden="true" id="micIco"></svg>
-        <span class="meter"><i id="lvl"></i></span>
-        <b id="micTxt"></b>
-      </button>
-      <div class="notes" id="notes"></div>
+    <div class="left" id="left">
+      <div class="mons" id="mons">
+        <div class="mon pv" id="monPvw" hidden><img id="pvw" alt="" hidden><span class="wait" id="pvwWait">Waiting for a picture…</span><span class="tag" id="pvwTag">PREVIEW</span></div>
+        <div class="mon" id="monPgm"><img id="pgm" alt="" hidden><span class="wait" id="pgmWait">Waiting for a picture from OBS…</span><span class="tag" id="pgmTag">PROGRAM</span><div class="notes" id="notes"></div></div>
+      </div>
+      <button type="button" class="cut" id="cutBtn" hidden>CUT<span id="cutTxt"></span></button>
+      <div class="onscr" id="onscr"></div>
+      <div class="dock" id="dock" role="region" aria-label="Hymn" hidden></div>
     </div>
     <div class="right">
       <div class="tiles" id="tiles"></div>
-      <div class="nowbar" id="nowbar"></div>
-      <div class="ons" id="ons"></div>
+      <div class="otnow" id="otnow" aria-label="On screen" hidden></div>
     </div>
   </div>
 
@@ -216,11 +294,12 @@ const ICON = {
   book:'<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>',
   back:'<path d="m15 18-6-6 6-6"/>', fwd:'<path d="m9 18 6-6-6-6"/>', check:'<path d="M20 6 9 17l-5-5"/>',
-  list:'<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
   stop:'<rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" stroke="none"/>',
   alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
   info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
-  slides:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>'
+  slides:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>',
+  del:'<path d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="m12 9 6 6"/><path d="m18 9-6 6"/>',
+  enter:'<polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/>'
 };
 const ic = (n, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[n] || ""}</svg>`;
 const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, "0")).join(":"); };
@@ -229,7 +308,7 @@ const durTxt = s => s >= 60 && s % 60 === 0 ? `${s / 60} min` : `${s} s`;
 // Only touch what changed, so a tap in progress isn't lost to a redraw
 const setHTML = (el, html) => { if(el._h !== html){ el._h = html; el.innerHTML = html; } };
 
-const S = {st:null, stAt:0, level:0, frame:"", pending:null, pendingT:null};
+const S = {st:null, stAt:0, level:0, frame:"", pframe:"", pending:null, pendingT:null, pick:null};
 
 /* ---------------- talking to the controller */
 async function cmd(c, args = {}){
@@ -240,21 +319,21 @@ async function cmd(c, args = {}){
 async function act(c, args, ask){
   if(!ask) args = {...args, sure:true};
   else if(S.st && S.st.safe){
-    if(!await confirmSheet("Safe mode is on", `${ask}`, "Yes, do it")) return {ok:false};
+    if(!await confirmSheet("Safe mode is on", ask, "Yes, do it")) return {ok:false};
     args = {...args, sure:true};
   }
   const j = await cmd(c, args);
   if(!j.ok && j.error) toast(j.error);
   return j;
 }
+const say = j => { if(j && !j.ok && j.error) toast(j.error); return j; };
 
 /* ---------------- drawing */
 function render(){
   const st = S.st;
   if(!st){ $("coll").textContent = "Waiting for the controller…"; return; }
-  const ok = st.obs;
-  $("coll").textContent = ok ? st.collection : "Not connected to OBS";
-  $("coll").className = "coll" + (ok ? "" : " bad");
+  $("coll").textContent = st.obs ? st.collection : "Not connected to OBS";
+  $("coll").className = "coll" + (st.obs ? "" : " bad");
   $("mColl").textContent = st.collection || "";
   $("mSlides").textContent = st.slides && st.slides.on ? "On" : "Off";
 
@@ -276,6 +355,7 @@ function render(){
   sb.setAttribute("aria-pressed", String(!!st.safe));
   sb.title = st.safe ? "Safe mode is on: every change asks first. Tap to turn it off." : "Safe mode is off. Tap to turn it on.";
   setHTML(sb, `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="${st.safe ? "M7 11V7a5 5 0 0 1 10 0v4" : "M7 11V7a5 5 0 0 1 9.9-1"}"></path></svg>`);
+  $("studioBtn").setAttribute("aria-pressed", String(!!st.studio));
 
   const a = st.audio || {}, micOk = !!a.name && !a.missing;
   $("mic").disabled = !micOk;
@@ -284,59 +364,78 @@ function render(){
   $("micTxt").textContent = !micOk ? "NO MIC SET UP" : a.muted ? "MUTED · tap for mic" : "MIC ON · tap to mute";
   if(a.muted || !micOk) $("lvl").style.width = "0%";
 
+  // Program, and Preview with CUT in Studio Mode
   const tag = `PROGRAM · ${String(st.program || "").toUpperCase()}`;
   if($("pgmTag").textContent !== tag) $("pgmTag").textContent = tag;
+  $("mons").classList.toggle("studio", !!st.studio); $("monPvw").hidden = !st.studio; $("cutBtn").hidden = !st.studio;
+  if(st.studio){
+    $("pvwTag").textContent = `PREVIEW · ${String(st.preview || "—").toUpperCase()}`;
+    const same = !st.preview || st.preview === st.program;
+    $("cutTxt").textContent = same ? "" : `${st.preview} goes live`; $("cutBtn").disabled = same;
+  }
+  // Hymns, Bible and lower thirds off for this collection: Program sits in the middle
+  $("left").classList.toggle("centered", !st.ltOn);
+  if(!st.ltOn && S.pick) closeDock();
 
   const list = st.scenes || [];
   setHTML($("tiles"), list.map(tileHTML).join(""));
   $("tiles").style.gridTemplateRows = `repeat(${Math.max(1, Math.ceil(list.length / 2))},minmax(0,1fr))`;
-  renderOns(st);
+  renderOnScreen(st);
   renderNotes(st);
 }
 function tileHTML(s){
   const st = S.st, ae = st.autoEnd || {};
-  let sub = s.on ? "ON AIR" : s.sub ? esc(s.sub) : "";
+  let sub = s.on ? "ON AIR" : s.pv ? "PREVIEW" : s.sub ? esc(s.sub) : "";
   if(s.ending && ae.on){
     if(s.on && ae.kept) sub = "ON AIR · staying live";
     else if(s.on && ae.left != null) sub = `ON AIR · ends in ${secTxt(endLeft())} · tap to cancel`;
-    else if(!s.on) sub = `Ends the stream after ${durTxt(ae.sec)}`;
+    else if(!s.on && !s.pv) sub = `Ends the stream after ${durTxt(ae.sec)}`;
   }
   const mic = s.mic === "off" ? ic("micOff", "i mi off") : s.mic === "on" ? ic("mic", "i mi") : "";
   const pend = S.pending === s.label && !s.on;
-  return `<button type="button" class="tile${pend ? " pending" : ""}" data-sc="${esc(s.label)}" aria-pressed="${!!s.on}"><span class="nm">${esc(s.label)}</span>${sub ? `<small>${sub}</small>` : ""}${mic}</button>`;
+  return `<button type="button" class="tile${s.pv ? " pvw" : ""}${pend ? " pending" : ""}" data-sc="${esc(s.label)}" aria-pressed="${!!s.on}"><span class="nm">${esc(s.label)}</span>${sub ? `<small>${sub}</small>` : ""}${mic}</button>`;
 }
 function endLeft(){ const ae = S.st.autoEnd; return Math.max(0, ae.left - Math.floor((Date.now() - S.stAt) / 1000)); }
-function renderOns(st){
-  const it = st.item, up = st.ltUp;
-  let nb = "", ons = "";
-  if(!st.ltOn){
-    ons = `<span class="off">Hymns, Bible and names are off for ${esc(st.collection)}. Turn them on in Settings → Scene collections.</span>`;
-  } else if(it && it.kind === "hymn"){
-    const sub = it.intro ? "number on screen · Next brings in the words" : `${esc(it.label)}${it.pages > 1 ? ` (${it.page} of ${it.pages})` : ""}${it.part === "chorus" && /^verse /i.test(it.label) ? " · Chorus" : it.part === "final" ? " · Final chorus" : ""} · ${it.i + 1} of ${it.n}`;
-    nb = `<span class="up${it.showing ? "" : " off"}">${it.showing ? "ON SCREEN" : "HIDDEN"}</span><b>${esc(it.title)}</b> · ${sub}`;
-    ons = `<button type="button" data-o="back" ${it.i ? "" : "disabled"}>${ic("back")}Back</button>
-      <button type="button" class="next" data-o="next" ${it.next ? "" : "disabled"}>Next${ic("fwd")}</button>
-      ${it.labels && it.labels.length > 1 ? `<button type="button" data-o="verses">${ic("list")}Verses</button>` : ""}
-      <button type="button" class="done" data-o="done">${ic("check")}Done</button>`;
-  } else if(it){
-    nb = `<span class="up${it.showing ? "" : " off"}">${it.showing ? "ON SCREEN" : it.started ? "HIDDEN" : "READY"}</span><b>${esc(it.started ? it.ref : it.title)}</b>${it.started ? "" : " · tap Start, or Verses to pick where to start"}`;
-    ons = `<button type="button" data-o="back" ${it.started && it.i ? "" : "disabled"}>${ic("back")}Back</button>
-      <button type="button" class="next" data-o="next" ${!it.started || it.i < it.verses.length - 1 ? "" : "disabled"}>${it.started ? "Next" : "Start"}${ic("fwd")}</button>
-      <button type="button" data-o="verses">${ic("list")}Verses</button>
-      <button type="button" class="done" data-o="done">${ic("check")}Done</button>`;
-  } else {
-    if(up){
-      const left = st.ltEnds ? Math.max(0, Math.ceil((st.ltEnds - Date.now()) / 1000)) : 0;
-      nb = `<span class="up">ON SCREEN</span><b>${esc(up.name)}</b>${up.sub ? ` · ${esc(up.sub)}` : ""}${left ? ` · hides in ${left} s` : ""}`;
-    }
-    ons = `<button type="button" data-o="hymn" ${up ? "disabled" : ""}>${ic("music")}Hymn</button>
-      <button type="button" data-o="bible" ${up ? "disabled" : ""}>${ic("book")}Bible</button>
-      <button type="button" data-o="names">${ic("user")}Names</button>`;
+
+/* Under Program: Hymn, Bible and the lower thirds. On the right: the hymn or passage that's open. */
+function renderOnScreen(st){
+  const it = st.ltOn ? st.item : null, up = st.ltUp;
+  let html = "";
+  if(st.ltOn){
+    const lts = it ? `<div class="waitnote">${ic("info")}Lower thirds come back when the ${it.kind === "hymn" ? "hymn" : "passage"} is done.</div>`
+      : st.lts.length ? `<div class="ltrow">${st.lts.map((l, i) => {
+          const on = !!up && up.name === l.name && up.sub === l.sub;
+          const left = on && st.ltEnds ? Math.max(0, (st.ltEnds - Date.now()) / 1000) : 0, dur = st.ltDur || 8;
+          return `<button type="button" class="ltb" data-lt="${i}" aria-pressed="${on}">${ic(l.host ? "mic" : "user")}<span class="t"><b>${esc(l.name)}</b>${on ? "<small>On screen</small>" : l.host ? "<small>Host</small>" : ""}</span>${on && st.ltEnds ? `<i class="bar" style="animation-duration:${dur}s;animation-delay:-${(dur - left).toFixed(2)}s"></i>` : ""}</button>`;
+        }).join("")}</div>` : "";
+    html = `<div class="osrow"><button type="button" data-o="hymn" ${up ? "disabled" : ""}>${ic("music")}Hymn</button><button type="button" data-o="bible" ${up ? "disabled" : ""}>${ic("book")}Bible</button></div>
+      ${lts ? `<span class="lbl">Lower thirds</span>${lts}` : ""}`;
   }
-  setHTML($("nowbar"), nb);
-  setHTML($("ons"), ons);
-  if(S.sheetFor === "verses" && S.drawVerses) S.drawVerses();
-  if(S.sheetFor === "names" && S.drawNames) S.drawNames();
+  setHTML($("onscr"), html);
+  $("tiles").classList.toggle("compact", !!it);
+  const on = $("otnow"); on.hidden = !it;
+  if(!it){ setHTML(on, ""); return; }
+  if(it.kind === "hymn"){
+    const sub = it.intro ? "Number on screen · Next brings in the words" : `${esc(it.label)}${it.pages > 1 ? ` (${it.page} of ${it.pages})` : ""}${it.part === "final" ? " · Final chorus" : ""} · ${it.i + 1} of ${it.n}`;
+    setHTML(on, `<div class="ot-top"><span class="ot-tag${it.showing ? "" : " off"}">${it.showing ? "ON SCREEN" : "HIDDEN"}</span><span class="ot-t"><b>${esc(it.title)}</b><span>${sub}</span></span></div>
+      ${it.labels.length > 1 ? `<div class="ot-vs" role="group" aria-label="Go to a verse">${it.labels.map(l => `<button type="button" data-jl="${esc(l)}" aria-current="${!it.intro && it.label === l}">${esc(l.replace(/^Verse /, ""))}</button>`).join("")}</div>` : ""}
+      <div class="ot-split">
+        <div class="ot-half now${it.intro ? " intro" : ""}"><b class="${it.showing ? "" : "off"}">${it.showing ? "ON SCREEN" : "HIDDEN"}</b><span>${it.lines.map(esc).join("<br>")}</span></div>
+        ${it.next ? `<button type="button" class="ot-half nx" data-o="next"><b>NEXT · tap to show</b><span>${it.next.map(esc).join("<br>")}</span></button>` : `<div class="ot-half nx last"><b>LAST</b><span>Tap Done when the hymn ends</span></div>`}
+      </div>
+      <div class="ot-ctrl"><button type="button" data-o="back" aria-label="Back" ${it.i ? "" : "disabled"}>${ic("back")}</button><button type="button" class="${it.showing ? "hide" : "show"}" data-o="show">${it.showing ? "Hide" : "Show"}</button><button type="button" data-o="next" aria-label="Next" ${it.next ? "" : "disabled"}>${ic("fwd")}</button></div>
+      <button type="button" class="ot-done" data-o="done">${ic("check")}Done · close the hymn</button>`);
+  } else {
+    const seen = new Set(it.seen || []);
+    setHTML(on, `<div class="ot-top"><span class="ot-tag${it.showing ? "" : " off"}">${it.showing ? "ON SCREEN" : it.started ? "HIDDEN" : "READY"}</span><span class="ot-t"><b>${esc(it.title)}</b><span>${it.started ? esc(it.ref) : "Tap a verse number as it's read"}</span></span></div>
+      <div class="ot-vs nums" role="group" aria-label="Verses">${it.verses.map((v, i) => `<button type="button" data-vi="${i}" class="${seen.has(i) && i !== it.i ? "seen" : ""}" aria-current="${!!it.started && i === it.i}">${v}</button>`).join("")}</div>
+      <div class="ot-ly">${it.started ? `<small>${esc(it.ref)}</small>${esc(it.text)}` : `<span class="dim">Nothing on screen yet. Tap the verse number when the reading starts.</span>`}</div>
+      <div class="ot-ctrl"><button type="button" data-o="back" aria-label="Previous verse" ${it.started && it.i ? "" : "disabled"}>${ic("back")}</button><button type="button" class="${it.showing ? "hide" : "show"}" data-o="show" ${it.started ? "" : "disabled"}>${it.showing ? "Hide" : "Show"}</button><button type="button" data-o="next" aria-label="Next verse" ${!it.started || it.i < it.verses.length - 1 ? "" : "disabled"}>${it.started ? ic("fwd") : "Start"}</button></div>
+      <button type="button" class="ot-done" data-o="done">${ic("check")}Done · close the passage</button>`);
+    // Keep the verse on screen in view
+    const c = on.querySelector('.ot-vs.nums [aria-current="true"]');
+    if(c){ const box = c.parentElement; if(c.offsetTop < box.scrollTop || c.offsetTop + c.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = c.offsetTop - box.offsetTop - 4; }
+  }
 }
 function renderNotes(st){
   const out = [];
@@ -348,59 +447,56 @@ function renderNotes(st){
   if(g && g.on && g.src === "laptop" && g.live){
     if(!g.open) out.push(`<div class="bn warn">${ic("slides")}<span class="t"><b>The slideshow isn't open.</b></span><button type="button" class="btn primary" data-n="ss-open">Open the slideshow</button></div>`);
     else out.push(`<div class="ssbar"><button type="button" class="btn" data-n="ss-back" aria-label="Previous slide" ${g.n <= 1 ? "disabled" : ""}>${ic("back")}</button>
-      <div class="mid">${S.slideImg ? `<img src="${S.slideImg}" alt="">` : ic("slides")}<b>${g.total ? `Slide ${g.n} of ${g.total}` : `Slide ${g.n}`}</b><span>${esc(g.title || "")}</span></div>
+      <div class="mid">${ic("slides")}<b>${g.total ? `Slide ${g.n} of ${g.total}` : `Slide ${g.n}`}</b><span>${esc(g.title || "")}</span></div>
       <button type="button" class="btn primary" data-n="ss-next" aria-label="Next slide" ${g.total && g.n >= g.total ? "disabled" : ""}>${ic("fwd")}</button></div>`);
   }
   setHTML($("notes"), out.join(""));
 }
 
-/* ---------------- sheets */
-function sheet(html, wire, opts = {}){
-  $("layer").innerHTML = `<div class="scrim" id="scrim"><div class="sheet${opts.wide ? " wide" : ""}" role="dialog" aria-modal="true">${html}</div></div>`;
-  $("scrim").addEventListener("click", e => { if(e.target.id === "scrim"){ close(); if(opts.onCancel) opts.onCancel(); } });
-  S.sheetFor = opts.kind || "";
-  wire && wire();
-}
-function close(){ $("layer").innerHTML = ""; S.sheetFor = ""; S.drawVerses = S.drawNames = null; }
-function confirmSheet(title, body, ok, danger){
-  return new Promise(res => sheet(`<h2>${esc(title)}</h2><p>${esc(body)}</p><div class="row2"><button type="button" class="btn" id="no">Cancel</button><button type="button" class="btn ${danger ? "danger" : "primary"}" id="yes">${esc(ok)}</button></div>`,
-    () => { $("no").onclick = () => { close(); res(false); }; $("yes").onclick = () => { close(); res(true); }; }, {onCancel:() => res(false)}));
-}
-let toastT;
-function toast(m){ const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600 + Math.max(0, m.length - 60) * 40); }
-
+/* ---------------- the Hymn and Bible screens, under Program */
+const bookIco = b => b && b.icon ? `<img class="bico" alt="" src="${esc(b.icon)}">` : `<span class="bico">${esc(b ? b.letter || "?" : "?")}</span>`;
+const HY = {book:"", num:"", found:null, t:null, pick:false};
 function openHymn(){
-  const st = S.st; if(!st.books || !st.books.length) return toast("There are no hymn books yet. Add one in Settings → On-screen text.");
-  let book = st.books.some(b => b.id === st.book) ? st.book : st.books[0].id, num = "", found = null, t = null;
-  const bookName = () => (st.books.find(b => b.id === book) || {}).name || "this book";
-  const draw = () => {
-    const el = $("hNum"); if(!el) return;
-    el.innerHTML = !num ? `<span style="margin:0">Hymn number</span>` : `${esc(num)}${found ? `<span>${esc(found.title)} · ${found.verses} verse${found.verses === 1 ? "" : "s"}</span>` : found === false ? `<span class="err">No hymn ${esc(num)} in ${esc(bookName())}</span>` : `<span>Looking…</span>`}`;
-    $("hGo").disabled = !found;
-  };
-  const look = () => {
-    clearTimeout(t); found = null; draw();
-    if(!num) return;
-    const n = num;
-    t = setTimeout(async () => {
-      const j = await cmd("hymn-find", {book, num:n});
-      if(n !== num || !$("hNum")) return;
-      found = j.ok && j.data ? j.data : false; draw();
-    }, 200);
-  };
-  sheet(`<h2>Hymn</h2>${st.books.length > 1 ? `<div class="chips" id="hBooks">${st.books.map(b => `<button type="button" data-b="${esc(b.id)}" aria-pressed="${b.id === book}">${esc(b.short || b.name)}</button>`).join("")}</div>` : `<p>${esc(st.books[0].name)}</p>`}
-    <div class="num" id="hNum"></div>
-    <div class="keys">${[1,2,3,4,5,6,7,8,9].map(k => `<button type="button" data-k="${k}">${k}</button>`).join("")}<button type="button" data-k="c">Clear</button><button type="button" data-k="0">0</button><button type="button" data-k="x" aria-label="Delete">⌫</button></div>
-    <div class="row2"><button type="button" class="btn" id="hNo">Cancel</button><button type="button" class="btn primary" id="hGo" disabled>Put it up</button></div>`, () => {
-    document.querySelectorAll("#hBooks [data-b]").forEach(b => b.onclick = () => { book = b.dataset.b; document.querySelectorAll("#hBooks [data-b]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); look(); });
-    document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const k = b.dataset.k; num = k === "c" ? "" : k === "x" ? num.slice(0, -1) : (num + k).slice(0, 4); look(); });
-    $("hNo").onclick = close;
-    $("hGo").onclick = async () => { const n = num; close(); await act("hymn", {book, num:n}, `Show hymn ${n} on the stream?`); };
-    draw();
-  }, {kind:"hymn"});
+  const st = S.st; if(!st.books.length) return toast("There are no hymn books yet. Add one in Settings → On-screen text.");
+  HY.book = st.books.some(b => b.id === st.book) ? st.book : st.books[0].id; HY.num = ""; HY.found = null; HY.pick = false;
+  S.pick = "hymn"; $("dock").hidden = false; placeDock(); $("dock").setAttribute("aria-label", "Hymn"); drawHymn();
+}
+// The Hymn and Bible screens cover exactly the box under Program (taller in Studio Mode, up to 300)
+function placeDock(){ const top = $("onscr").offsetTop, h = $("left").clientHeight - top; $("dock").style.height = Math.max(200, Math.min(300, h)) + "px"; }
+function closeDock(){ S.pick = null; $("dock").hidden = true; $("dock").innerHTML = ""; }
+function drawHymn(){
+  const st = S.st, b = st.books.find(x => x.id === HY.book) || st.books[0];
+  $("dock").innerHTML = `<div class="bkcol"><button type="button" class="bk1" data-pick="1" aria-expanded="${HY.pick}" aria-label="Hymn book: ${esc(b.name)}. Tap to change" title="${esc(b.name)}">${bookIco(b)}</button>
+      ${HY.pick ? `<div class="bkpop" role="listbox" aria-label="Hymn book">${st.books.map(x => `<button type="button" role="option" data-bk="${esc(x.id)}" aria-selected="${x.id === b.id}">${bookIco(x)}<b>${esc(x.name)}</b>${x.id === b.id ? ic("check") : ""}</button>`).join("")}</div>` : ""}</div>
+    <div class="dk-pad">
+      <div class="dk-head"><h2>Hymn</h2><div class="hy-num${HY.num ? "" : " empty"}">${esc(HY.num) || "Number"}</div>
+        <div class="hy-res">${esc(b.name)} · ${!HY.num ? "Tap the number on the keypad" : HY.found ? `<b>${esc(HY.num)} · ${esc(HY.found.title)}</b> · ${HY.found.verses} verse${HY.found.verses === 1 ? "" : "s"}` : HY.found === false ? `<span class="err">no hymn ${esc(HY.num)}</span>` : "Looking…"}</div></div>
+      <div class="kp">${[1,2,3,4,5,6,7,8,9,0].map(k => `<button type="button" data-k="${k}">${k}</button>`).join("")}<button type="button" data-k="x" aria-label="Delete">${ic("del")}</button><button type="button" data-k="c" class="sm">Clear</button></div>
+    </div>
+    <div class="dk-act"><button type="button" class="enter" data-k="enter" ${HY.found ? "" : "disabled"}>${ic("enter")}Enter</button><button type="button" class="cancel" data-k="cancel">Cancel</button></div>`;
+}
+function hymnLook(){
+  clearTimeout(HY.t); HY.found = null; drawHymn();
+  if(!HY.num) return;
+  const n = HY.num, bk = HY.book;
+  HY.t = setTimeout(async () => {
+    const j = await cmd("hymn-find", {book:bk, num:n});
+    if(S.pick !== "hymn" || HY.num !== n || HY.book !== bk) return;
+    HY.found = j.ok && j.data ? j.data : false; drawHymn();
+  }, 200);
+}
+async function hymnTap(t){
+  const d = t.dataset;
+  if(d.pick){ HY.pick = !HY.pick; drawHymn(); return; }
+  if(d.bk){ HY.book = d.bk; HY.pick = false; hymnLook(); return; }
+  if(d.k === "enter"){
+    const book = HY.book, num = HY.num; closeDock();
+    await act("hymn", {book, num}, `Show hymn ${num} on the stream?`); return;
+  }
+  if(d.k){ HY.num = d.k === "c" ? "" : d.k === "x" ? HY.num.slice(0, -1) : (HY.num + d.k).slice(0, 4); hymnLook(); }
 }
 /* The books of the Bible and how many chapters each has */
-const BOOKS = [["Genesis",50],["Exodus",40],["Leviticus",27],["Numbers",36],["Deuteronomy",34],["Joshua",24],["Judges",21],["Ruth",4],
+const BIBLE = [["Genesis",50],["Exodus",40],["Leviticus",27],["Numbers",36],["Deuteronomy",34],["Joshua",24],["Judges",21],["Ruth",4],
   ["1 Samuel",31],["2 Samuel",24],["1 Kings",22],["2 Kings",25],["1 Chronicles",29],["2 Chronicles",36],["Ezra",10],["Nehemiah",13],
   ["Esther",10],["Job",42],["Psalms",150],["Proverbs",31],["Ecclesiastes",12],["Song of Solomon",8],["Isaiah",66],["Jeremiah",52],
   ["Lamentations",5],["Ezekiel",48],["Daniel",12],["Hosea",14],["Joel",3],["Amos",9],["Obadiah",1],["Jonah",4],["Micah",7],["Nahum",3],
@@ -408,86 +504,83 @@ const BOOKS = [["Genesis",50],["Exodus",40],["Leviticus",27],["Numbers",36],["De
   ["Matthew",28],["Mark",16],["Luke",24],["John",21],["Acts",28],["Romans",16],["1 Corinthians",16],["2 Corinthians",13],["Galatians",6],
   ["Ephesians",6],["Philippians",4],["Colossians",4],["1 Thessalonians",5],["2 Thessalonians",3],["1 Timothy",6],["2 Timothy",4],
   ["Titus",3],["Philemon",1],["Hebrews",13],["James",5],["1 Peter",5],["2 Peter",3],["1 John",5],["2 John",1],["3 John",1],["Jude",1],["Revelation",22]];
+// Short names, so all the books fit on the buttons (the full name is read out)
+const ABBR = {"Genesis":"Gen","Exodus":"Exod","Leviticus":"Lev","Numbers":"Num","Deuteronomy":"Deut","Joshua":"Josh","Judges":"Judg","Ruth":"Ruth",
+  "1 Samuel":"1 Sam","2 Samuel":"2 Sam","1 Kings":"1 Kgs","2 Kings":"2 Kgs","1 Chronicles":"1 Chr","2 Chronicles":"2 Chr","Ezra":"Ezra","Nehemiah":"Neh",
+  "Esther":"Esth","Job":"Job","Psalms":"Ps","Proverbs":"Prov","Ecclesiastes":"Eccl","Song of Solomon":"Song","Isaiah":"Isa","Jeremiah":"Jer",
+  "Lamentations":"Lam","Ezekiel":"Ezek","Daniel":"Dan","Hosea":"Hos","Joel":"Joel","Amos":"Amos","Obadiah":"Obad","Jonah":"Jonah","Micah":"Mic",
+  "Nahum":"Nah","Habakkuk":"Hab","Zephaniah":"Zeph","Haggai":"Hag","Zechariah":"Zech","Malachi":"Mal",
+  "Matthew":"Matt","Mark":"Mark","Luke":"Luke","John":"John","Acts":"Acts","Romans":"Rom","1 Corinthians":"1 Cor","2 Corinthians":"2 Cor",
+  "Galatians":"Gal","Ephesians":"Eph","Philippians":"Phil","Colossians":"Col","1 Thessalonians":"1 Thess","2 Thessalonians":"2 Thess",
+  "1 Timothy":"1 Tim","2 Timothy":"2 Tim","Titus":"Titus","Philemon":"Phlm","Hebrews":"Heb","James":"Jas","1 Peter":"1 Pet","2 Peter":"2 Pet",
+  "1 John":"1 Jn","2 John":"2 Jn","3 John":"3 Jn","Jude":"Jude","Revelation":"Rev"};
+const BB = {tr:"KJV", trs:[{abbr:"KJV", ok:true}], pick:false, tm:"nt", book:null};
 async function openBible(){
   const st = S.st;
-  let tr = st.tr || "KJV", trs = [{abbr:tr, ok:true}], testament = "nt", book = null;
-  const j = await cmd("bible-status"); if(j.ok && Array.isArray(j.data)) trs = j.data;
-  if(!trs.some(x => x.abbr === tr && x.ok)) tr = (trs.find(x => x.ok) || {abbr:"KJV"}).abbr;
-  const open = async ref => { close(); await act("bible", {ref, tr}, `Open ${ref} (${tr})?`); };
-  const draw = () => {
-    const el = $("bPick"); if(!el) return;
-    const list = testament === "ot" ? BOOKS.slice(0, 39) : BOOKS.slice(39);
-    el.innerHTML = book
-      ? `<div class="pickh"><button type="button" class="link" id="bBack">${ic("back")}Books</button><b>${esc(book[0])}</b><span>Choose a chapter</span></div>
-         <div class="grid nums">${Array.from({length:book[1]}, (_, i) => `<button type="button" data-ch="${i + 1}">${i + 1}</button>`).join("")}</div>`
-      : `<div class="seg" role="tablist" aria-label="Testament"><button type="button" role="tab" data-tm="ot" aria-selected="${testament === "ot"}">Old Testament</button><button type="button" role="tab" data-tm="nt" aria-selected="${testament === "nt"}">New Testament</button></div>
-         <div class="grid books">${list.map(b => `<button type="button" data-bk="${esc(b[0])}">${esc(b[0])}</button>`).join("")}</div>`;
-    el.querySelectorAll("[data-tm]").forEach(b => b.onclick = () => { testament = b.dataset.tm; draw(); });
-    el.querySelectorAll("[data-bk]").forEach(b => b.onclick = () => { const bk = BOOKS.find(x => x[0] === b.dataset.bk); if(bk[1] === 1) return open(bk[0]); book = bk; draw(); });
-    el.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => open(`${book[0]} ${b.dataset.ch}`));
-    if($("bBack")) $("bBack").onclick = () => { book = null; draw(); };
-  };
-  sheet(`<h2>Bible</h2>
-    <div class="chips" id="bTr">${trs.map(x => `<button type="button" data-t="${esc(x.abbr)}" aria-pressed="${x.abbr === tr}" ${x.ok ? "" : "disabled"}>${esc(x.abbr)}</button>`).join("")}</div>
-    ${st.reading ? `<button type="button" class="reading" id="bRead">${ic("book")}<span>Open ${esc(st.reading)}<small>Today's Bible Reading</small></span></button>` : ""}
-    <div id="bPick" style="display:flex;flex-direction:column;gap:16px"></div>
-    <div class="row2"><button type="button" class="btn" id="bNo">Cancel</button><span></span></div>`, () => {
-    document.querySelectorAll("#bTr [data-t]").forEach(b => b.onclick = () => { tr = b.dataset.t; document.querySelectorAll("#bTr [data-t]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
-    if($("bRead")) $("bRead").onclick = () => open(st.reading);
-    $("bNo").onclick = close;
-    draw();
-  }, {wide:true, kind:"bible"});
+  BB.tr = st.tr || "KJV"; BB.pick = false; BB.book = null;
+  S.pick = "bible"; $("dock").hidden = false; placeDock(); $("dock").setAttribute("aria-label", "Bible"); drawBible();
+  const j = await cmd("bible-status");
+  if(j.ok && Array.isArray(j.data) && j.data.length) BB.trs = j.data;
+  if(!BB.trs.some(x => x.abbr === BB.tr && x.ok)) BB.tr = (BB.trs.find(x => x.ok) || {abbr:"KJV"}).abbr;
+  if(S.pick === "bible") drawBible();
 }
-function openVerses(){
-  sheet(`<h2 id="vH"></h2><div class="chips scroll" id="vList"></div><div class="row2"><button type="button" class="btn" id="vNo">Close</button><span></span></div>`, () => {
-    $("vNo").onclick = close;
-    S.drawVerses = () => {
-      const it = S.st && S.st.item; if(!it) return close();
-      if(it.kind === "hymn"){
-        $("vH").textContent = `${it.title}: go to`;
-        setHTML($("vList"), it.labels.map(l => `<button type="button" data-jl="${esc(l)}" aria-pressed="${!it.intro && l === it.label}">${esc(l)}</button>`).join(""));
-      } else {
-        const seen = new Set(it.seen || []);
-        $("vH").textContent = `${it.title}: tap the verse being read`;
-        setHTML($("vList"), it.verses.map((v, i) => `<button type="button" data-vi="${i}" class="${seen.has(i) && i !== it.i ? "seen" : ""}" aria-pressed="${!!it.started && i === it.i}">${v}</button>`).join(""));
-      }
-    };
-    $("vList").addEventListener("click", e => {
-      const b = e.target.closest("button"); if(!b) return;
-      if(b.dataset.jl) cmd("jump", {label:b.dataset.jl}).then(j => !j.ok && j.error && toast(j.error));
-      else cmd("verse", {i:+b.dataset.vi}).then(j => { if(j.ok) close(); else if(j.error) toast(j.error); });
-    });
-    S.drawVerses();
-  }, {wide:true, kind:"verses"});
+function drawBible(){
+  const st = S.st, list = BB.tm === "ot" ? BIBLE.slice(0, 39) : BIBLE.slice(39), b = BB.book && BIBLE.find(x => x[0] === BB.book);
+  $("dock").innerHTML = `<div class="bkcol"><button type="button" class="bk1" data-trpick="1" aria-expanded="${BB.pick}" aria-label="Translation: ${esc(BB.tr)}. Tap to change"><span class="trb">${esc(BB.tr)}</span></button>
+      ${BB.pick ? `<div class="bkpop" role="listbox" aria-label="Translation">${BB.trs.map(t => `<button type="button" role="option" data-tr="${esc(t.abbr)}" aria-selected="${t.abbr === BB.tr}" ${t.ok ? "" : "disabled"}><span class="trb">${esc(t.abbr)}</span><b>${esc(t.name || t.abbr)}</b>${t.abbr === BB.tr ? ic("check") : ""}</button>`).join("")}</div>` : ""}</div>
+    <div class="dk-pad">
+      <div class="dk-head"><h2>Bible</h2>${b
+        ? `<button type="button" class="crumb" data-bback="1">${ic("back")}Books</button><b class="bkname">${esc(b[0])}</b><span class="hy-res">Choose a chapter</span>`
+        : `<div class="seg2" role="tablist" aria-label="Testament"><button type="button" role="tab" data-tm="ot" aria-selected="${BB.tm === "ot"}">Old Testament</button><button type="button" role="tab" data-tm="nt" aria-selected="${BB.tm === "nt"}">New Testament</button></div>`}</div>
+      <div class="bgrid ${b ? "nums" : "books"}">${b
+        ? Array.from({length:b[1]}, (_, i) => `<button type="button" data-ch="${i + 1}">${i + 1}</button>`).join("")
+        : list.map(x => `<button type="button" data-bkb="${esc(x[0])}" aria-label="${esc(x[0])}">${esc(ABBR[x[0]] || x[0])}</button>`).join("")}</div>
+    </div>
+    <div class="dk-act">${st.reading ? `<button type="button" class="reading" data-ref="${esc(st.reading)}">${esc(st.reading)}<small>Today's Bible Reading</small></button>` : `<span class="spacer"></span>`}<button type="button" class="cancel" data-k="cancel">Cancel</button></div>`;
 }
-function openNames(){
-  sheet(`<h2>Names</h2><p id="nP"></p><div class="chips" id="nList"></div><div class="row2"><button type="button" class="btn" id="nNo">Close</button><span></span></div>`, () => {
-    $("nNo").onclick = close;
-    S.drawNames = () => {
-      const st = S.st; if(!st) return;
-      $("nP").textContent = st.lts.length ? `Tap a name to show it. It hides itself after ${st.ltDur || 8} seconds. Tap it again to take it off.` : "No speakers yet. Choose them in Go Live, or in Change speaker on the full controller.";
-      setHTML($("nList"), st.lts.map((l, i) => { const up = !!st.ltUp && st.ltUp.name === l.name && st.ltUp.sub === l.sub;
-        return `<button type="button" data-ln="${i}" class="${up ? "up" : ""}">${esc(l.short || l.name)}${l.note ? `<small>${esc(l.note)}</small>` : ""}</button>`; }).join(""));
-    };
-    $("nList").addEventListener("click", async e => {
-      const b = e.target.closest("[data-ln]"); if(!b) return;
-      const st = S.st, l = st.lts[+b.dataset.ln]; if(!l) return;
-      const up = !!st.ltUp && st.ltUp.name === l.name && st.ltUp.sub === l.sub;
-      if(!up) close();
-      await act("lt", {name:l.name, sub:l.sub}, up ? null : `Show ${l.name}'s name on the stream?`);
-    });
-    S.drawNames();
-  }, {kind:"names"});
+async function bibleTap(t){
+  const d = t.dataset;
+  const open = async ref => { const tr = BB.tr; closeDock(); await act("bible", {ref, tr}, `Open ${ref} (${tr})?`); };
+  if(d.trpick) BB.pick = !BB.pick;
+  else if(d.tr){ BB.tr = d.tr; BB.pick = false; }
+  else if(d.tm) BB.tm = d.tm;
+  else if(d.bback) BB.book = null;
+  else if(d.bkb){ const x = BIBLE.find(y => y[0] === d.bkb); if(x[1] === 1) return open(x[0]); BB.book = d.bkb; }
+  else if(d.ch) return open(`${BB.book} ${d.ch}`);
+  else if(d.ref) return open(d.ref);
+  else return;
+  drawBible();
 }
+$("dock").addEventListener("click", e => {
+  const t = e.target.closest("button"); if(!t || t.disabled) return;
+  if(t.dataset.k === "cancel") return closeDock();
+  if(S.pick === "hymn") hymnTap(t); else if(S.pick === "bible") bibleTap(t);
+});
+
+/* ---------------- sheets */
+function sheet(html, wire, opts = {}){
+  $("layer").innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  $("scrim").addEventListener("click", e => { if(e.target.id === "scrim"){ close(); if(opts.onCancel) opts.onCancel(); } });
+  wire && wire();
+}
+function close(){ $("layer").innerHTML = ""; }
+function confirmSheet(title, body, ok, danger){
+  return new Promise(res => sheet(`<h2>${esc(title)}</h2><p>${esc(body)}</p><div class="row2"><button type="button" class="btn" id="no">Cancel</button><button type="button" class="btn ${danger ? "danger" : "primary"}" id="yes">${esc(ok)}</button></div>`,
+    () => { $("no").onclick = () => { close(); res(false); }; $("yes").onclick = () => { close(); res(true); }; }, {onCancel:() => res(false)}));
+}
+let toastT;
+function toast(m){ const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600 + Math.max(0, m.length - 60) * 40); }
 
 /* ---------------- taps */
 $("tiles").addEventListener("click", async e => {
   const b = e.target.closest("[data-sc]"); if(!b || !S.st) return;
   const n = b.dataset.sc, s = S.st.scenes.find(x => x.label === n); if(!s) return;
+  // Studio Mode: a tapped scene goes into Preview only; nothing goes live until CUT
+  if(S.st.studio){ if(!s.on) say(await cmd("preview", {label:n})); return; }
   if(s.on){
     // Ending, live and counting down: tapping it again keeps Ending on but cancels the timer
     const ae = S.st.autoEnd;
-    if(s.ending && ae.on && ae.left != null && !ae.kept){ const j = await cmd("keep"); if(j.ok) toast("Timer cancelled. The stream stays live."); else if(j.error) toast(j.error); }
+    if(s.ending && ae.on && ae.left != null && !ae.kept){ const j = await cmd("keep"); if(j.ok) toast("Timer cancelled. The stream stays live."); else say(j); }
     return;
   }
   if(S.st.safe && !await confirmSheet("Safe mode is on", `Switch the livestream to ${n}?`, "Switch")) return;
@@ -495,53 +588,64 @@ $("tiles").addEventListener("click", async e => {
   S.pendingT = setTimeout(() => { if(S.pending === n){ S.pending = null; render(); } }, 4000);
   const j = await cmd("scene", {label:n, sure:true});
   S.pending = null; clearTimeout(S.pendingT);
-  if(!j.ok && j.error) toast(j.error);
-  render();
+  say(j); render();
 });
-$("ons").addEventListener("click", e => {
-  const b = e.target.closest("[data-o]"); if(!b || b.disabled) return;
-  const o = b.dataset.o, say = j => !j.ok && j.error && toast(j.error);
-  if(o === "hymn") openHymn();
-  else if(o === "bible") openBible();
-  else if(o === "names") openNames();
-  else if(o === "verses") openVerses();
-  else if(o === "next") cmd("step", {d:1}).then(say);
-  else if(o === "back") cmd("step", {d:-1}).then(say);
-  else if(o === "done") cmd("done").then(say);
-});
+$("cutBtn").onclick = async () => {
+  const st = S.st; if(!st || !st.preview || st.preview === st.program) return;
+  if(st.safe && !await confirmSheet("Safe mode is on", `Cut to ${st.preview}?`, "Cut")) return;
+  say(await cmd("cut"));
+};
+$("studioBtn").onclick = async () => { if(!S.st) return; const on = !S.st.studio; const j = await cmd("studio", {on}); if(j.ok) toast(on ? "Studio Mode on: tap a scene to put it in Preview, then CUT." : "Studio Mode off: scenes go live when tapped."); else say(j); };
+async function onScreenTap(e){
+  const b = e.target.closest("button"); if(!b || b.disabled || !S.st) return;
+  const st = S.st, d = b.dataset;
+  if(d.lt){
+    const l = st.lts[+d.lt]; if(!l) return;
+    const up = !!st.ltUp && st.ltUp.name === l.name && st.ltUp.sub === l.sub;
+    await act("lt", {name:l.name, sub:l.sub}, up ? null : `Show ${l.name}'s name on the stream?`); return;
+  }
+  if(d.o === "hymn") return openHymn();
+  if(d.o === "bible") return openBible();
+  if(d.jl) return say(await cmd("jump", {label:d.jl}));
+  if(d.vi) return say(await cmd("verse", {i:+d.vi}));
+  if(d.o === "next") return say(await cmd("step", {d:1}));
+  if(d.o === "back") return say(await cmd("step", {d:-1}));
+  if(d.o === "show"){ const it = st.item; return act("ot-show", {}, it && !it.showing ? "Show it on the stream again?" : null); }
+  if(d.o === "done"){ const j = await cmd("done"); if(j.ok) toast("Taken off the screen."); else say(j); }
+}
+$("onscr").addEventListener("click", onScreenTap);
+$("otnow").addEventListener("click", onScreenTap);
 $("notes").addEventListener("click", async e => {
   const b = e.target.closest("[data-n]"); if(!b || b.disabled) return;
-  const n = b.dataset.n, say = j => !j.ok && j.error && toast(j.error);
+  const n = b.dataset.n;
   if(n === "yt"){ const j = await cmd("yt-start"); toast(j.ok ? "Starting the YouTube broadcast…" : j.error || "Couldn't start it. Press Start Broadcast in OBS."); }
-  else if(n === "ss-open") cmd("slide-open").then(say);
-  else if(n === "ss-back") cmd("slide", {d:-1}).then(say);
-  else if(n === "ss-next") cmd("slide", {d:1}).then(say);
+  else if(n === "ss-open") say(await cmd("slide-open"));
+  else if(n === "ss-back") say(await cmd("slide", {d:-1}));
+  else if(n === "ss-next") say(await cmd("slide", {d:1}));
 });
 $("mic").onclick = () => { const a = S.st && S.st.audio; if(!a || !a.name || a.missing) return; const m = !a.muted; act("mute", {muted:m}, m ? null : "Unmute the mic?"); };
-$("safeBtn").onclick = async () => { if(!S.st) return; const j = await cmd("safe", {on:!S.st.safe}); if(j.ok) toast(!S.st.safe ? "Safe mode on: every change asks first." : "Safe mode off."); else if(j.error) toast(j.error); };
+$("safeBtn").onclick = async () => { if(!S.st) return; const on = !S.st.safe; const j = await cmd("safe", {on}); if(j.ok) toast(on ? "Safe mode on: every change asks first." : "Safe mode off."); else say(j); };
 $("liveBtn").onclick = async () => {
   const st = S.st; if(!st) return;
   if(st.live){
     if(!await confirmSheet("End the livestream?", `You have been live for ${fmt(Date.now() - st.liveT0)}. Viewers will see the stream end. Recording keeps going if it's on.`, "End livestream", true)) return;
-    const j = await cmd("stream-stop"); if(!j.ok && j.error) toast(j.error);
-    return;
+    return say(await cmd("stream-stop"));
   }
   // Go Live, the waiting message and signing in all happen in the full controller, brought onto this screen
-  const j = await cmd("go-live"); if(!j.ok && j.error) toast(j.error);
+  say(await cmd("go-live"));
 };
 $("recBtn").onclick = async () => {
   const st = S.st; if(!st) return;
   if(st.rec){
     if(!await confirmSheet("Stop recording?", `The recording has been running for ${fmt(Date.now() - st.recT0)}. Stopping finalizes the file.`, "Stop recording", true)) return;
-    const j = await cmd("rec-stop"); if(!j.ok && j.error) toast(j.error);
-    return;
+    return say(await cmd("rec-stop"));
   }
   let j = await cmd("rec-start");
   if(!j.ok && j.code === "LOW_DISK"){
     if(!await confirmSheet("Low disk space", j.error, "Record anyway")) return;
     j = await cmd("rec-start", {force:true});
   }
-  if(!j.ok && j.error) toast(j.error);
+  say(j);
 };
 const menuOpen = open => { $("menu").hidden = !open; $("menuBtn").setAttribute("aria-expanded", String(open)); };
 $("menuBtn").onclick = () => menuOpen($("menu").hidden);
@@ -549,10 +653,14 @@ $("menu").addEventListener("click", async e => {
   const b = e.target.closest("[data-m]"); if(!b) return;
   menuOpen(false);
   // Everything in the menu opens in the full controller, brought onto this screen until it's closed
-  const j = await cmd("open", {what:b.dataset.m}); if(!j.ok && j.error) toast(j.error);
+  say(await cmd("open", {what:b.dataset.m}));
 });
-document.addEventListener("click", e => { if(!$("menu").hidden && !e.target.closest("#menu,#menuBtn")) menuOpen(false); });
-// No long-press menus, no text selection, no zooming with two fingers on the touchscreen
+document.addEventListener("click", e => {
+  if(!$("menu").hidden && !e.target.closest("#menu,#menuBtn")) menuOpen(false);
+  // Tapping elsewhere closes the book or translation list
+  if((HY.pick || BB.pick) && !e.target.closest(".bkcol")){ HY.pick = BB.pick = false; if(S.pick === "hymn") drawHymn(); else if(S.pick === "bible") drawBible(); }
+});
+// No long-press menus on the touchscreen
 document.addEventListener("contextmenu", e => e.preventDefault());
 
 /* ---------------- what the controller sends */
@@ -562,16 +670,14 @@ function onState(s){
   if(S.pending && s.scenes && s.scenes.some(x => x.label === S.pending && x.on)){ S.pending = null; clearTimeout(S.pendingT); }
   render();
 }
-function onFrame(f){
-  if(!f || f === S.frame) return;
-  S.frame = f; const img = $("pgm"); img.src = f; img.hidden = false; $("pgmWait").hidden = true;
-}
+function picture(imgId, waitId, f){ const img = $(imgId); img.src = f; img.hidden = false; $(waitId).hidden = true; }
 if(api){
   api.onState(onState);
-  api.onFrame(onFrame);
+  api.onFrame(f => { if(f && f !== S.frame){ S.frame = f; picture("pgm", "pgmWait", f); } });
+  if(api.onPframe) api.onPframe(f => { if(f && f !== S.pframe){ S.pframe = f; picture("pvw", "pvwWait", f); } });
   api.onLevel(l => { S.level = l; const a = S.st && S.st.audio; $("lvl").style.width = (a && (a.muted || !a.name || a.missing) ? 0 : l) + "%"; });
   api.onToast(t => t && toast(t));
-  api.hello().then(h => { if(h){ if(h.frame) onFrame(h.frame); if(h.state) onState(h.state); } }).catch(() => {});
+  api.hello().then(h => { if(h){ if(h.frame){ S.frame = h.frame; picture("pgm", "pgmWait", h.frame); } if(h.state) onState(h.state); } }).catch(() => {});
 }
 
 /* ---------------- clocks */

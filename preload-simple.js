@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld("bghSimple", {
   onState: fn => ipcRenderer.on("simple-state", (e, s) => fn(s)),
   onLevel: fn => ipcRenderer.on("simple-level", (e, l) => fn(l)),
   onFrame: fn => ipcRenderer.on("simple-frame", (e, f) => fn(f)),
+  onPframe: fn => ipcRenderer.on("simple-pframe", (e, f) => fn(f)),
   onToast: fn => ipcRenderer.on("simple-toast", (e, t) => fn(t))
 });
