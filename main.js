@@ -531,7 +531,8 @@ function createWindow() {
   win.on("close", onWindowClose);
   // Windows is shutting down or signing out: close straight away
   win.on("session-end", () => { allowClose = true; });
-  win.on("closed", () => { win = null; });
+  // Simple mode closes with the controller
+  win.on("closed", () => { win = null; if (simple) simple.close(); });
 }
 
 app.on("second-instance", (e, argv) => {
@@ -543,15 +544,17 @@ app.on("second-instance", (e, argv) => {
 });
 
 app.whenReady().then(() => {
+  if (process.env.BGH_TEST_DISPLAYS) { try { require("./test-displays")(screen, process.env.BGH_TEST_DISPLAYS); } catch (e) {} }
   lastDisplays = describeDisplays();
   screen.on("display-added", (e, d) => displaysChanged("added", d));
   screen.on("display-removed", (e, d) => displaysChanged("removed", d));
   createWindow();
   phone = require("./phone").setup({ ipcMain, getWin: () => win, userData, appDir: __dirname });
   slides = require("./slides").setup({ ipcMain, getWin: () => win, userData: userData(), screen });
+  simple = require("./simple").setup({ ipcMain, getWin: () => win, appDir: __dirname });
   setupAppUpdates();
 });
 // The slideshow's Chrome window closes with the controller
-let slides = null;
+let slides = null, simple = null;
 app.on("will-quit", () => { if (slides) slides.close().catch(() => {}); });
 app.on("window-all-closed", () => app.quit());

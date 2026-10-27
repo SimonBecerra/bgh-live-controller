@@ -48,6 +48,19 @@ contextBridge.exposeInMainWorld("bgh", {
     onChanged: fn => ipcRenderer.on("phone-changed", () => fn()),
     onPaired: fn => ipcRenderer.on("phone-paired", (e, d) => fn(d))
   },
+  simple: {
+    open: displayId => ipcRenderer.invoke("simple-open", displayId),
+    close: () => ipcRenderer.invoke("simple-close"),
+    status: () => ipcRenderer.invoke("simple-status"),
+    focus: () => ipcRenderer.invoke("simple-focus"),
+    state: s => ipcRenderer.send("simple-state", s),
+    level: l => ipcRenderer.send("simple-level", l),
+    frame: dataUrl => ipcRenderer.send("simple-frame", dataUrl),
+    toast: text => ipcRenderer.send("simple-toast", text),
+    reply: r => ipcRenderer.send("simple-reply", r),
+    onCmd: fn => ipcRenderer.on("simple-cmd", (e, c) => fn(c)),
+    onStatus: fn => ipcRenderer.on("simple-status", (e, s) => fn(s))
+  },
   youtube: {
     viewers: q => ipcRenderer.invoke("youtube-viewers", q),
     test: q => ipcRenderer.invoke("youtube-test", q)

@@ -802,6 +802,9 @@ body.portrait .monitors.studio .cut-wrap{width:var(--mw)}
 .sil-fill.loud{background:var(--pvw)}
 .sil-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--warn)}
 .inline-row{display:flex;align-items:center;gap:10px}
+.sm-hide{display:none!important}
+.sm-back{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;height:56px;padding:0 24px;border-radius:999px;border:2px solid var(--accent);background:var(--accent);color:#fff;font:inherit;font-size:18px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer}
+.sm-back svg{width:22px;height:22px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:600;max-width:calc(100% - 32px);z-index:11}
 
 /* On screen: hymns, Bible verses and lower thirds */
@@ -1715,6 +1718,9 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <label class="check" for="setScreenWindowed" data-desktop-hide><input type="checkbox" id="setScreenWindowed" checked>
               <span>Use a window on the main monitor<small>When your chosen monitor isn't connected, so the controller doesn't cover OBS.</small></span>
             </label>
+            <label class="check" for="setScreenSimple"><input type="checkbox" id="setScreenSimple" checked>
+              <span>Simple mode on the touchscreen<small>With two screens, the full controller stays on the main monitor and the touchscreen shows Simple mode: big scene buttons, the mic, Go Live, Record, hymns, Bible and names. With one screen, it's just the full controller.</small></span>
+            </label>
             <div class="btn-row">
               <button type="button" class="btn" id="setIdentify">Identify monitors</button>
             </div>
@@ -2159,6 +2165,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
+<button type="button" class="sm-back" id="smBack" hidden><i data-lucide="tablet-smartphone"></i>Back to Simple mode</button>
 
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <script>
@@ -5858,7 +5865,7 @@ ui.closeObs = (() => { try{
    the controller asks. Desktop app: Electron's screen.getAllDisplays() gives id, label, bounds and primary; simulated here. */
 let nextDisplayId = 2;
 let protoDisplays = [{id:1, label:"Built-in display", size:"1920×1080", primary:true, pos:"main"}];
-ui.screen = (() => { const d = {target:"main", follow:true, windowed:true};
+ui.screen = (() => { const d = {target:"main", follow:true, windowed:true, simple:true};
   try{ return {...d, ...JSON.parse(localStorage.getItem("screen") || "{}")}; }catch(e){ return d; } })();
 // Older saves stored "Name · size" as text
 if(typeof ui.screen.target === "string" && ui.screen.target !== "main"){ const [label, size] = ui.screen.target.split(" · "); ui.screen.target = {label, size}; }
@@ -5903,6 +5910,17 @@ function renderScreens(){
   if(m.kind === "missing") add("saved", `${cur.label} · ${cur.size} (not connected)`);
   if(m.kind === "ambiguous") add("saved", `${cur.label} · ${cur.size} (more than one: choose which)`);
   sel.value = m.kind === "main" ? "main" : m.kind === "found" ? "d:" + m.d.id : "saved";
+  const simple = $("setScreenSimple").checked;
+  $("setScreen").previousElementSibling.textContent = simple ? "The touchscreen for Simple mode" : "Open the controller on";
+  sel.options[0].textContent = simple ? "Find it by itself (the touchscreen, or the only other screen)" : "The main monitor (whichever it is)";
+  $("setScreenWindowed").closest("label").classList.toggle("sm-hide", simple);
+  if(simple){
+    const t = smTarget({target:cur, simple:true});
+    $("setScreenFollow").closest("label").hidden = true;
+    $("setScreenNow").textContent = `Connected now: ${protoDisplays.map(describe).join("; ")}. ` + (t ? `Simple mode is on ${t.label}; the full controller is on the main monitor.`
+      : protoDisplays.length < 2 ? "Only one screen, so it's just the full controller." : "Choose the touchscreen above, so Simple mode doesn't open on a projector or TV.");
+    return;
+  }
   const p = screenPlacement(cur, $("setScreenWindowed").checked);
   $("setScreenNow").textContent = `Connected now: ${protoDisplays.map(describe).join("; ")}. ` +
     `The controller is on ${p.display.label}, ${window.bgh ? "maximized" : p.full ? "fullscreen" : "in a window"}` +
@@ -5913,6 +5931,7 @@ function renderScreens(){
 }
 $("setScreen").addEventListener("change", renderScreens);
 $("setScreenWindowed").addEventListener("change", renderScreens);
+$("setScreenSimple").addEventListener("change", renderScreens);
 $("setIdentify").addEventListener("click", () => window.bgh ? window.bgh.identify() : toast("Each monitor shows its number and name in large text for a few seconds: " + protoDisplays.map((d, i) => `${i + 1} ${d.label} (${d.primary ? "main" : d.pos})`).join(", ")));
 // Two connected monitors look identical: ask which one is the touchscreen
 function askWhichScreen(list){
@@ -5938,6 +5957,10 @@ function place(mode = "auto"){
   if(!window.bgh) return;
   const main = protoDisplays.find(d => d.primary) || protoDisplays[0];
   if(mode === "corner") return window.bgh.place({displayId:main && main.id, corner:true});
+  // Simple mode on the touchscreen: the full controller stays on the main monitor, unless Simple mode
+  // brought it over for Go Live, Settings or the menu
+  const t = smTarget();
+  if(t) return window.bgh.place({displayId:SM && SM.swap ? t.id : main.id, full:true});
   const p = screenPlacement();
   window.bgh.place({displayId:p.display && p.display.id, full:p.full});
 }
@@ -5948,6 +5971,7 @@ const isLiveOrRec = () => ui.stream.active || ui.rec.active;
 function screensChanged(added, removed){
   if(!$("setOverlay").hidden) renderScreens();
   const target = ui.screen.target, main = protoDisplays.find(d => d.primary);
+  if(smApi && ui.screen.simple){ smScreensChanged(added, removed, main); return; }
   const isTarget = d => sameMonitor(target, d);
   if(added){
     const m = matchTarget();
@@ -5992,7 +6016,7 @@ function screensChanged(added, removed){
 ui.screenNow = "";
 // Desktop app: the real monitors, kept current as they're plugged in and out
 if(window.bgh){
-  window.bgh.displays().then(list => { protoDisplays = list; place(); if(!$("setOverlay").hidden) renderScreens(); });
+  window.bgh.displays().then(list => { protoDisplays = list; place(); smSync(); if(!$("setOverlay").hidden) renderScreens(); });
   window.bgh.onDisplaysChanged(d => { protoDisplays = d.list; screensChanged(d.added, d.removed); });
 }
 
@@ -6543,6 +6567,7 @@ async function openSettingsPanel(page = "connection"){
   $("setViews").checked = vw.cfg.on; $("setViewsBox").hidden = !vw.cfg.on; $("setYtChannel").value = vw.cfg.channel; $("setViewsMsg").textContent = "";
   vw.keyAtOpen = (await secret.get("ytKey")) || ""; $("setYtKey").value = vw.keyAtOpen;
   $("setScreen").innerHTML = ""; screenDraft = null; renderScreens(); $("setScreenFollow").checked = ui.screen.follow; $("setScreenWindowed").checked = ui.screen.windowed;
+  $("setScreenSimple").checked = ui.screen.simple !== false; renderScreens();
   $("setLayout").value = ui.layout; $("setTheme").value = ui.theme; $("setTextSize").value = String(ui.textSize); renderTextSizeNote(); renderAutoBackups();
   $("setHomeLbl").value = homeLabel(); $("setHomeHdr").textContent = homeLabel();
   workSpk = JSON.parse(JSON.stringify({home:ui.speakers.home, visiting:ui.speakers.visiting, teachers:ui.speakers.teachers || []}));
@@ -7633,12 +7658,12 @@ $("setForm").addEventListener("submit", e => {
   ui.bapRels = workRels.length ? [...workRels] : [...BAP_RELS_DEFAULT]; try{ localStorage.setItem("bapRels", JSON.stringify(ui.bapRels)); }catch(err){}
   // Desktop app: Electron's screen module places the window; "display-added" moves it when a monitor is plugged in
   const prevScreen = JSON.stringify(ui.screen);
-  ui.screen = {target:selToTarget($("setScreen").value), follow:$("setScreenFollow").checked, windowed:$("setScreenWindowed").checked};
+  ui.screen = {target:selToTarget($("setScreen").value), follow:$("setScreenFollow").checked, windowed:$("setScreenWindowed").checked, simple:$("setScreenSimple").checked};
   ui.layout = $("setLayout").value; try{ localStorage.setItem("layout", ui.layout); }catch(err){} applyLayout();
   ui.theme = $("setTheme").value; try{ localStorage.setItem("appTheme", ui.theme); }catch(err){} applyTheme();
   ui.textSize = parseFloat($("setTextSize").value) || 1; try{ localStorage.setItem("textSize", String(ui.textSize)); }catch(err){} applyTextSize(); applyLayout();
   try{ localStorage.setItem("screen", JSON.stringify(ui.screen)); }catch(err){}
-  if(JSON.stringify(ui.screen) !== prevScreen) place();
+  if(JSON.stringify(ui.screen) !== prevScreen){ place(); smSync(); }
   try{ localStorage.setItem("openWithObs", ui.openWithObs ? "1" : "0"); localStorage.setItem("closeWithObs", ui.closeWithObs ? "1" : "0"); }catch(err){}
   try{ localStorage.setItem("silenceSec", ui.silenceSec); localStorage.setItem("keepAwake", ui.keepAwake ? "1" : "0"); }catch(err){}
   applyWakeLock();
@@ -7848,7 +7873,7 @@ function confirmDlg(title, body, ok, style = "danger", cancel = "Keep going", al
   });
 }
 let toastT;
-function toast(msg){ $("toast").textContent = msg; $("toast").hidden = false; clearTimeout(toastT); toastT = setTimeout(() => $("toast").hidden = true, 2600 + Math.max(0, msg.length - 60) * 40); }
+function toast(msg){ if(SM && SM.open && !SM.swap) smApi.toast(msg); $("toast").textContent = msg; $("toast").hidden = false; clearTimeout(toastT); toastT = setTimeout(() => $("toast").hidden = true, 2600 + Math.max(0, msg.length - 60) * 40); }
 
 /* OBS events → UI. The UI only changes in response to these, so it always mirrors OBS. */
 obs.on("SceneTransitionStarted", d => { ui.lastTransition = d.transitionName; });
@@ -9069,6 +9094,7 @@ async function drawShot(ctx, scene){
   const r = await withTimeout(obs.call("GetSourceScreenshot", {sourceName:scene, imageFormat:"jpg", imageWidth:854, imageCompressionQuality:75}), 3000);
   const img = new Image(); img.src = r.imageData; await withTimeout(img.decode(), 3000);
   ctx.drawImage(img, 0, 0, ctx.canvas.width, ctx.canvas.height);
+  return r.imageData;
 }
 // When OBS can't give a picture of the scene, say so on the monitor instead of leaving another scene's picture there
 function drawNoShot(ctx, scene, why){
@@ -9079,16 +9105,17 @@ function drawNoShot(ctx, scene, why){
   if(why) txt(c, why.length > 80 ? why.slice(0, 78) + "…" : why, W/2, H*.65, Math.round(H*.035), {w:400, f:BODY, col:"#6f8f9a"});
 }
 async function shotOne(ctx, scene, key){
-  try{ await drawShot(ctx, scene); shotState.fail[key] = null; }
+  try{ const d = await drawShot(ctx, scene); shotState.fail[key] = null; if(key === "pgm" && SM && SM.open) smApi.frame(d); }
   catch(e){
     const f = shotState.fail[key] && shotState.fail[key].scene === scene ? shotState.fail[key] : {scene, n:0};
     f.n++; f.why = (e && (e.message || e.comment)) || String(e); shotState.fail[key] = f;
     // Twice in a row (half a second) for the same scene: show why, so a stale picture is never mistaken for it
-    if(f.n >= 2){ drawNoShot(ctx, scene, f.why); if(f.n === 2) console.warn(`No picture of "${scene}" from OBS: ${f.why}`); }
+    if(f.n >= 2){ drawNoShot(ctx, scene, f.why); if(f.n === 2) console.warn(`No picture of "${scene}" from OBS: ${f.why}`); if(key === "pgm" && SM && SM.open) smApi.frame(ctx.canvas.toDataURL("image/jpeg", .8)); }
   }
 }
 async function pollShots(){
-  if(shotState.busy || ui.connected === false || document.hidden) return;
+  // Hidden behind OBS: still needed while Simple mode shows the picture on the touchscreen
+  if(shotState.busy || ui.connected === false || (document.hidden && !(SM && SM.open))) return;
   shotState.busy = true;
   try{
     if(ui.program) await shotOne(cvP, ui.program, "pgm");
@@ -9252,7 +9279,7 @@ async function phRun(cmd, a){
     case "keep": {   // Ending tapped again on the phone: stay on Ending, but don't end the stream by itself
       if(!autoEnd) return {};
       cancelAutoEnd(); ui.autoEndSkip = ui.program;
-      toast("From the phone: still live. It won't end by itself until you leave Ending and come back.");
+      toast(`${a.simple ? "From Simple mode" : "From the phone"}: still live. It won't end by itself until you leave Ending and come back.`);
       return {};
     }
     case "mute": {
@@ -9303,7 +9330,7 @@ async function phRun(cmd, a){
       renderOt();
       const from = phFromVerse(p, a.ref);
       if(from) { const n = ot.item.slides.findIndex(x => x.v === from); if(n >= 0) bbGo(n); }
-      toast(`From the phone: ${r.name} (${tr})`);
+      if(!a.simple) toast(`From the phone: ${r.name} (${tr})`);
       return {};
     }
     case "verse": { if(!ot.item || ot.item.kind !== "verse") throw phErr("No passage is open."); bbGo(+a.i); return {}; }
@@ -9336,6 +9363,136 @@ if(phApi){
   phApi.onChanged(() => { if(!$("setOverlay").hidden && ui.setPage === "phone") renderPhone(); renderPhonePop(); });
   phApi.onPaired(d => { if(!phonePopPaired(d.name)) toast(`${d.name} is paired as a phone remote`); });
 }
+
+/* ---------------- Simple mode ----------------
+   Desktop app with two screens: the full controller on the main monitor, and Simple mode (simple.js, app/simple.html)
+   filling the touchscreen. Like the phone remote, Simple mode has no OBS connection of its own: this page sends it
+   what's happening and runs its taps through the same functions as the buttons here. Go Live, Settings and the menu
+   bring this window over onto the touchscreen until they're closed. */
+var SM = null;
+const smApi = window.bgh && window.bgh.simple ? window.bgh.simple : null;
+// Which screen Simple mode goes on: the touchscreen chosen in Settings → Screen (remembered the first time Simple mode
+// opens). Before that: the only other screen, or the only touchscreen. Nothing when unsure, so it never opens on a projector or TV.
+function smTarget(scr = ui.screen){
+  if(!(window.bgh && window.bgh.simple) || scr.simple === false || protoDisplays.length < 2) return null;
+  const others = protoDisplays.filter(d => !d.primary), m = matchTarget(scr.target);
+  if(m.kind === "found" && !m.d.primary) return m.d;
+  if(m.kind === "ambiguous"){ const c = m.list.filter(d => !d.primary); return c.length === 1 ? c[0] : null; }
+  if(m.kind === "missing") return null;
+  if(others.length === 1) return others[0];
+  const touch = others.filter(d => d.touch);
+  return touch.length === 1 ? touch[0] : null;
+}
+function smSync(){
+  if(!smApi || !SM) return;
+  const t = smTarget();
+  if(t){
+    // Remember it, so a projector or TV plugged in later is never mistaken for the touchscreen
+    if(!sameMonitor(ui.screen.target, t)){ ui.screen.target = descriptor(t); try{ localStorage.setItem("screen", JSON.stringify(ui.screen)); }catch(e){} }
+    if(!SM.open || SM.displayId !== t.id) smApi.open(t.id);
+  }
+  else if(SM.open || SM.displayId != null) smApi.close();
+}
+function smScreensChanged(added, removed, main){
+  const was = SM.shownOn;
+  ui.screenCorner = false; $("screenBanner").hidden = true; clearTimeout(screenGraceT); screenGraceT = null;
+  smSync(); place();
+  const t = smTarget();
+  if(added) toast(t && t.id === added.id ? `${added.label} connected. Simple mode is on it; the full controller stays on ${main.label}.` : `${added.label} connected. The controller stays where it is.`);
+  if(removed) toast(removed.id === was ? `${removed.label} was unplugged. The full controller is on ${main.label}; Simple mode comes back when it's plugged in again.` : `${removed.label} was unplugged.`);
+}
+function smState(){ return {...phState(), pending:!ui.stream.active && !!ui.streamPending}; }
+let smLast = "";
+function smSend(){
+  if(!SM || !SM.open) return;
+  const s = smState(), j = JSON.stringify(s);
+  if(j === smLast) return;
+  smLast = j; smApi.state(s);
+}
+function smStatus(s){
+  SM.open = !!s.open; SM.displayId = s.open ? s.displayId : null;
+  if(SM.open) SM.shownOn = s.displayId;
+  clearInterval(SM.stateT); clearInterval(SM.lvlT);
+  if(SM.open){
+    smLast = ""; smSend();
+    SM.stateT = setInterval(smSend, 300);
+    SM.lvlT = setInterval(() => smApi.level(ui.muted || ui.audioMissing ? 0 : pct(ui.lastPeak)), 150);
+  } else if(SM.swap) smBack(true);
+}
+// Go Live, Settings and the menu: this window comes onto the touchscreen, and goes back when it's closed
+const smOverlayUp = () => [...document.querySelectorAll(".overlay:not(.dock)")].some(o => !o.hidden);
+async function smHere(what, open){
+  if(SM && SM.open && smTarget()){
+    SM.swap = what; $("smBack").hidden = false;
+    try{ await place(); await window.bgh.bringToFront(); }catch(e){}
+    clearInterval(SM.swapT);
+    if(what !== "full"){ let quiet = 0; SM.swapT = setInterval(() => { quiet = smOverlayUp() ? 0 : quiet + 1; if(quiet >= 3) smBack(); }, 500); }
+  }
+  if(open) await open();
+}
+function smBack(gone){
+  if(!SM) return;
+  clearInterval(SM.swapT); SM.swap = null; $("smBack").hidden = true;
+  place();
+  if(!gone && SM.open) smApi.focus();
+}
+const SM_OPEN = {
+  slides:() => { $("ssOverlay").hidden = false; ssEditor($("ssPanelEd")); },
+  ready:() => openReady(),
+  phone:() => openPhonePop(),
+  coll:() => openCollections(),
+  settings:() => openSettingsPanel(),
+  full:null
+};
+async function smRun(cmd, a){
+  switch(cmd){
+    case "go-live": {
+      if(ui.stream.active) return {};
+      if(ui.connected === false || !ui.everConnected) throw phErr("The controller isn't connected to OBS right now.", "NO_OBS");
+      await smHere("golive", () => { toggleStream(); });
+      return {};
+    }
+    case "stream-stop": { if(ui.stream.active) await obs.call("StopStream"); return {}; }
+    case "rec-start": {
+      if(ui.rec.active) return {};
+      if(ui.connected === false || !ui.everConnected) throw phErr("The controller isn't connected to OBS right now.", "NO_OBS");
+      if(!a.force){
+        try{
+          const gb = (await obs.call("GetStats")).availableDiskSpace / 1024;
+          if(gb < LOW_DISK_GB){
+            const hrs = gb / GB_PER_HOUR, time = hrs < 1 ? `${Math.max(1, Math.round(hrs*60))} minutes` : `${hrs.toFixed(1)} hours`;
+            throw phErr(`Only ${gb.toFixed(1)} GB is free on the recording drive. That's roughly ${time} of recording, and the recording stops if the drive fills up.`, "LOW_DISK");
+          }
+        }catch(e){ if(e.code === "LOW_DISK") throw e; }
+      }
+      await obs.call("StartRecord"); return {};
+    }
+    case "rec-stop": { if(ui.rec.active) await obs.call("StopRecord"); return {}; }
+    case "safe": { if(!!a.on !== !!ui.safe) setSafe(!!a.on); return {}; }
+    case "open": {
+      const what = String(a.what || "");
+      if(!(what in SM_OPEN)) throw phErr("The controller doesn't know that yet.");
+      await smHere(what, SM_OPEN[what]);
+      return {};
+    }
+    default: return phRun(cmd, {...a, simple:true});
+  }
+}
+if(smApi){
+  SM = {open:false, displayId:null, swap:null};
+  smApi.onStatus(smStatus);
+  smApi.status().then(smStatus).catch(() => {});
+  smApi.onCmd(async ({id, cmd, args}) => {
+    try{ const data = await smRun(String(cmd), args || {}); smApi.reply({id, ok:true, data}); }
+    catch(e){ smApi.reply({id, ok:false, error:e.message || String(e), code:e.code || ""}); }
+    smSend();
+  });
+}
+$("smBack").addEventListener("click", () => {
+  // Closing Go Live or Settings this way is the same as their own Close or Cancel
+  if(SM && SM.swap === "golive" && !$("glOverlay").hidden){ closeGoLive(); forgetBap(); }
+  smBack();
+});
 
 /* Settings → Phone remote. The pairing code only works while this page is open. */
 let phInfo = null, phTick = null;

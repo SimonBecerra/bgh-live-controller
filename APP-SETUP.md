@@ -96,6 +96,20 @@ A one-hour service uses about 250 of the 10,000 units YouTube gives free each da
 never goes in a backup. YouTube gives no count for unlisted or private streams, or when the channel hides it;
 the pill then shows a dash and tapping it says why.
 
+## Simple mode on the touchscreen
+
+With two screens plugged in, the full controller stays on the main monitor and the touchscreen shows **Simple mode**:
+the Program picture, the mic bar, big scene buttons, Go Live and Record (with End and Stop built in), Safe mode,
+and Hymn, Bible and Names. With only one screen, it's just the full controller.
+
+- The first time it opens, Simple mode remembers that screen as the touchscreen, so a projector or TV plugged in later
+  never gets it. To change it, use **Settings → Screen → The touchscreen for Simple mode**.
+- **Go Live** and everything in **Menu** (Slideshow, Ready check, Phone remote, Scene collection, Settings) bring the
+  full controller onto the touchscreen. It goes back to the main monitor when that's closed, or tap
+  **Back to Simple mode** at the top. **Menu → Full controller** keeps it there until you tap that button.
+- Unplug the touchscreen and Simple mode closes; plug it back in and it opens again.
+- To turn it off, untick **Settings → Screen → Simple mode on the touchscreen**.
+
 ## Ready check
 
 The double-tick button beside Safe mode checks Camera 1 (picture, no-signal screen, unplugged, asleep, wrong
