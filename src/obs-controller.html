@@ -1073,6 +1073,13 @@ body.compact .lt-chip{min-height:42px}
 @media (max-width:760px){.dk{grid-template-columns:minmax(0,1fr)}.dk-left{width:auto}.overlay.dock .sheet.ot{overflow-y:auto}.dk-act{flex-direction:row}}
 /* Settings → On-screen text */
 .hb-list{display:flex;flex-direction:column;gap:8px}
+.svchb-list{display:flex;flex-direction:column;gap:8px}
+.svchb-row{display:grid;grid-template-columns:minmax(160px,1fr) auto;align-items:center;gap:8px 14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.svchb-row > b{font-size:15px}
+.svchb-row .book-chips{justify-content:flex-end}
+.svchb-row .book-chip.last{width:auto;padding:0 14px;font-size:14px}
+.svchb-row .svchb-note{grid-column:1 / -1;font-size:13px;color:var(--warn)}
+@media (max-width:700px){.svchb-row{grid-template-columns:1fr}.svchb-row .book-chips{justify-content:flex-start}}
 .hb-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
 .hb-row > div{flex:1;min-width:160px;display:flex;flex-direction:column;gap:2px;font-size:15px}
 .hb-row small{color:var(--muted);font-size:13px}
@@ -1588,6 +1595,11 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
               <button type="button" class="btn" id="hbTemplate" data-keep><i data-lucide="file-text"></i>Get the template</button>
             </div>
             <span class="path">Type a hymn book into the template in Notepad, then add it here and choose its logo. To change it later, edit the text file and use Update from file. Hymn books are saved straight away; they don't need Apply.</span>
+          </div>
+          <div class="set-section" id="svcHbSec">
+            <h4>Hymn book for each service</h4>
+            <span class="path">Go Live chooses this book when you pick the service, and so does Change speaker and service type. You can still choose another book for one service in Go Live. Last used keeps whichever book was used last. The same in every scene collection.</span>
+            <div class="svchb-list" id="svcHbList"></div>
           </div>
           <div class="set-section">
             <h4>Hymns on screen</h4>
@@ -3587,15 +3599,17 @@ $("glHere").addEventListener("click", async () => {
   gl.host = {on:false, id:""};
   hostPicker("gl", gl.host, h => { gl.host = h; });
   // Hymn book for this service (only asked when there's more than one)
-  bookInUseOk(); gl.hymnBook = ui.ot.book;
+  // The book set for the service (Settings → On-screen text), or the last one used
+  bookInUseOk(); gl.hymnBook = svcBook(gl.svc) || ui.ot.book;
   $("glHbField").hidden = shownBooks().length < 2 || !ltOn();   // no on-screen text for this collection: no hymn book to ask about
-  const pickHb = id => { gl.hymnBook = id; bookChips($("glHb"), gl.hymnBook, pickHb, true); const b = bookById(id); $("glHbName").textContent = b ? ` · ${b.name}` : ""; };
+  const pickHb = id => { gl.hymnBook = id; bookChips($("glHb"), gl.hymnBook, pickHb, true); const b = bookById(id);
+    $("glHbName").textContent = b ? ` · ${b.name}${svcBook(gl.svc) === id ? " (set for this service)" : ""}` : ""; };
   pickHb(gl.hymnBook);
   $("glSvc").innerHTML = "";
   names.forEach(n => {
     const b = document.createElement("button");
     b.className = "svc"; b.textContent = n; b.setAttribute("aria-pressed", n === gl.svc);
-    b.addEventListener("click", () => { gl.svc = n; if(isSsSvc(n) && gl.sel.length > 1){ gl.sel = gl.sel.slice(0, 1); renderSpkTrigger(); } $("glSvc").querySelectorAll(".svc").forEach(x => x.setAttribute("aria-pressed", x === b)); glRender(); });
+    b.addEventListener("click", () => { gl.svc = n; pickHb(svcBook(n) || ui.ot.book); if(isSsSvc(n) && gl.sel.length > 1){ gl.sel = gl.sel.slice(0, 1); renderSpkTrigger(); } $("glSvc").querySelectorAll(".svc").forEach(x => x.setAttribute("aria-pressed", x === b)); glRender(); });
     $("glSvc").appendChild(b);
   });
   glRender(); glShow("glDetails"); ssEditor($("glSsEd"));
@@ -4067,6 +4081,7 @@ $("qcApply").addEventListener("click", async () => {
       (ui.stream.active ? " You're live, so viewers will see the change right away. The YouTube title and description can't be changed from the controller while live. To update them, edit the broadcast in YouTube Studio." : ""),
     "OK", "primary", "Cancel");
   if(!ok){ $("qcOverlay").hidden = false; return; }
+  if(change.file != null) svcBookSwitch(qc.svc);
   forgetQcBap();   // used now; the names aren't kept
   if(change.lt) setLtPicked(change.lt);
   if(change.bap){ ui.bapReaders = change.bap; renderOt(); if(Object.keys(change).length === 1) return toast("Testimony lower thirds updated"); }
@@ -4682,11 +4697,21 @@ function otJump(label){
   if(ot.showing || ot.item.kind === "hymn") otSend(); else renderOt();
 }
 // Done: the singing (or reading) is over. Take it off the stream and clear the panel.
+// A new service type mid-service: its hymn book, straight away, or once the hymn on screen is done
+function svcBookSwitch(svc){
+  const id = svcBook(svc);
+  ui.pendingBook = "";
+  if(!id || id === ui.ot.book) return;
+  if(ot.item && ot.item.kind === "hymn"){ ui.pendingBook = id; toast(`${bookById(id).name} is used once this hymn is done`); return; }
+  ui.ot.book = id; saveOt(); renderOt();
+  toast(`Hymn book: ${bookById(id).name}`);
+}
 async function otDone(quiet){
   if(!ot.item) return;
   const title = ot.item.title;
   if(ot.showing) await otHide();
   ot.item = null; renderOt();
+  if(ui.pendingBook){ const b = bookById(ui.pendingBook); if(b && !bookHidden(b)){ ui.ot.book = b.id; saveOt(); renderOt(); } ui.pendingBook = ""; }
   if(!$("bbOverlay").hidden && bb.mode === "read"){ bb.mode = "pick"; $("bbOverlay").hidden = true; }
   if(!quiet) toast(`Done: ${title}`);
 }
@@ -5074,6 +5099,12 @@ const bookById = id => ui.hymnBooks.find(b => b.id === id);
    keeps it hidden. */
 const bookHidden = b => !!b && (ui.ot.hiddenBooks || []).includes(b.id);
 const shownBooks = () => ui.hymnBooks.filter(b => !bookHidden(b));
+// Settings → On-screen text → Hymn book for each service: {service name: book id}, the same in every scene collection.
+// A book that's hidden or removed counts as "Last used".
+function svcBook(svc, map = ui.ot.svcBooks){
+  const id = svc && map ? map[svc] : "", b = id ? bookById(id) : null;
+  return b && !bookHidden(b) ? b.id : "";
+}
 // The book in use: the chosen one if it's shown, otherwise the first shown book (or none)
 function bookInUseOk(){
   if(!bookById(ui.ot.book) || bookHidden(bookById(ui.ot.book))){ const f = shownBooks()[0]; ui.ot.book = f ? f.id : ""; saveOt(); }
@@ -5637,6 +5668,34 @@ async function fillOtSettings(){
   otKeysAtOpen = {esv:(await secret.get("esvKey")) || "", ab:(await secret.get("apiBibleKey")) || ""};
   $("setEsvKey").value = otKeysAtOpen.esv; $("setAbKey").value = otKeysAtOpen.ab;
   renderHbList(); renderTrList();
+  workSvcBooks = {...(ui.ot.svcBooks || {})};
+  await listServiceFiles(); renderSvcBooks();
+}
+let workSvcBooks = {};
+function renderSvcBooks(){
+  const el = $("svcHbList"); if(!el) return;
+  const names = ui.files.map(p => noExt(base(p))), books = shownBooks();
+  // Only worth asking with service types and more than one hymn book
+  $("svcHbSec").hidden = !names.length || books.length < 2;
+  el.innerHTML = "";
+  names.forEach(n => {
+    const row = document.createElement("div"); row.className = "svchb-row";
+    const set = workSvcBooks[n] || "", ok = svcBook(n, workSvcBooks);
+    row.innerHTML = `<b></b><div class="book-chips" role="radiogroup"></div>${set && !ok ? `<span class="svchb-note"></span>` : ""}`;
+    row.querySelector("b").textContent = n;
+    if(set && !ok){ const b = bookById(set); row.querySelector(".svchb-note").textContent = `${b ? b.name + " is hidden" : "That hymn book was removed"}, so this service uses the last book until you choose another.`; }
+    const chips = row.querySelector(".book-chips");
+    const last = document.createElement("button"); last.type = "button"; last.className = "book-chip last"; last.textContent = "Last used";
+    last.setAttribute("aria-pressed", String(!ok)); last.addEventListener("click", () => { delete workSvcBooks[n]; renderSvcBooks(); updateSetDots(); });
+    chips.appendChild(last);
+    books.forEach(b => {
+      const c = document.createElement("button"); c.type = "button"; c.className = "book-chip icon-only";
+      c.innerHTML = bookLogo(b); c.title = b.name; c.setAttribute("aria-label", `${n}: ${b.name}`); c.setAttribute("aria-pressed", String(ok === b.id));
+      c.addEventListener("click", () => { workSvcBooks[n] = b.id; renderSvcBooks(); updateSetDots(); });
+      chips.appendChild(c);
+    });
+    el.appendChild(row);
+  });
 }
 $("hyNote").addEventListener("click", () => { $("hyOverlay").hidden = true; settingsGoTo("ontext", "hbAdd"); });
 
@@ -6506,7 +6565,7 @@ function pageSnaps(){
   const out = {};
   Object.keys(SET_PAGES).forEach(p => out[p] = []);
   setFields().forEach(el => { const pg = el.closest(".set-page"); if(pg) out[pg.dataset.page].push(el.type === "checkbox" ? el.checked : el.value); });
-  out.speakers.push({home:workSpk.home, visiting:workSpk.visiting}); out.collections.push(workCfg, workSpk.teachers); out.golive.push(workRels);
+  out.speakers.push({home:workSpk.home, visiting:workSpk.visiting}); out.collections.push(workCfg, workSpk.teachers); out.golive.push(workRels); out.ontext.push(workSvcBooks);
   Object.keys(out).forEach(p => out[p] = JSON.stringify(out[p]));
   return out;
 }
@@ -7653,7 +7712,7 @@ $("setForm").addEventListener("submit", e => {
   if($("setFail")) obs.protoFail = $("setFail").value || null;
   // #proto-end
   // On-screen text
-  ui.ot = {...ui.ot, hyLines:+$("setHyLines").value, hyChorus:$("setHyChorus").checked, bbTr:$("setBbTr").value, bbPer:+$("setBbPer").value};
+  ui.ot = {...ui.ot, hyLines:+$("setHyLines").value, hyChorus:$("setHyChorus").checked, bbTr:$("setBbTr").value, bbPer:+$("setBbPer").value, svcBooks:{...workSvcBooks}};
   saveOt();
   if($("setEsvKey").value !== otKeysAtOpen.esv) secret.set("esvKey", $("setEsvKey").value.trim());
   if($("setAbKey").value !== otKeysAtOpen.ab) secret.set("apiBibleKey", $("setAbKey").value.trim());
