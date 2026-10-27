@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld("bgh", {
     state: s => ipcRenderer.send("simple-state", s),
     level: l => ipcRenderer.send("simple-level", l),
     frame: dataUrl => ipcRenderer.send("simple-frame", dataUrl),
+    pframe: dataUrl => ipcRenderer.send("simple-pframe", dataUrl),
     toast: text => ipcRenderer.send("simple-toast", text),
     reply: r => ipcRenderer.send("simple-reply", r),
     onCmd: fn => ipcRenderer.on("simple-cmd", (e, c) => fn(c)),

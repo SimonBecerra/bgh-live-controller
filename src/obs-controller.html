@@ -926,6 +926,9 @@ body.compact .lt-chip{min-height:42px}
 .book-chip{min-height:56px;display:inline-flex;align-items:center;gap:10px;padding:0 16px 0 8px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-size:16px;font-weight:600}
 .book-chip img,.book-chip .no-logo{width:40px;height:40px;object-fit:contain;border-radius:6px;flex:none}
 .no-logo{display:grid;place-items:center;background:var(--line);color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.book-chip.icon-only{padding:0;width:64px;height:64px;justify-content:center}
+.book-chip.icon-only img,.book-chip.icon-only .no-logo{width:48px;height:48px}
+#glHbName{text-transform:none;letter-spacing:0;font-weight:600;color:var(--fg)}
 .book-chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
 .hy-grid{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:20px;align-items:start}
 @media (max-width:760px){.hy-grid{grid-template-columns:minmax(0,1fr)}}
@@ -1954,7 +1957,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <span class="path">A lower third button only. Not put in the title or description.</span>
           </div>
           <div class="field ss-field" id="glSsField"><span class="label">Slideshow</span><div class="ss-ed" id="glSsEd"></div></div>
-          <div class="field" id="glHbField" hidden><span class="label">Hymn book</span>
+          <div class="field" id="glHbField" hidden><span class="label">Hymn book<span id="glHbName"></span></span>
             <div class="book-chips" id="glHb"></div>
             <span class="path">Used for hymns during this service. You can also switch on the Hymn screen.</span>
           </div>
@@ -2952,7 +2955,8 @@ async function toggleStudio(){
 $("sqStudio").addEventListener("click", toggleStudio);
 // CUT swaps: the scene that was live goes back into Preview, ready to cut back to.
 // Done by the controller so it works whatever OBS's own "swap after transitioning" setting is.
-$("cutBtn").addEventListener("click", async () => {
+$("cutBtn").addEventListener("click", () => studioCut());
+async function studioCut(){
   const prev = ui.program;
   if(ui.preview) await fadeBeforeSwitch(ui.preview);
   await obs.call("TriggerStudioModeTransition");
@@ -2960,7 +2964,7 @@ $("cutBtn").addEventListener("click", async () => {
   // Leaving the waiting rotation mid-cycle: queue Title Slide so cutting back restarts the sequence
   const w = BUTTONS.find(b => b.waiting && b.group.includes(prev));
   await obs.call("SetCurrentPreviewScene",{sceneName: w ? w.scene : prev});
-});
+}
 
 // Recording / streaming
 /* "Remind me to record while live" (Settings → Scene collections → Recording; on to start with for the Conference
@@ -3568,7 +3572,7 @@ $("glHere").addEventListener("click", async () => {
   // Hymn book for this service (only asked when there's more than one)
   bookInUseOk(); gl.hymnBook = ui.ot.book;
   $("glHbField").hidden = shownBooks().length < 2 || !ltOn();   // no on-screen text for this collection: no hymn book to ask about
-  const pickHb = id => { gl.hymnBook = id; bookChips($("glHb"), gl.hymnBook, pickHb); };
+  const pickHb = id => { gl.hymnBook = id; bookChips($("glHb"), gl.hymnBook, pickHb, true); const b = bookById(id); $("glHbName").textContent = b ? ` · ${b.name}` : ""; };
   pickHb(gl.hymnBook);
   $("glSvc").innerHTML = "";
   names.forEach(n => {
@@ -5179,13 +5183,15 @@ const bookIcon = (b, cls = "") => b && b.icon ? `<img class="${cls}" alt="" src=
 // The book's logo (wide, 10 × 5.12) as it goes on the stream; only previewed in Settings
 const bookLogoWide = b => b && b.logo ? `<img class="hb-wide" alt="" src="${esc(b.logo)}">` : `<span class="hb-wide no-logo" aria-hidden="true">No logo</span>`;
 const bookLogo = bookIcon;
-function bookChips(el, selected, onPick){
+function bookChips(el, selected, onPick, iconOnly){
   el.innerHTML = "";
   shownBooks().forEach(b => {
     const c = document.createElement("button");
-    c.type = "button"; c.className = "book-chip"; c.setAttribute("aria-pressed", b.id === selected);
+    c.type = "button"; c.className = "book-chip" + (iconOnly ? " icon-only" : ""); c.setAttribute("aria-pressed", b.id === selected);
     c.innerHTML = bookLogo(b) + `<span class="bk-name"></span>`;
     c.querySelector(".bk-name").textContent = b.name;
+    // Go Live: just the book's icon; its name is read out, shown on hover, and beside the "Hymn book" label
+    if(iconOnly){ c.querySelector(".bk-name").hidden = true; c.title = b.name; c.setAttribute("aria-label", b.name); }
     c.addEventListener("click", () => onPick(b.id));
     el.appendChild(c);
   });
@@ -9105,7 +9111,7 @@ function drawNoShot(ctx, scene, why){
   if(why) txt(c, why.length > 80 ? why.slice(0, 78) + "…" : why, W/2, H*.65, Math.round(H*.035), {w:400, f:BODY, col:"#6f8f9a"});
 }
 async function shotOne(ctx, scene, key){
-  try{ const d = await drawShot(ctx, scene); shotState.fail[key] = null; if(key === "pgm" && SM && SM.open) smApi.frame(d); }
+  try{ const d = await drawShot(ctx, scene); shotState.fail[key] = null; if(SM && SM.open){ if(key === "pgm") smApi.frame(d); else if(key === "pvw") smApi.pframe(d); } }
   catch(e){
     const f = shotState.fail[key] && shotState.fail[key].scene === scene ? shotState.fail[key] : {scene, n:0};
     f.n++; f.why = (e && (e.message || e.comment)) || String(e); shotState.fail[key] = f;
@@ -9196,7 +9202,7 @@ function phState(){
     safe:!!ui.safe, program:ui.program || "", cm:cmPhone(),
     scenes:BUTTONS.map((b, i) => ({b, k:sceneSlot(i)})).filter(x => sceneShown(x.b)).sort((x, y) => x.k - y.k).map(({b}) => {
       const on = b.group.includes(ui.program);
-      return {label:b.label, icon:b.icon, on, mic:micOf(b.scene), ending:isEnding(b.label) || isEnding(b.scene),
+      return {label:b.label, icon:b.icon, on, pv:!!ui.studio && !on && b.group.includes(ui.preview), mic:micOf(b.scene), ending:isEnding(b.label) || isEnding(b.scene),
         sub:b.waiting ? (on && ui.program !== b.label ? ui.program : "Title Slide") : ""};
     }),
     audio:{name:srcAudio() || "", missing:!!ui.audioMissing, muted:!!ui.muted},
@@ -9403,7 +9409,14 @@ function smScreensChanged(added, removed, main){
   if(added) toast(t && t.id === added.id ? `${added.label} connected. Simple mode is on it; the full controller stays on ${main.label}.` : `${added.label} connected. The controller stays where it is.`);
   if(removed) toast(removed.id === was ? `${removed.label} was unplugged. The full controller is on ${main.label}; Simple mode comes back when it's plugged in again.` : `${removed.label} was unplugged.`);
 }
-function smState(){ return {...phState(), pending:!ui.stream.active && !!ui.streamPending}; }
+function smState(){
+  const s = phState();
+  s.pending = !ui.stream.active && !!ui.streamPending;
+  s.studio = !!ui.studio; s.preview = ui.studio ? ui.preview || "" : "";
+  // Simple mode shows each hymn book by its icon (Settings → On-screen text), or its short name
+  s.books = s.books.map(x => { const b = bookById(x.id) || {}; return {...x, icon:b.icon || "", letter:(b.short || bookLetter(b)).slice(0, 4)}; });
+  return s;
+}
 let smLast = "";
 function smSend(){
   if(!SM || !SM.open) return;
@@ -9471,6 +9484,19 @@ async function smRun(cmd, a){
     }
     case "rec-stop": { if(ui.rec.active) await obs.call("StopRecord"); return {}; }
     case "safe": { if(!!a.on !== !!ui.safe) setSafe(!!a.on); return {}; }
+    case "studio": { if(!!a.on !== !!ui.studio) await toggleStudio(); return {}; }
+    case "preview": {   // Studio Mode: a tapped scene goes into Preview only
+      if(!ui.studio) throw phErr("Studio Mode is off.");
+      const b = BUTTONS.find(x => x.label === a.label);
+      if(!b) throw phErr(`There's no ${a.label} scene in ${ui.collection} any more.`);
+      await obs.call("SetCurrentPreviewScene", {sceneName:b.scene}); return {};
+    }
+    case "cut": { if(!ui.studio) throw phErr("Studio Mode is off."); await studioCut(); return {}; }
+    case "ot-show": {   // Hide / Show the hymn or verse on screen
+      if(!ot.item) throw phErr("Nothing is on screen.");
+      if(ot.showing) await otHide(); else await otSend();
+      return {};
+    }
     case "open": {
       const what = String(a.what || "");
       if(!(what in SM_OPEN)) throw phErr("The controller doesn't know that yet.");
