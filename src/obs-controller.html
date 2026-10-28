@@ -1545,6 +1545,9 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
             <label class="check" for="setRecRemind"><input type="checkbox" id="setRecRemind" data-cfg>
               <span>Remind me to record while live<small>While you're livestreaming and not recording, the Record button turns yellow and pulses, and NOT RECORDING at the top turns yellow. Starts switched on for collections with the Conference lower third, where the sermons are recorded.</small></span>
             </label>
+            <label class="check" for="setAutoRec"><input type="checkbox" id="setAutoRec" data-cfg>
+              <span>Record camera scenes automatically<small id="setAutoRecHint">Recording starts when you switch to a camera scene and stops when you switch away from the cameras. Going from one camera to another keeps the same recording. Works however the scene changes: the controller, Simple mode, the phone or OBS.</small></span>
+            </label>
           </div>
           <div class="set-section">
             <h4>Waiting button</h4>
@@ -3039,7 +3042,7 @@ function tick(){
   // OBS sends no event when its dialog is cancelled, so the waiting hint clears itself after two minutes
   if(ui.streamPending && (ui.stream.active || (!ui.streamMsg && now - ui.streamPending > 120000))){ ui.streamPending = null; $("sqLive").classList.remove("pending"); }
   renderRecRemind();   // also follows a change of collection or Settings
-  $("sqRecSt").textContent = r || ($("sqRec").classList.contains("remind") ? "Live · not recording" : "Not recording");
+  $("sqRecSt").textContent = r || ($("sqRec").classList.contains("remind") ? "Live · not recording" : autoRecOn() ? "Auto · on cameras" : "Not recording");
   $("sqLiveSt").textContent = l || (ui.streamPending ? (ui.streamMsg || "Confirm in OBS") : "Offline");
 }
 setInterval(tick, 500);
@@ -3074,6 +3077,7 @@ async function toggleRec(){
         if(!ok) return;
       }
     }catch(e){}
+    ui.autoRecBy = false;
     return obs.call("StartRecord");
   }
   if(await confirmDlg("Stop recording?", `The recording has been running for ${fmt(Date.now()-ui.rec.t0)}. Stopping finalizes the file.`, "Stop recording"))
@@ -6875,6 +6879,7 @@ function syncCfgFields(){
     ltSubB: $("setLtSubB").checked,
     homeSub: {on:$("setHomeSubOn").checked, text:$("setHomeSub").value.trim().toUpperCase()},
     recRemind: $("setRecRemind").checked,
+    autoRec: $("setAutoRec").checked ? true : undefined,
     ssMax: parseInt($("setLtSsMax").value, 10) || 1,
     ltHost: {on:$("setLtHostOn").checked, sub:$("setLtHostSubOn").checked, subText:$("setLtHostSub").value.trim().toUpperCase()},
     boxOpacity: parseInt($("setBoxOp").value, 10) === BOX_OPACITY_DEFAULT ? undefined : parseInt($("setBoxOp").value, 10),
@@ -6919,6 +6924,12 @@ async function fillCfgFields(coll){
   $("setHomeSubOn").checked = !!(c && c.homeSub && c.homeSub.on); $("setHomeSub").value = (c && c.homeSub && c.homeSub.text) || "";
   $("setRecRemind").checked = c && typeof c.recRemind === "boolean" ? c.recRemind : !!(c && c.ltTheme === "conference");
   recRemindTouched = !!(c && typeof c.recRemind === "boolean");
+  $("setAutoRec").checked = !!(c && c.autoRec === true);
+  { const cams = scenes.filter(isCamScene);
+    $("setAutoRec").disabled = !cams.length && !$("setAutoRec").checked;
+    $("setAutoRecHint").textContent = cams.length
+      ? `Recording starts when you switch to a camera scene (${cams.join(", ")}) and stops when you switch to any other scene. Going from one camera to another keeps the same recording. A recording you started yourself is never stopped. Works however the scene changes: here, Simple mode, the phone or OBS.`
+      : "This collection has no camera scenes."; }
   $("setLtSsMax").value = String(c && c.ssMax >= 1 && c.ssMax <= 10 ? c.ssMax : 1);
   fillLtHost(c && c.ltHost);
   $("setLtColor").value = (c && c.ltColor) || LT_COLOR;
@@ -8031,6 +8042,7 @@ obs.on("CurrentProgramSceneChanged", d => {
   if(scPending && scPending.kind === "pgm"){ clearTimeout(scPending.timer); scPending = null; }   // OBS has switched (to that, or something else)
   renderScenes();
   autoMute(prev, d.sceneName);
+  autoRec(prev, d.sceneName);
   fadeTrack(prev, d.sceneName);
   rotationGuard(prev, d.sceneName);
   if(isSlideScene(d.sceneName)) slAutoOpen();
@@ -8773,6 +8785,27 @@ function rotationGuard(prev, next){
     toast(`The Advanced Scene Switcher switched to ${next} just as ${prev} came on, so the controller put ${prev} back.`);
   }).catch(() => {});
 }
+/* Record camera scenes automatically (Settings → Scene collections → Recording). Program going onto a camera starts
+   recording; going from a camera to anything else stops it, but only a recording this started (one you started
+   yourself keeps going). Camera to camera is the same recording. Works however Program changes. */
+const isCamScene = n => /\b(web)?cam(era)?s?\s*\d*\b/i.test(String(n || "")) && !/\bcamp\b/i.test(String(n || ""));
+const autoRecOn = () => !!(cfg() && cfg().autoRec === true);
+async function autoRec(prev, next){
+  if(!autoRecOn() || !next || prev === next || ui.connected === false) return;
+  const was = isCamScene(prev), now = isCamScene(next);
+  if(now && !ui.rec.active){
+    ui.autoRecBy = true;
+    try{
+      await obs.call("StartRecord");
+      let low = "";
+      try{ const gb = (await obs.call("GetStats")).availableDiskSpace / 1024; if(gb < LOW_DISK_GB) low = ` Only ${gb.toFixed(1)} GB free on the recording drive.`; }catch(e){}
+      toast(`Recording started automatically for ${next}.${low}`);
+    }catch(e){ ui.autoRecBy = false; toast(`Couldn't start recording automatically for ${next}. Use the Record button.`); }
+  } else if(was && !now && ui.rec.active && ui.autoRecBy){
+    try{ await obs.call("StopRecord"); toast(`Recording stopped automatically: ${next} isn't a camera.`); }
+    catch(e){ toast("Couldn't stop recording automatically. Use the Record button."); }
+  }
+}
 /* Automatic mute (Settings → Scene collections → Audio). Works however Program changes: a scene button,
    CUT, OBS itself, or the Advanced Scene Switcher. Only changes the mic when it isn't already that way. */
 function autoMute(prev, next){
@@ -8845,7 +8878,7 @@ obs.on("InputVolumeMeters", d => {
   if(m && ui.lastPeak > ui.silenceDb) lastSoundAt = Date.now();
   if(!$("setOverlay").hidden) renderSilencePreview();
 });
-obs.on("RecordStateChanged", d => { ui.rec = {active:d.outputActive,t0:d.t0}; renderOutputs(); lockIfWentLive(); diskSamples = []; if(d.outputActive) setTimeout(checkDiskWhileRec, 5000); else $("diskNote").hidden = true; });
+obs.on("RecordStateChanged", d => { if(!d.outputActive) ui.autoRecBy = false; ui.rec = {active:d.outputActive,t0:d.t0}; renderOutputs(); lockIfWentLive(); diskSamples = []; if(d.outputActive) setTimeout(checkDiskWhileRec, 5000); else $("diskNote").hidden = true; });
 obs.on("StreamStateChanged", d => {
   const startedHere = d.outputActive && !!ui.streamPending;   // Go Live from the controller (either way)
   const was = ui.stream;
@@ -9673,7 +9706,7 @@ async function smRun(cmd, a){
           }
         }catch(e){ if(e.code === "LOW_DISK") throw e; }
       }
-      await obs.call("StartRecord"); return {};
+      ui.autoRecBy = false; await obs.call("StartRecord"); return {};
     }
     case "rec-stop": { if(ui.rec.active) await obs.call("StopRecord"); return {}; }
     case "safe": { if(!!a.on !== !!ui.safe) setSafe(!!a.on); return {}; }
