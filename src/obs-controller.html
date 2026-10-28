@@ -1516,6 +1516,9 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
           </div>
           <div class="set-section">
             <h4>Scene buttons</h4>
+            <label class="check" for="setCam2Btn"><input type="checkbox" id="setCam2Btn" data-cfg>
+              <span>Add second camera button<small>Always shows the Camera 2 button in this collection, even when no picture is coming from Cam 2. Off: it shows only while Cam 2 has a picture.</small></span>
+            </label>
             <label class="check" for="setBlackBtn"><input type="checkbox" id="setBlackBtn" data-cfg>
               <span>Black button<small id="setBlackHint">Shows the button for the Black scene in this collection. It still shows while Black is on Program or Preview.</small></span>
             </label>
@@ -2849,7 +2852,9 @@ ui.cam2Found = null;   // null: not checked yet (shown meanwhile)
 ui.cam2Exists = null;
 let cam2Zero = 0, cam2Busy = false;
 const onAir = b => b.group.includes(ui.program) || (ui.studio && b.group.includes(ui.preview));
-const cam2Shown = b => onAir(b) || ui.cam2Found !== false;
+// Settings → Scene collections → Scene buttons → "Add second camera button": always shown in that collection
+const cam2Always = () => !!(cfg() && cfg().cam2Btn === true);
+const cam2Shown = b => onAir(b) || cam2Always() || ui.cam2Found !== false;
 const blackShown = b => onAir(b) || !(cfg() && cfg().blackBtn === false);
 async function cam2Check(){
   try{
@@ -2883,6 +2888,7 @@ async function cam2Poll(){
   if(found === ui.cam2Found || !ui.cam2Exists) return;
   const was = ui.cam2Found; ui.cam2Found = found;
   renderBapCam();
+  if(cam2Always()) return;   // the button stays either way
   if(found === false) toast(`No video from ${CAM2_SOURCE}, so the ${camScene(2) || "Camera 2"} button is hidden until it has some.`);
   else if(was === false) toast(`${CAM2_SOURCE} has video again: ${camScene(2) || "Camera 2"} is back.`);
 }
@@ -6817,6 +6823,7 @@ function syncCfgFields(){
     boxOpacity: parseInt($("setBoxOp").value, 10) === BOX_OPACITY_DEFAULT ? undefined : parseInt($("setBoxOp").value, 10),
     ltColor: hexColor($("setLtColor").value) || (workCfg[cfgColl] && workCfg[cfgColl].ltColor) || LT_COLOR,
     blackBtn: $("setBlackBtn").checked ? undefined : false,
+    cam2Btn: $("setCam2Btn").checked ? true : undefined,
     fadeIn: {on:$("setFadeIn").checked, from:$("setFadeFrom").value, to:$("setFadeTo").value,
       after:[...document.querySelectorAll("#setFadeAfter input:checked")].map(el => el.dataset.scene)},
     autoMic: {on: $("setAutoMic").checked,
@@ -6877,6 +6884,7 @@ async function fillCfgFields(coll){
   // Fade after Live Soon
   const fd = fadeCfgOf(c, scenes);
   $("setBlackBtn").checked = !(c && c.blackBtn === false);
+  $("setCam2Btn").checked = !!(c && c.cam2Btn === true);
   { const bl = scenes.find(isBlackScene); $("setBlackBtn").disabled = !bl;
     $("setBlackHint").textContent = bl ? `Shows the "${bl}" button in this collection. It still shows while it's on Program or Preview.` : "This collection has no Black scene."; }
   $("setFadeIn").checked = !!fd.on;
