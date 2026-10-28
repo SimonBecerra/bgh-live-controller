@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:">
 <title>BGH LIVE Simple mode</title>
 <link rel="stylesheet" href="vendor/fonts/inter/400.css"><link rel="stylesheet" href="vendor/fonts/inter/500.css"><link rel="stylesheet" href="vendor/fonts/inter/600.css">
-<link rel="stylesheet" href="vendor/fonts/inter/700.css"><link rel="stylesheet" href="vendor/fonts/inter/800.css"><link rel="stylesheet" href="vendor/fonts/spectral/700.css">
+<link rel="stylesheet" href="vendor/fonts/inter/700.css"><link rel="stylesheet" href="vendor/fonts/inter/800.css"><link rel="stylesheet" href="vendor/fonts/spectral/700.css"><link rel="stylesheet" href="vendor/fonts/montserrat/700.css">
 <!-- BGH LIVE Controller: Simple mode, the second window that fills the touchscreen (simple.js).
      It has no connection to OBS: the controller on the main monitor sends what's happening, and runs every tap
      through its own functions, so the rules are the same as on the controller and the phone remote. -->
@@ -40,8 +40,9 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 /* top bar */
 .top{display:flex;align-items:center;gap:16px;height:72px;flex:none}
 .logo{display:flex;align-items:center;gap:14px;min-width:0;flex:none}
-.logo .badge{width:56px;height:56px;border-radius:12px;background:var(--brand);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex:none}
-.logo b{font-family:var(--f-brand);font-size:34px;letter-spacing:.04em}
+/* The BGH LIVE logo: BGH in Spectral Bold, LIVE in Montserrat Bold on the yellow tag */
+.logo .bgh{font-family:"Spectral",Georgia,serif;font-weight:700;font-size:40px;line-height:1;letter-spacing:.03em;color:#fff}
+.logo .live{display:flex;align-items:center;height:46px;padding:0 12px;border-radius:9px;background:var(--brand);color:#132932;font-family:"Montserrat","Inter",sans-serif;font-weight:700;font-size:32px;line-height:1;letter-spacing:.01em;flex:none}
 .coll{font-size:20px;color:var(--muted);margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
 .coll.bad{color:var(--warn)}
 .mic{flex:1;min-width:0;margin:0 12px 0 20px;box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;height:64px;padding:0 22px;border-radius:14px;border:2px solid var(--ok);background:var(--ok-soft);text-align:left}
@@ -239,7 +240,7 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 <div class="fit" id="fit"><div class="frame" id="frame"><div class="stage" id="stage">
 
   <header class="top">
-    <div class="logo"><div class="badge">LIVE</div><b>BGH</b><span class="coll" id="coll">Connecting…</span></div>
+    <div class="logo" aria-label="BGH LIVE"><span class="bgh">BGH</span><span class="live">LIVE</span><span class="coll" id="coll">Connecting…</span></div>
     <button type="button" class="mic" id="mic" aria-pressed="false">
       <svg class="i" viewBox="0 0 24 24" aria-hidden="true" id="micIco"></svg>
       <span class="meter"><i id="lvl"></i></span>

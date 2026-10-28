@@ -96,6 +96,13 @@ A one-hour service uses about 250 of the 10,000 units YouTube gives free each da
 never goes in a backup. YouTube gives no count for unlisted or private streams, or when the channel hides it;
 the pill then shows a dash and tapping it says why.
 
+## Hymn book for each service
+
+In **Settings → On-screen text → Hymn book for each service**, choose a hymn book for each service type (or leave it on
+**Last used**). Go Live picks that book when you choose the service, and so does **Change speaker and service type**
+(after the hymn on screen is done, if one is up). You can still choose another book in Go Live for one service.
+The setting is the same in every scene collection.
+
 ## Simple mode on the touchscreen
 
 With two screens plugged in, the full controller stays on the main monitor and the touchscreen shows **Simple mode**:

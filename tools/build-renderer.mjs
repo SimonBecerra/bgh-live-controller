@@ -18,6 +18,7 @@ cpSync(nm("obs-websocket-js/dist/obs-ws.global.js"), join(vendor, "obs-ws.global
 cpSync(nm("@fontsource/inter"), join(vendor, "fonts", "inter"), { recursive: true, filter: p => !/\.(woff)$/.test(p) || p.endsWith(".woff2") });
 cpSync(nm("@fontsource/spectral"), join(vendor, "fonts", "spectral"), { recursive: true, filter: p => !/\.(woff)$/.test(p) || p.endsWith(".woff2") });
 cpSync(nm("@fontsource/yellowtail"), join(vendor, "fonts", "yellowtail"), { recursive: true, filter: p => !/\.(woff)$/.test(p) || p.endsWith(".woff2") });
+cpSync(nm("@fontsource/montserrat"), join(vendor, "fonts", "montserrat"), { recursive: true, filter: p => !/\.(woff)$/.test(p) || p.endsWith(".woff2") });
 
 const { html: stripped, elements, blocks } = stripPrototype(readFileSync(join(root, "src", "obs-controller.html"), "utf8"));
 let html = stripped;
