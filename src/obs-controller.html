@@ -831,6 +831,7 @@ body.sm-solo #overlay,body.sm-solo #pickOverlay{background:rgba(4,6,9,.72)}
 .ot-bbopen svg{width:20px;height:20px}
 .rail.ot-busy .aud-panel,.rail.ot-busy .qc-btn{display:none}
 .ot-btn:disabled{opacity:.35;cursor:not-allowed;background:var(--panel-2)}
+.ot-here{margin:0;font-size:13px;line-height:1.4;color:var(--muted)}
 .ot-btn svg{width:24px;height:24px;stroke-width:1.75}
 .ot-now{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line-2);border-radius:var(--r);background:var(--bg);padding:10px 12px}
 .ot-now.on{border-color:var(--pgm);box-shadow:inset 0 0 0 1px var(--pgm)}
@@ -1254,6 +1255,7 @@ span.hb-wide.no-logo{font-size:12px;letter-spacing:0;text-transform:none}
     <section class="panel ot-panel" id="otPanel">
       <div class="panel-head"><span class="label">On screen</span><span class="chip" id="otChip">Nothing showing</span></div>
       <p class="sp-note link-note" id="otNote" role="button" tabindex="0" hidden></p>
+      <p class="ot-here" id="otHere" hidden></p>
       <div class="ot-row" id="otRow">
         <button class="ot-btn" id="otHymnBtn"><i data-lucide="music"></i>Hymn</button>
         <button class="ot-btn" id="otBibleBtn"><i data-lucide="book-open"></i>Bible</button>
@@ -2341,7 +2343,10 @@ class MockOBS {
       case "GetSceneItemList": {
         const ins = this.inputsByColl[s.collection] || {}, cam = this.cam || "ok";
         const items = /^cam/i.test(d.sceneName) && ins.Video && cam !== "missing" ? [{sceneItemId:1, sourceName:"Video", inputKind:"dshow_input", sceneItemEnabled:cam !== "hidden", isGroup:false}] : [];
-        if(ins["Lower Third"]) items.push({sceneItemId:2, sourceName:"Lower Third", inputKind:"church_lower_third", sceneItemEnabled:true, isGroup:false});
+        // Prototype: Lower Third and Scripture & Hymns are in the camera and slideshow scenes only
+        const otScene = /^(cam|slide|front|bap)/i.test(d.sceneName);
+        if(ins["Lower Third"] && otScene) items.push({sceneItemId:2, sourceName:"Lower Third", inputKind:"church_lower_third", sceneItemEnabled:true, isGroup:false});
+        if(otScene) items.push({sceneItemId:3, sourceName:"Scripture & Hymns", inputKind:"church_text_display", sceneItemEnabled:true, isGroup:false});
         if(isSlideScene(d.sceneName)){ this.ssItems ||= {}; [["Projector", 11, null], ["Presentation", 12, "window_capture"]].forEach(([n, id, k]) =>
           items.push({sceneItemId:id, sourceName:n, inputKind:k, sourceType:k ? "OBS_SOURCE_TYPE_INPUT" : "OBS_SOURCE_TYPE_SCENE", sceneItemEnabled:this.ssItems[d.sceneName + id] ?? true, isGroup:false})); }
         if(d.sceneName === "Projector") items.push({sceneItemId:21, sourceName:"Projector NDI", inputKind:"ndi_source", sourceType:"OBS_SOURCE_TYPE_INPUT", sceneItemEnabled:true, isGroup:false});
@@ -4754,10 +4759,13 @@ function renderOt(){
   document.querySelector(".rail").classList.toggle("ot-busy", !!it && it.kind === "hymn");
   $("otNow").classList.toggle("verse", !!it && it.kind === "verse");
   $("otBbOpen").hidden = !(it && it.kind === "verse" && $("bbOverlay").hidden);
+  const tdNo = tdBlocked(), ltNo = ltBlocked();
   ["otHymnBtn", "otBibleBtn"].forEach(id => {
-    $(id).disabled = ltUp;
-    $(id).title = ltUp ? "Available when the speaker's lower third has gone" : "";
+    $(id).disabled = ltUp || tdNo;
+    $(id).title = tdNo ? `${otHereScenes()} has no Scripture & Hymns source, so hymns and verses wouldn't show` : ltUp ? "Available when the speaker's lower third has gone" : "";
   });
+  const what = tdNo && ltNo ? "hymns, verses or lower thirds" : tdNo ? "hymns or verses" : ltNo ? "lower thirds" : "";
+  $("otHere").hidden = !what || !!it; $("otHere").textContent = what ? `${otHereScenes()} doesn't show ${what}. Switch to a scene that does to use them.` : "";
   const notes = otNotes();
   $("otNote").hidden = !notes.length; $("otNote").textContent = notes.join(" ");
   $("otNow").hidden = !it;
@@ -4835,6 +4843,7 @@ function renderOt(){
       b.setAttribute("aria-label", b.title);
       b.classList.toggle("lt-missing", ui.lt.found === false);
       b.addEventListener("click", ltToggleHost);
+      if(ltNo && !on){ b.disabled = true; b.title = `${otHereScenes()} has no Lower Third source`; }
       row.appendChild(b);
     }
     if(!items.length){
@@ -4861,6 +4870,7 @@ function renderOt(){
       // Never disabled: a tap always asks OBS, so if the source really is missing it says so instead of doing nothing
       b.classList.toggle("lt-missing", ui.lt.found === false);
       b.addEventListener("click", () => ltShow(name, it2.sub));
+      if(ltNo && !on){ b.disabled = true; b.title = `${otHereScenes()} has no Lower Third source`; }
       row.appendChild(b);
     });
   }
@@ -5044,6 +5054,53 @@ let otRecheckT;
 function otRecheck(){ clearTimeout(otRecheckT); otRecheckT = setTimeout(() => { if(ui.connected !== false) otSync(); }, 300); }
 obs.on("InputCreated", d => { if(OT_KINDS.includes(d.unversionedInputKind || d.inputKind)) otRecheck(); });
 obs.on("InputRemoved", d => { if(ui.lt.found || ot.tdFound) otRecheck(); });
+/* Hymns, verses and lower thirds only appear in scenes that have their source (Scripture & Hymns, Lower Third), directly,
+   in a nested scene or in a group. While Program (or, in Studio Mode, Preview) has none, the buttons to start them are
+   grayed out here, in Simple mode and on the phone. Something already up can still be taken down. Unknown (can't
+   check, or the source isn't in this collection at all, which has its own message): nothing is grayed out. */
+const otHere = {td:null, lt:null, cache:{}, busy:false, again:false};
+async function sceneKinds(scene, depth = 0, seen = new Set()){
+  if(!depth && otHere.cache[scene]) return otHere.cache[scene];
+  const out = new Set();
+  if(depth > 4 || seen.has(scene)) return out;
+  seen.add(scene);
+  const kindOf = i => i.unversionedInputKind || i.inputKind || "";
+  const items = (await obs.call("GetSceneItemList", {sceneName:scene})).sceneItems || [];
+  for(const i of items){
+    if(i.sceneItemEnabled === false) continue;
+    if(kindOf(i)) out.add(kindOf(i));
+    if(i.isGroup){
+      try{ ((await obs.call("GetGroupSceneItemList", {sceneName:i.sourceName})).sceneItems || []).forEach(x => { if(x.sceneItemEnabled !== false && kindOf(x)) out.add(kindOf(x)); }); }catch(e){}
+    } else if(i.sourceType === "OBS_SOURCE_TYPE_SCENE"){
+      try{ (await sceneKinds(i.sourceName, depth + 1, seen)).forEach(k => out.add(k)); }catch(e){}
+    }
+  }
+  if(!depth) otHere.cache[scene] = out;
+  return out;
+}
+async function otHereCheck(){
+  if(otHere.busy){ otHere.again = true; return; }
+  otHere.busy = true;
+  try{
+    const scenes = [ui.program, ui.studio ? ui.preview : null].filter(Boolean);
+    if(!scenes.length || ui.connected === false){ otHere.td = otHere.lt = null; }
+    else{
+      const kinds = new Set();
+      for(const sc of scenes) (await sceneKinds(sc)).forEach(k => kinds.add(k));
+      const has = k => [...kinds].some(x => x.startsWith(k));
+      otHere.td = has("church_text_display"); otHere.lt = has("church_lower_third");
+    }
+  }catch(e){ otHere.td = otHere.lt = null; }
+  otHere.busy = false;
+  renderOt();
+  if(otHere.again){ otHere.again = false; otHereCheck(); }
+}
+const tdBlocked = () => otHere.td === false && ot.tdFound !== false;
+const ltBlocked = () => otHere.lt === false && ui.lt.found !== false;
+const otHereScenes = () => [ui.program, ui.studio && ui.preview && ui.preview !== ui.program ? ui.preview : null].filter(Boolean).join(" or ");
+const otForget = () => { otHere.cache = {}; otHereCheck(); };
+["CurrentProgramSceneChanged", "CurrentPreviewSceneChanged", "StudioModeStateChanged"].forEach(ev => obs.on(ev, () => setTimeout(otHereCheck, 0)));
+["SceneItemCreated", "SceneItemRemoved", "SceneItemEnableStateChanged", "CurrentSceneCollectionChanged", "InputCreated", "InputRemoved"].forEach(ev => obs.on(ev, () => setTimeout(otForget, 200)));
 $("otPrev").addEventListener("click", () => otStep(-1));
 $("otNext").addEventListener("click", () => otStep(1));
 $("otShow").addEventListener("click", () => ot.showing ? otHide() : otSend());
@@ -9245,6 +9302,7 @@ async function syncAll(){
   syncStartTitle();
   ssCollMoving = false; ssTplSync();
   cam2Check(); frontCheck();
+  otForget();
 }
 /* ---------------- Phone remote ----------------
    Desktop app: main.js runs a small web server on the church network (phone.js). Phones see what this page
@@ -9291,7 +9349,7 @@ function phState(){
     }),
     audio:{name:srcAudio() || "", missing:!!ui.audioMissing, muted:!!ui.muted},
     autoEnd:{on:!!ui.autoEnd, sec:ui.autoEndSec, left, kept:!!ui.autoEndSkip && ui.autoEndSkip === ui.program},
-    ltOn:ltOn(),
+    ltOn:ltOn(), tdHere:!tdBlocked(), ltHere:!ltBlocked(),
     item:phItem(),
     lts:ltOn() ? [...ltItems().map(x => ({name:x.name, sub:x.sub || "", short:x.short || x.name, note:x.note || ""})),
       ...(host ? [{name:host.name, sub:host.subtitle || "", short:ltShort(host.name, [host.name]), note:"Host", host:true}] : [])] : [],
@@ -9384,6 +9442,7 @@ async function phRun(cmd, a){
     }
     case "hymn": {
       needOt();
+      if(tdBlocked()) throw phErr(`${otHereScenes()} doesn't show hymns. Switch to a scene with the Scripture & Hymns source first.`, "NOT_HERE");
       if(ui.lt.showing) throw phErr("A lower third is showing. Hymns wait until it's gone.");
       const b = bookById(a.book), num = String(a.num || "").trim().toUpperCase();
       if(bookHidden(b)) throw phErr(`${b.name} is hidden on the controller. Show it in Settings → On-screen text.`);
@@ -9403,6 +9462,7 @@ async function phRun(cmd, a){
     }
     case "bible": {
       needOt();
+      if(tdBlocked()) throw phErr(`${otHereScenes()} doesn't show verses. Switch to a scene with the Scripture & Hymns source first.`, "NOT_HERE");
       if(ui.lt.showing) throw phErr("A lower third is showing. The Bible waits until it's gone.");
       const p = parseBibleRef(String(a.ref || ""));
       if(!p.ok) throw phErr(p.error);
@@ -9429,6 +9489,7 @@ async function phRun(cmd, a){
     case "done": { if(ot.item) await otDone(); return {}; }
     case "lt": {
       needOt();
+      if(ltBlocked() && !ltIsUp(String(a.name || ""), String(a.sub || ""))) throw phErr(`${otHereScenes()} doesn't show lower thirds. Switch to a scene with the Lower Third source first.`, "NOT_HERE");
       if(ot.item) throw phErr("Lower thirds wait until the hymn or passage is done.");
       await ltShow(String(a.name || ""), String(a.sub || "")); return {};
     }

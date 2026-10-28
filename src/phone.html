@@ -666,10 +666,12 @@ function onScreenHTML(st){
   const lts = st.lts.length ? `<div class="lts grow">${st.lts.map((l, i) => {
       const up = !!ltUp && ltUp.name === l.name && ltUp.sub === l.sub;
       const left = up && st.ltEnds ? Math.max(0, (st.ltEnds - now()) / 1000) : 0;
-      return `<button class="lt" type="button" data-lt="${i}" aria-pressed="${up}" style="--dur:${st.ltDur}s;--delay:${up && st.ltEnds ? -(st.ltDur - left) : 0}s">${ic(l.host ? "mic" : l.note === "Testimony" ? "book" : "user")}<span class="nm">${esc(l.short)}${l.note ? `<small>${esc(l.note)}</small>` : ""}</span>${up && st.ltEnds ? '<i class="bar"></i>' : ""}</button>`;
+      return `<button class="lt" type="button" data-lt="${i}" aria-pressed="${up}" ${st.ltHere === false && !up ? "disabled" : ""} style="--dur:${st.ltDur}s;--delay:${up && st.ltEnds ? -(st.ltDur - left) : 0}s">${ic(l.host ? "mic" : l.note === "Testimony" ? "book" : "user")}<span class="nm">${esc(l.short)}${l.note ? `<small>${esc(l.note)}</small>` : ""}</span>${up && st.ltEnds ? '<i class="bar"></i>' : ""}</button>`;
     }).join("")}</div>` : `<p class="hint grow">No speakers yet. Choose them on the controller in Go Live or Change speaker.</p>`;
-  return `<div class="row2"><button class="btn" id="hymn" type="button" ${ltUp ? "disabled" : ""}>${ic("music")}Hymn</button><button class="btn" id="bible" type="button" ${ltUp ? "disabled" : ""}>${ic("book")}Bible</button></div>
-    ${ltUp ? `<span class="hint">Hymn and Bible wait until the lower third is gone.</span>` : ""}
+  const tdNo = st.tdHere === false, ltNo = st.ltHere === false;
+  const notHere = tdNo && ltNo ? "hymns, verses or lower thirds" : tdNo ? "hymns or verses" : ltNo ? "lower thirds" : "";
+  return `<div class="row2"><button class="btn" id="hymn" type="button" ${ltUp || tdNo ? "disabled" : ""}>${ic("music")}Hymn</button><button class="btn" id="bible" type="button" ${ltUp || tdNo ? "disabled" : ""}>${ic("book")}Bible</button></div>
+    ${notHere ? `<span class="hint">${esc(st.program)} doesn't show ${notHere}.</span>` : ltUp ? `<span class="hint">Hymn and Bible wait until the lower third is gone.</span>` : ""}
     <span class="label">Lower thirds</span>${lts}${camRow}`;
 }
 function scBtn(s){

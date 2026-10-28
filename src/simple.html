@@ -411,9 +411,11 @@ function renderOnScreen(st){
       : st.lts.length ? `<div class="ltrow">${st.lts.map((l, i) => {
           const on = !!up && up.name === l.name && up.sub === l.sub;
           const left = on && st.ltEnds ? Math.max(0, (st.ltEnds - Date.now()) / 1000) : 0, dur = st.ltDur || 8;
-          return `<button type="button" class="ltb" data-lt="${i}" aria-pressed="${on}">${ic(l.host ? "mic" : "user")}<span class="t"><b>${esc(l.name)}</b>${on ? "<small>On screen</small>" : l.host ? "<small>Host</small>" : ""}</span>${on && st.ltEnds ? `<i class="bar" style="animation-duration:${dur}s;animation-delay:-${(dur - left).toFixed(2)}s"></i>` : ""}</button>`;
+          return `<button type="button" class="ltb" data-lt="${i}" aria-pressed="${on}" ${st.ltHere === false && !on ? "disabled" : ""}>${ic(l.host ? "mic" : "user")}<span class="t"><b>${esc(l.name)}</b>${on ? "<small>On screen</small>" : l.host ? "<small>Host</small>" : ""}</span>${on && st.ltEnds ? `<i class="bar" style="animation-duration:${dur}s;animation-delay:-${(dur - left).toFixed(2)}s"></i>` : ""}</button>`;
         }).join("")}</div>` : "";
-    html = `<div class="osrow"><button type="button" data-o="hymn" ${up ? "disabled" : ""}>${ic("music")}Hymn</button><button type="button" data-o="bible" ${up ? "disabled" : ""}>${ic("book")}Bible</button></div>
+    // Grayed out while the scene on Program has no Scripture & Hymns (or Lower Third) source
+    const tdNo = st.tdHere === false;
+    html = `<div class="osrow"><button type="button" data-o="hymn" ${up || tdNo ? "disabled" : ""}>${ic("music")}Hymn</button><button type="button" data-o="bible" ${up || tdNo ? "disabled" : ""}>${ic("book")}Bible</button></div>
       ${lts ? `<span class="lbl">Lower thirds</span>${lts}` : ""}`;
   }
   setHTML($("onscr"), html);
