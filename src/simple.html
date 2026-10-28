@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:">
 <title>BGH LIVE Simple mode</title>
 <link rel="stylesheet" href="vendor/fonts/inter/400.css"><link rel="stylesheet" href="vendor/fonts/inter/500.css"><link rel="stylesheet" href="vendor/fonts/inter/600.css">
-<link rel="stylesheet" href="vendor/fonts/inter/700.css"><link rel="stylesheet" href="vendor/fonts/inter/800.css"><link rel="stylesheet" href="vendor/fonts/spectral/700.css"><link rel="stylesheet" href="vendor/fonts/montserrat/700.css">
+<link rel="stylesheet" href="vendor/fonts/inter/700.css"><link rel="stylesheet" href="vendor/fonts/inter/800.css"><link rel="stylesheet" href="vendor/fonts/spectral/700.css">
 <!-- BGH LIVE Controller: Simple mode, the second window that fills the touchscreen (simple.js).
      It has no connection to OBS: the controller on the main monitor sends what's happening, and runs every tap
      through its own functions, so the rules are the same as on the controller and the phone remote. -->
@@ -39,13 +39,8 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
 /* top bar */
 .top{display:flex;align-items:center;gap:16px;height:72px;flex:none}
-.logo{display:flex;align-items:center;gap:14px;min-width:0;flex:none}
-/* The BGH LIVE logo: BGH in Spectral Bold, LIVE in Montserrat Bold cut out of the yellow tag (the background shows through) */
-.logo .bgh{font-family:"Spectral",Georgia,serif;font-weight:700;font-size:44px;line-height:1;letter-spacing:.03em;color:#fff}
-.logo .live{display:flex;align-items:center;height:52px;padding:0 13px;border-radius:10px;background:var(--brand);color:var(--bg);font-family:"Montserrat","Inter",sans-serif;font-weight:700;font-size:38px;line-height:1;letter-spacing:.01em;flex:none}
-.coll{font-size:20px;color:var(--muted);margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
-.coll.bad{color:var(--warn)}
-.mic{flex:1;min-width:0;margin:0 12px 0 20px;box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;height:64px;padding:0 22px;border-radius:14px;border:2px solid var(--ok);background:var(--ok-soft);text-align:left}
+/* The mic bar lines up with the Program picture below it */
+.mic{flex:none;width:1180px;min-width:0;margin:0 auto 0 0;box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;height:64px;padding:0 22px;border-radius:14px;border:2px solid var(--ok);background:var(--ok-soft);text-align:left}
 .mic svg{width:30px;height:30px;color:var(--ok)}
 .mic .meter{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden}
 .mic .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ok) 70%,var(--warn) 88%,var(--pgm));transition:width 90ms linear}
@@ -240,7 +235,6 @@ svg.i{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke
 <div class="fit" id="fit"><div class="frame" id="frame"><div class="stage" id="stage">
 
   <header class="top">
-    <div class="logo" aria-label="BGH LIVE"><span class="bgh">BGH</span><span class="live">LIVE</span><span class="coll" id="coll">Connecting…</span></div>
     <button type="button" class="mic" id="mic" aria-pressed="false">
       <svg class="i" viewBox="0 0 24 24" aria-hidden="true" id="micIco"></svg>
       <span class="meter"><i id="lvl"></i></span>
@@ -336,9 +330,7 @@ const say = j => { if(j && !j.ok && j.error) toast(j.error); return j; };
 /* ---------------- drawing */
 function render(){
   const st = S.st;
-  if(!st){ $("coll").textContent = "Waiting for the controller…"; return; }
-  $("coll").textContent = st.obs ? st.collection : "Not connected to OBS";
-  $("coll").className = "coll" + (st.obs ? "" : " bad");
+  if(!st){ $("micTxt").textContent = "WAITING FOR THE CONTROLLER…"; $("mic").disabled = true; return; }
   $("mColl").textContent = st.collection || "";
   $("mSlides").textContent = st.slides && st.slides.on ? "On" : "Off";
 
@@ -366,7 +358,8 @@ function render(){
   $("mic").disabled = !micOk;
   $("mic").setAttribute("aria-pressed", String(!!a.muted));
   setHTML($("micIco"), a.muted || !micOk ? ICON.micOff : ICON.mic);
-  $("micTxt").textContent = !micOk ? "NO MIC SET UP" : a.muted ? "MUTED · tap for mic" : "MIC ON · tap to mute";
+  // No logo or collection name up here: not being connected shows in the mic bar (the collection is in the menu)
+  $("micTxt").textContent = !st.obs ? "NOT CONNECTED TO OBS" : !micOk ? "NO MIC SET UP" : a.muted ? "MUTED · tap for mic" : "MIC ON · tap to mute";
   if(a.muted || !micOk) $("lvl").style.width = "0%";
 
   // Program, and Preview with CUT in Studio Mode
